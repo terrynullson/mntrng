@@ -115,12 +115,33 @@ Atomic check statuses inside `checks` use uppercase values: `OK`, `WARN`, `FAIL`
     "declared_bitrate": "OK",
     "effective_bitrate": "WARN",
     "freeze": "OK",
-    "blackframe": "OK"
+    "blackframe": "OK",
+    "blackframe_details": {
+      "dark_frame_ratio": 0.12,
+      "analyzed_frames": 320,
+      "reason": "within_threshold",
+      "source": "ffmpeg_blackframe"
+    }
   },
   "screenshot_path": "storage/10/1201/9001.jpg",
   "created_at": "2026-02-13T10:05:12Z"
 }
 ```
+
+`checks.blackframe_details` schema:
+- `dark_frame_ratio` (`number`)
+- `analyzed_frames` (`integer`)
+- `reason` (`string`)
+- `source` (`string`, expected value: `ffmpeg_blackframe`)
+
+Deterministic blackframe fallback contract:
+- If blackframe analysis cannot be completed, `checks.blackframe` must be `WARN`.
+- `checks.blackframe_details.reason` must be one of:
+  - `playlist_unavailable`
+  - `segments_not_available`
+  - `no_downloaded_segments`
+  - `blackframe_analysis_failed`
+  - `blackframe_analyzer_not_available`
 
 ## 4. Status model and aggregation rule
 

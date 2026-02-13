@@ -190,6 +190,12 @@ curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
 - `OK`: иначе
 
 При невозможности анализа worker возвращает детерминированный `WARN` с явным `reason` в `blackframe_details`.
+Ожидаемый набор fallback-reason:
+- `playlist_unavailable`
+- `segments_not_available`
+- `no_downloaded_segments`
+- `blackframe_analysis_failed`
+- `blackframe_analyzer_not_available`
 
 В `checks` сохраняются `blackframe` (`OK/WARN/FAIL`) и `blackframe_details` (`dark_frame_ratio`, `analyzed_frames`, `reason`, `source`).
 
