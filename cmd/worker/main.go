@@ -36,6 +36,8 @@ type worker struct {
 	segmentsSampleCount int
 	freshnessWarn       time.Duration
 	freshnessFail       time.Duration
+	freezeWarn          time.Duration
+	freezeFail          time.Duration
 	effectiveWarnRatio  float64
 	effectiveFailRatio  float64
 	retryMax            int
@@ -73,10 +75,15 @@ func main() {
 	segmentsSampleCount := intInRange(config.GetInt("SEGMENTS_SAMPLE_COUNT", 3), 3, 5)
 	freshnessWarn := time.Duration(intAtLeast(config.GetInt("FRESHNESS_WARN_SEC", 10), 1)) * time.Second
 	freshnessFail := time.Duration(intAtLeast(config.GetInt("FRESHNESS_FAIL_SEC", 30), 1)) * time.Second
+	freezeWarn := time.Duration(intAtLeast(config.GetInt("FREEZE_WARN_SEC", 2), 1)) * time.Second
+	freezeFail := time.Duration(intAtLeast(config.GetInt("FREEZE_FAIL_SEC", 5), 1)) * time.Second
 	effectiveWarnRatio := floatAtLeast(envFloat("EFFECTIVE_BITRATE_WARN_RATIO", 0.7), 0)
 	effectiveFailRatio := floatAtLeast(envFloat("EFFECTIVE_BITRATE_FAIL_RATIO", 0.4), 0)
 	if freshnessFail < freshnessWarn {
 		freshnessFail = freshnessWarn
+	}
+	if freezeFail < freezeWarn {
+		freezeFail = freezeWarn
 	}
 	retryMax := intAtLeast(config.GetInt("WORKER_DB_RETRY_MAX", 2), 0)
 	retryBackoff := time.Duration(intAtLeast(config.GetInt("WORKER_DB_RETRY_BACKOFF_MS", 500), 1)) * time.Millisecond
@@ -109,6 +116,8 @@ func main() {
 		segmentsSampleCount: segmentsSampleCount,
 		freshnessWarn:       freshnessWarn,
 		freshnessFail:       freshnessFail,
+		freezeWarn:          freezeWarn,
+		freezeFail:          freezeFail,
 		effectiveWarnRatio:  effectiveWarnRatio,
 		effectiveFailRatio:  effectiveFailRatio,
 		retryMax:            retryMax,
@@ -116,7 +125,7 @@ func main() {
 	}
 
 	log.Printf(
-		"worker skeleton started: poll_interval=%s, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, retry_max=%d, retry_backoff=%s",
+		"worker skeleton started: poll_interval=%s, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, retry_max=%d, retry_backoff=%s",
 		w.pollInterval,
 		w.jobTimeout,
 		w.playlistTimeout,
@@ -124,6 +133,8 @@ func main() {
 		w.segmentsSampleCount,
 		w.freshnessWarn,
 		w.freshnessFail,
+		w.freezeWarn,
+		w.freezeFail,
 		w.effectiveWarnRatio,
 		w.effectiveFailRatio,
 		w.retryMax,
@@ -257,11 +268,17 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 	playlistStatus := "OK"
 	freshnessStatus := "FAIL"
 	segmentsStatus := "FAIL"
+	freezeStatus := "FAIL"
 	declaredBitrate := declaredBitrateResult{
 		Status: "FAIL",
 		Details: map[string]interface{}{
 			"reason": "playlist_unavailable",
 		},
+	}
+	freezeDetails := map[string]interface{}{
+		"max_freeze_sec": w.freezeFail.Seconds(),
+		"reason":         "playlist_unavailable",
+		"source":         "playlist_http",
 	}
 	effectiveBitrateStatus := "FAIL"
 	effectiveBitrateDetails := map[string]interface{}{
@@ -276,6 +293,7 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 		playlistStatus = "FAIL"
 	} else {
 		freshnessStatus = w.checkFreshness(playlistBody)
+		freezeStatus, freezeDetails = w.checkFreeze(playlistBody)
 
 		segments, segmentParseErr := extractLatestPlaylistSegments(streamURL, playlistBody, w.segmentsSampleCount)
 		segmentSamples := make([]segmentSample, 0)
@@ -299,7 +317,7 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 		}
 	}
 
-	aggregate := aggregateStatuses(playlistStatus, freshnessStatus, segmentsStatus, declaredBitrate.Status, effectiveBitrateStatus)
+	aggregate := aggregateStatuses(playlistStatus, freshnessStatus, segmentsStatus, freezeStatus, declaredBitrate.Status, effectiveBitrateStatus)
 
 	return checkJobEvaluation{
 		DBStatus:  strings.ToLower(aggregate),
@@ -308,6 +326,8 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 			"playlist":                  playlistStatus,
 			"freshness":                 freshnessStatus,
 			"segments":                  segmentsStatus,
+			"freeze":                    freezeStatus,
+			"freeze_details":            freezeDetails,
 			"declared_bitrate":          declaredBitrate.Status,
 			"declared_bitrate_details":  declaredBitrate.Details,
 			"effective_bitrate":         effectiveBitrateStatus,
@@ -389,6 +409,37 @@ func (w *worker) checkFreshness(playlistBody string) string {
 		return "WARN"
 	}
 	return "OK"
+}
+
+func (w *worker) checkFreeze(playlistBody string) (string, map[string]interface{}) {
+	lastProgramDateTime, ok := extractLatestProgramDateTime(playlistBody)
+	if !ok {
+		return freezeStatusByThreshold(0, w.freezeWarn.Seconds(), w.freezeFail.Seconds()), map[string]interface{}{
+			"max_freeze_sec": 0.0,
+			"reason":         "program_date_time_not_found",
+			"source":         "playlist_ext_x_program_date_time",
+		}
+	}
+
+	maxFreezeSec := time.Since(lastProgramDateTime).Seconds()
+	if maxFreezeSec < 0 {
+		maxFreezeSec = 0
+	}
+
+	status := freezeStatusByThreshold(maxFreezeSec, w.freezeWarn.Seconds(), w.freezeFail.Seconds())
+	reason := "within_threshold"
+	if status == "WARN" {
+		reason = "freeze_warn_threshold_reached"
+	}
+	if status == "FAIL" {
+		reason = "freeze_fail_threshold_reached"
+	}
+
+	return status, map[string]interface{}{
+		"max_freeze_sec": maxFreezeSec,
+		"reason":         reason,
+		"source":         "playlist_ext_x_program_date_time",
+	}
 }
 
 func (w *worker) checkSegmentsAvailability(ctx context.Context, segments []playlistSegment) (string, []segmentSample) {
@@ -716,6 +767,16 @@ func (w *worker) checkEffectiveBitrate(samples []segmentSample, declared declare
 
 	details["reason"] = "within_threshold"
 	return "OK", details
+}
+
+func freezeStatusByThreshold(maxFreezeSec float64, warnSec float64, failSec float64) string {
+	if maxFreezeSec >= failSec {
+		return "FAIL"
+	}
+	if maxFreezeSec >= warnSec {
+		return "WARN"
+	}
+	return "OK"
 }
 
 func aggregateStatuses(statuses ...string) string {

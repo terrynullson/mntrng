@@ -23,7 +23,7 @@ cp .env.example .env
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
 - `API_PORT`, `REDIS_ADDR`, `WORKER_HEARTBEAT_SEC`
 - `WORKER_JOB_TIMEOUT_SEC`, `WORKER_DB_RETRY_MAX`, `WORKER_DB_RETRY_BACKOFF_MS`
-- `PLAYLIST_TIMEOUT_MS`, `SEGMENT_TIMEOUT_MS`, `SEGMENTS_SAMPLE_COUNT`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`, `EFFECTIVE_BITRATE_WARN_RATIO`, `EFFECTIVE_BITRATE_FAIL_RATIO`
+- `PLAYLIST_TIMEOUT_MS`, `SEGMENT_TIMEOUT_MS`, `SEGMENTS_SAMPLE_COUNT`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`, `FREEZE_WARN_SEC`, `FREEZE_FAIL_SEC`, `EFFECTIVE_BITRATE_WARN_RATIO`, `EFFECTIVE_BITRATE_FAIL_RATIO`
 - `FRONTEND_PORT`, `NEXT_PUBLIC_API_BASE_URL`
 
 Файл `.env` не добавляется в git (трекается только `.env.example`).
@@ -158,6 +158,7 @@ curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
 - `playlist` availability check
 - `freshness` check (по `#EXT-X-PROGRAM-DATE-TIME`)
 - `segments` availability check по последним `N` сегментам из playlist
+- `freeze` check по `#EXT-X-PROGRAM-DATE-TIME` (оценка максимального freeze-интервала)
 - `declared_bitrate` check по тегам `#EXT-X-STREAM-INF` (`BANDWIDTH` / `AVERAGE-BANDWIDTH`)
 - `effective_bitrate` check по уже скачанным сегментам из окна `segments`
 
@@ -175,6 +176,13 @@ curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
 
 В `checks` сохраняются диагностические детали по `declared_bitrate` (например, `parsed_bitrate_bps`, `source`, `reason`) без секретов.
 
+Правило `freeze`-статуса:
+- `FAIL`: `max_freeze_sec >= FREEZE_FAIL_SEC` (по умолчанию `>= 5`)
+- `WARN`: `max_freeze_sec >= FREEZE_WARN_SEC` и `< FREEZE_FAIL_SEC` (по умолчанию `>= 2` и `< 5`)
+- `OK`: иначе
+
+В `checks` сохраняются `freeze` (`OK/WARN/FAIL`) и `freeze_details` (`max_freeze_sec`, `reason`, `source`).
+
 Правило `effective_bitrate`-статуса:
 - формула: `calculated_bps = (sum(downloaded_segment_bytes) * 8) / sum(segment_duration_sec)` по скачанным сегментам окна
 - `FAIL`: `ratio = calculated_bps / declared_bps < EFFECTIVE_BITRATE_FAIL_RATIO` (по умолчанию `< 0.4`)
@@ -183,7 +191,7 @@ curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
 
 В `checks` сохраняются `effective_bitrate` (`OK/WARN/FAIL`) и `effective_bitrate_details` (`calculated_bps`, `declared_bps`, `ratio`, `reason`, `sample_count`).
 
-Итоговая агрегация статуса: `FAIL > WARN > OK` по чекам `playlist`, `freshness`, `segments`, `declared_bitrate`, `effective_bitrate`.
+Итоговая агрегация статуса: `FAIL > WARN > OK` по чекам `playlist`, `freshness`, `segments`, `freeze`, `declared_bitrate`, `effective_bitrate`.
 
 Используемые thresholds:
 - `PLAYLIST_TIMEOUT_MS` (по умолчанию `3000`)
@@ -191,6 +199,8 @@ curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
 - `SEGMENTS_SAMPLE_COUNT` (по умолчанию `3`, допустимый диапазон `3..5`)
 - `FRESHNESS_WARN_SEC` (по умолчанию `10`)
 - `FRESHNESS_FAIL_SEC` (по умолчанию `30`)
+- `FREEZE_WARN_SEC` (по умолчанию `2`)
+- `FREEZE_FAIL_SEC` (по умолчанию `5`)
 - `EFFECTIVE_BITRATE_WARN_RATIO` (по умолчанию `0.7`)
 - `EFFECTIVE_BITRATE_FAIL_RATIO` (по умолчанию `0.4`)
 
