@@ -35,7 +35,7 @@ docker compose up --build -d
 Проверка API:
 
 ```bash
-curl http://localhost:8080/healthz
+curl http://localhost:8080/api/v1/health
 ```
 
 ## Остановка локального окружения
