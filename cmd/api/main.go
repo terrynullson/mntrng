@@ -40,6 +40,27 @@ type patchCompanyRequest struct {
 	Name string `json:"name"`
 }
 
+type project struct {
+	ID        int64     `json:"id"`
+	CompanyID int64     `json:"company_id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type projectListResponse struct {
+	Items      []project `json:"items"`
+	NextCursor *string   `json:"next_cursor"`
+}
+
+type createProjectRequest struct {
+	Name string `json:"name"`
+}
+
+type patchProjectRequest struct {
+	Name string `json:"name"`
+}
+
 type errorEnvelope struct {
 	Code      string      `json:"code"`
 	Message   string      `json:"message"`
@@ -116,7 +137,7 @@ func (s *apiServer) handleCompanies(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
-	companyID, pathErr := parseCompanyIDFromPath(r.URL.Path)
+	companyID, pathRemainder, pathErr := parseCompanyPath(r.URL.Path)
 	if pathErr == "not_found" {
 		writeJSONError(
 			w,
@@ -140,16 +161,81 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch r.Method {
-	case http.MethodGet:
-		s.handleGetCompany(w, r, companyID)
-	case http.MethodPatch:
-		s.handlePatchCompany(w, r, companyID)
-	case http.MethodDelete:
-		s.handleDeleteCompany(w, r, companyID)
-	default:
-		writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+	if pathRemainder == "" {
+		switch r.Method {
+		case http.MethodGet:
+			s.handleGetCompany(w, r, companyID)
+		case http.MethodPatch:
+			s.handlePatchCompany(w, r, companyID)
+		case http.MethodDelete:
+			s.handleDeleteCompany(w, r, companyID)
+		default:
+			writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+		}
+		return
 	}
+
+	const projectCollectionPath = "projects"
+	const projectItemPrefix = "projects/"
+	if pathRemainder == projectCollectionPath {
+		switch r.Method {
+		case http.MethodPost:
+			s.handleCreateProject(w, r, companyID)
+		case http.MethodGet:
+			s.handleListProjects(w, r, companyID)
+		default:
+			writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
+		}
+		return
+	}
+	if strings.HasPrefix(pathRemainder, projectItemPrefix) {
+		projectIDRaw := strings.TrimPrefix(pathRemainder, projectItemPrefix)
+		if projectIDRaw == "" || strings.Contains(projectIDRaw, "/") {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"resource not found",
+				map[string]interface{}{"path": r.URL.Path},
+			)
+			return
+		}
+
+		projectID, err := parsePositiveID(projectIDRaw)
+		if err != nil {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid project_id",
+				map[string]interface{}{"path": r.URL.Path},
+			)
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			s.handleGetProject(w, r, companyID, projectID)
+		case http.MethodPatch:
+			s.handlePatchProject(w, r, companyID, projectID)
+		case http.MethodDelete:
+			s.handleDeleteProject(w, r, companyID, projectID)
+		default:
+			writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+		}
+		return
+	}
+
+	writeJSONError(
+		w,
+		r,
+		http.StatusNotFound,
+		"not_found",
+		"resource not found",
+		map[string]interface{}{"path": r.URL.Path},
+	)
 }
 
 func (s *apiServer) handleCreateCompany(w http.ResponseWriter, r *http.Request) {
@@ -391,6 +477,261 @@ func (s *apiServer) handleDeleteCompany(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (s *apiServer) handleCreateProject(w http.ResponseWriter, r *http.Request, companyID int64) {
+	var request createProjectRequest
+	if err := decodeJSONBody(r, &request); err != nil {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"invalid request body",
+			map[string]interface{}{"error": err.Error()},
+		)
+		return
+	}
+
+	name := strings.TrimSpace(request.Name)
+	if name == "" {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"name is required",
+			map[string]interface{}{"field": "name"},
+		)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var item project
+	err := s.db.QueryRowContext(
+		ctx,
+		`INSERT INTO projects (company_id, name) VALUES ($1, $2) RETURNING id, company_id, name, created_at, updated_at`,
+		companyID,
+		name,
+	).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
+	if err != nil {
+		if isUniqueViolation(err) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusConflict,
+				"conflict",
+				"project with the same name already exists for this company",
+				map[string]interface{}{"field": "name", "company_id": companyID},
+			)
+			return
+		}
+		if isForeignKeyViolation(err) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"company not found",
+				map[string]interface{}{"company_id": companyID},
+			)
+			return
+		}
+
+		log.Printf("create project failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := writeJSON(w, http.StatusCreated, item); err != nil {
+		log.Printf("create project response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handleListProjects(w http.ResponseWriter, r *http.Request, companyID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	rows, err := s.db.QueryContext(
+		ctx,
+		`SELECT id, company_id, name, created_at, updated_at FROM projects WHERE company_id = $1 ORDER BY id ASC`,
+		companyID,
+	)
+	if err != nil {
+		log.Printf("list projects failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+	defer rows.Close()
+
+	items := make([]project, 0)
+	for rows.Next() {
+		var item project
+		if err := rows.Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			log.Printf("list projects scan failed: %v", err)
+			writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+			return
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("list projects rows failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	response := projectListResponse{
+		Items:      items,
+		NextCursor: nil,
+	}
+	if err := writeJSON(w, http.StatusOK, response); err != nil {
+		log.Printf("list projects response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handleGetProject(w http.ResponseWriter, r *http.Request, companyID int64, projectID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var item project
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT id, company_id, name, created_at, updated_at FROM projects WHERE company_id = $1 AND id = $2`,
+		companyID,
+		projectID,
+	).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"project not found",
+				map[string]interface{}{"company_id": companyID, "project_id": projectID},
+			)
+			return
+		}
+
+		log.Printf("get project failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := writeJSON(w, http.StatusOK, item); err != nil {
+		log.Printf("get project response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handlePatchProject(w http.ResponseWriter, r *http.Request, companyID int64, projectID int64) {
+	var request patchProjectRequest
+	if err := decodeJSONBody(r, &request); err != nil {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"invalid request body",
+			map[string]interface{}{"error": err.Error()},
+		)
+		return
+	}
+
+	name := strings.TrimSpace(request.Name)
+	if name == "" {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"name is required",
+			map[string]interface{}{"field": "name"},
+		)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var item project
+	err := s.db.QueryRowContext(
+		ctx,
+		`UPDATE projects SET name = $1, updated_at = NOW() WHERE company_id = $2 AND id = $3 RETURNING id, company_id, name, created_at, updated_at`,
+		name,
+		companyID,
+		projectID,
+	).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"project not found",
+				map[string]interface{}{"company_id": companyID, "project_id": projectID},
+			)
+			return
+		}
+		if isUniqueViolation(err) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusConflict,
+				"conflict",
+				"project with the same name already exists for this company",
+				map[string]interface{}{"field": "name", "company_id": companyID},
+			)
+			return
+		}
+
+		log.Printf("patch project failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := writeJSON(w, http.StatusOK, item); err != nil {
+		log.Printf("patch project response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handleDeleteProject(w http.ResponseWriter, r *http.Request, companyID int64, projectID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	result, err := s.db.ExecContext(
+		ctx,
+		`DELETE FROM projects WHERE company_id = $1 AND id = $2`,
+		companyID,
+		projectID,
+	)
+	if err != nil {
+		log.Printf("delete project failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("delete project rows affected failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+	if rowsAffected == 0 {
+		writeJSONError(
+			w,
+			r,
+			http.StatusNotFound,
+			"not_found",
+			"project not found",
+			map[string]interface{}{"company_id": companyID, "project_id": projectID},
+		)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func writeJSON(w http.ResponseWriter, statusCode int, payload interface{}) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -431,23 +772,39 @@ func writeMethodNotAllowed(w http.ResponseWriter, r *http.Request, allowedMethod
 	)
 }
 
-func parseCompanyIDFromPath(path string) (int64, string) {
+func parseCompanyPath(path string) (int64, string, string) {
 	const prefix = "/api/v1/companies/"
 	if !strings.HasPrefix(path, prefix) {
-		return 0, "not_found"
+		return 0, "", "not_found"
 	}
 
-	rawID := strings.TrimPrefix(path, prefix)
-	if rawID == "" || strings.Contains(rawID, "/") {
-		return 0, "not_found"
+	rawPath := strings.TrimPrefix(path, prefix)
+	if rawPath == "" {
+		return 0, "", "not_found"
 	}
 
-	companyID, err := strconv.ParseInt(rawID, 10, 64)
-	if err != nil || companyID <= 0 {
-		return 0, "validation_error"
+	parts := strings.SplitN(rawPath, "/", 2)
+	companyID, err := parsePositiveID(parts[0])
+	if err != nil {
+		return 0, "", "validation_error"
 	}
 
-	return companyID, ""
+	if len(parts) == 1 {
+		return companyID, "", ""
+	}
+	if parts[1] == "" {
+		return 0, "", "not_found"
+	}
+
+	return companyID, parts[1], ""
+}
+
+func parsePositiveID(rawID string) (int64, error) {
+	value, err := strconv.ParseInt(rawID, 10, 64)
+	if err != nil || value <= 0 {
+		return 0, errors.New("invalid id")
+	}
+	return value, nil
 }
 
 func decodeJSONBody(r *http.Request, target interface{}) error {
@@ -465,6 +822,11 @@ func decodeJSONBody(r *http.Request, target interface{}) error {
 func isUniqueViolation(err error) bool {
 	var pgErr *pq.Error
 	return errors.As(err, &pgErr) && string(pgErr.Code) == "23505"
+}
+
+func isForeignKeyViolation(err error) bool {
+	var pgErr *pq.Error
+	return errors.As(err, &pgErr) && string(pgErr.Code) == "23503"
 }
 
 func requestIDFromRequest(r *http.Request) string {

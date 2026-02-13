@@ -69,6 +69,31 @@ curl -sS -X PATCH http://localhost:8080/api/v1/companies/1 \
 curl -sS -X DELETE http://localhost:8080/api/v1/companies/1 -i
 ```
 
+## Projects CRUD smoke-check
+
+Требуется существующий `company_id` (например, `1`).
+
+```bash
+# create
+curl -sS -X POST http://localhost:8080/api/v1/companies/1/projects \
+  -H "Content-Type: application/json" \
+  -d '{"name":"News Channel"}'
+
+# list
+curl -sS http://localhost:8080/api/v1/companies/1/projects
+
+# get by id
+curl -sS http://localhost:8080/api/v1/companies/1/projects/1
+
+# patch
+curl -sS -X PATCH http://localhost:8080/api/v1/companies/1/projects/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Updated Project Name"}'
+
+# delete
+curl -sS -X DELETE http://localhost:8080/api/v1/companies/1/projects/1 -i
+```
+
 ## Остановка локального окружения
 
 ```bash
