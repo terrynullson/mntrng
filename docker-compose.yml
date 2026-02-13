@@ -2,13 +2,13 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: hls_monitoring
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
+      POSTGRES_DB: ${POSTGRES_DB:-hls_monitoring}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d hls_monitoring"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-hls_monitoring}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -29,25 +29,25 @@ services:
       context: .
       dockerfile: Dockerfile.api
     environment:
-      API_PORT: "8080"
-      DATABASE_URL: postgres://app:app@postgres:5432/hls_monitoring?sslmode=disable
-      REDIS_ADDR: redis:6379
+      API_PORT: ${API_PORT:-8080}
+      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-hls_monitoring}?sslmode=disable
+      REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "${API_PORT:-8080}:${API_PORT:-8080}"
 
   worker:
     build:
       context: .
       dockerfile: Dockerfile.worker
     environment:
-      WORKER_HEARTBEAT_SEC: "15"
-      DATABASE_URL: postgres://app:app@postgres:5432/hls_monitoring?sslmode=disable
-      REDIS_ADDR: redis:6379
+      WORKER_HEARTBEAT_SEC: ${WORKER_HEARTBEAT_SEC:-15}
+      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-hls_monitoring}?sslmode=disable
+      REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,13 +59,13 @@ services:
       context: ./web
       dockerfile: Dockerfile
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://api:8080
-      PORT: "3000"
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+      PORT: ${FRONTEND_PORT:-3000}
     depends_on:
       api:
         condition: service_started
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
 
 volumes:
   postgres_data:

@@ -10,6 +10,22 @@
 - `redis` (Redis)
 - `frontend` (Next.js + TypeScript)
 
+## Переменные окружения
+
+1. Создать локальный env-файл:
+
+```bash
+cp .env.example .env
+```
+
+2. При необходимости изменить значения в `.env`:
+
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
+- `API_PORT`, `REDIS_ADDR`, `WORKER_HEARTBEAT_SEC`
+- `FRONTEND_PORT`, `NEXT_PUBLIC_API_BASE_URL`
+
+Файл `.env` не добавляется в git (трекается только `.env.example`).
+
 ## Запуск локального окружения
 
 ```bash
