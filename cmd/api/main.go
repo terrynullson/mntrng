@@ -142,6 +142,15 @@ type apiServer struct {
 	db *sql.DB
 }
 
+const (
+	auditActorTypeAPI       = "api"
+	auditActorIDSystem      = "system"
+	auditEntityTypeStream   = "stream"
+	auditActionStreamCreate = "create"
+	auditActionStreamUpdate = "update"
+	auditActionStreamDelete = "delete"
+)
+
 func main() {
 	port := config.GetString("API_PORT", "8080")
 	databaseURL := config.GetString("DATABASE_URL", "")
@@ -1047,8 +1056,16 @@ func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, c
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("create stream tx begin failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+	defer tx.Rollback()
+
 	var item stream
-	err := s.db.QueryRowContext(
+	err = tx.QueryRowContext(
 		ctx,
 		`INSERT INTO streams (company_id, project_id, name, url, is_active)
          SELECT $1, $2, $3, $4, $5
@@ -1088,6 +1105,34 @@ func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, c
 		}
 
 		log.Printf("create stream failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	auditPayload := map[string]interface{}{
+		"project_id": item.ProjectID,
+		"name":       item.Name,
+		"url":        item.URL,
+		"is_active":  item.IsActive,
+	}
+	if err := insertAuditLogTx(
+		ctx,
+		tx,
+		companyID,
+		auditActorTypeAPI,
+		auditActorIDSystem,
+		auditEntityTypeStream,
+		item.ID,
+		auditActionStreamCreate,
+		auditPayload,
+	); err != nil {
+		log.Printf("create stream audit insert failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("create stream tx commit failed: %v", err)
 		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
@@ -1236,6 +1281,7 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 
 	setClauses := make([]string, 0, 3)
 	args := make([]interface{}, 0, 5)
+	changePayload := make(map[string]interface{})
 	nextPlaceholder := 1
 
 	if request.Name != nil {
@@ -1253,6 +1299,7 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 		}
 		setClauses = append(setClauses, fmt.Sprintf("name = $%d", nextPlaceholder))
 		args = append(args, name)
+		changePayload["name"] = name
 		nextPlaceholder++
 	}
 	if request.URL != nil {
@@ -1270,11 +1317,13 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 		}
 		setClauses = append(setClauses, fmt.Sprintf("url = $%d", nextPlaceholder))
 		args = append(args, url)
+		changePayload["url"] = url
 		nextPlaceholder++
 	}
 	if request.IsActive != nil {
 		setClauses = append(setClauses, fmt.Sprintf("is_active = $%d", nextPlaceholder))
 		args = append(args, *request.IsActive)
+		changePayload["is_active"] = *request.IsActive
 		nextPlaceholder++
 	}
 	if len(setClauses) == 0 {
@@ -1313,8 +1362,16 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("patch stream tx begin failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+	defer tx.Rollback()
+
 	var item stream
-	err := s.db.QueryRowContext(ctx, query, args...).Scan(
+	err = tx.QueryRowContext(ctx, query, args...).Scan(
 		&item.ID,
 		&item.CompanyID,
 		&item.ProjectID,
@@ -1353,6 +1410,32 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 		return
 	}
 
+	auditPayload := map[string]interface{}{
+		"project_id": item.ProjectID,
+		"changes":    changePayload,
+	}
+	if err := insertAuditLogTx(
+		ctx,
+		tx,
+		companyID,
+		auditActorTypeAPI,
+		auditActorIDSystem,
+		auditEntityTypeStream,
+		item.ID,
+		auditActionStreamUpdate,
+		auditPayload,
+	); err != nil {
+		log.Printf("patch stream audit insert failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("patch stream tx commit failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
 	if err := writeJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("patch stream response encode error: %v", err)
 	}
@@ -1362,33 +1445,75 @@ func (s *apiServer) handleDeleteStream(w http.ResponseWriter, r *http.Request, c
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	result, err := s.db.ExecContext(
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("delete stream tx begin failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+	defer tx.Rollback()
+
+	var deleted stream
+	err = tx.QueryRowContext(
 		ctx,
-		`DELETE FROM streams WHERE company_id = $1 AND id = $2`,
+		`DELETE FROM streams
+         WHERE company_id = $1 AND id = $2
+         RETURNING id, company_id, project_id, name, url, is_active, created_at, updated_at`,
 		companyID,
 		streamID,
+	).Scan(
+		&deleted.ID,
+		&deleted.CompanyID,
+		&deleted.ProjectID,
+		&deleted.Name,
+		&deleted.URL,
+		&deleted.IsActive,
+		&deleted.CreatedAt,
+		&deleted.UpdatedAt,
 	)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"stream not found",
+				map[string]interface{}{"company_id": companyID, "stream_id": streamID},
+			)
+			return
+		}
+
 		log.Printf("delete stream failed: %v", err)
 		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		log.Printf("delete stream rows affected failed: %v", err)
+	auditPayload := map[string]interface{}{
+		"project_id": deleted.ProjectID,
+		"name":       deleted.Name,
+		"url":        deleted.URL,
+		"is_active":  deleted.IsActive,
+	}
+	if err := insertAuditLogTx(
+		ctx,
+		tx,
+		companyID,
+		auditActorTypeAPI,
+		auditActorIDSystem,
+		auditEntityTypeStream,
+		deleted.ID,
+		auditActionStreamDelete,
+		auditPayload,
+	); err != nil {
+		log.Printf("delete stream audit insert failed: %v", err)
 		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
-	if rowsAffected == 0 {
-		writeJSONError(
-			w,
-			r,
-			http.StatusNotFound,
-			"not_found",
-			"stream not found",
-			map[string]interface{}{"company_id": companyID, "stream_id": streamID},
-		)
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("delete stream tx commit failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -1912,6 +2037,37 @@ func scanCheckResult(scanner rowScanner) (checkResult, error) {
 	item.Checks = json.RawMessage(checksRaw)
 	item.Status = formatCheckResultStatus(dbStatus)
 	return item, nil
+}
+
+func insertAuditLogTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	companyID int64,
+	actorType string,
+	actorID string,
+	entityType string,
+	entityID int64,
+	action string,
+	payload map[string]interface{},
+) error {
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(
+		ctx,
+		`INSERT INTO audit_log (company_id, actor_type, actor_id, entity_type, entity_id, action, payload)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+		companyID,
+		actorType,
+		actorID,
+		entityType,
+		entityID,
+		action,
+		string(payloadJSON),
+	)
+	return err
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, payload interface{}) error {
