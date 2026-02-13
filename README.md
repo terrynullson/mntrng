@@ -94,6 +94,31 @@ curl -sS -X PATCH http://localhost:8080/api/v1/companies/1/projects/1 \
 curl -sS -X DELETE http://localhost:8080/api/v1/companies/1/projects/1 -i
 ```
 
+## Streams CRUD smoke-check
+
+Требуются существующие `company_id` и `project_id` (например, `1` и `1`).
+
+```bash
+# create in project
+curl -sS -X POST http://localhost:8080/api/v1/companies/1/projects/1/streams \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Primary HLS","url":"https://cdn.example.com/live/index.m3u8","is_active":true}'
+
+# list by company (optional filters: project_id, is_active)
+curl -sS "http://localhost:8080/api/v1/companies/1/streams?project_id=1&is_active=true"
+
+# get by id
+curl -sS http://localhost:8080/api/v1/companies/1/streams/1
+
+# patch
+curl -sS -X PATCH http://localhost:8080/api/v1/companies/1/streams/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Backup HLS","is_active":false}'
+
+# delete
+curl -sS -X DELETE http://localhost:8080/api/v1/companies/1/streams/1 -i
+```
+
 ## Остановка локального окружения
 
 ```bash

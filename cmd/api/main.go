@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -59,6 +60,34 @@ type createProjectRequest struct {
 
 type patchProjectRequest struct {
 	Name string `json:"name"`
+}
+
+type stream struct {
+	ID        int64     `json:"id"`
+	CompanyID int64     `json:"company_id"`
+	ProjectID int64     `json:"project_id"`
+	Name      string    `json:"name"`
+	URL       string    `json:"url"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type streamListResponse struct {
+	Items      []stream `json:"items"`
+	NextCursor *string  `json:"next_cursor"`
+}
+
+type createStreamRequest struct {
+	Name     string `json:"name"`
+	URL      string `json:"url"`
+	IsActive *bool  `json:"is_active"`
+}
+
+type patchStreamRequest struct {
+	Name     *string `json:"name"`
+	URL      *string `json:"url"`
+	IsActive *bool   `json:"is_active"`
 }
 
 type errorEnvelope struct {
@@ -177,6 +206,8 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 
 	const projectCollectionPath = "projects"
 	const projectItemPrefix = "projects/"
+	const streamCollectionPath = "streams"
+	const streamItemPrefix = "streams/"
 	if pathRemainder == projectCollectionPath {
 		switch r.Method {
 		case http.MethodPost:
@@ -189,8 +220,8 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(pathRemainder, projectItemPrefix) {
-		projectIDRaw := strings.TrimPrefix(pathRemainder, projectItemPrefix)
-		if projectIDRaw == "" || strings.Contains(projectIDRaw, "/") {
+		projectPath := strings.TrimPrefix(pathRemainder, projectItemPrefix)
+		if projectPath == "" {
 			writeJSONError(
 				w,
 				r,
@@ -202,7 +233,8 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		projectID, err := parsePositiveID(projectIDRaw)
+		projectParts := strings.Split(projectPath, "/")
+		projectID, err := parsePositiveID(projectParts[0])
 		if err != nil {
 			writeJSONError(
 				w,
@@ -214,14 +246,82 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			)
 			return
 		}
+		if len(projectParts) == 1 {
+			switch r.Method {
+			case http.MethodGet:
+				s.handleGetProject(w, r, companyID, projectID)
+			case http.MethodPatch:
+				s.handlePatchProject(w, r, companyID, projectID)
+			case http.MethodDelete:
+				s.handleDeleteProject(w, r, companyID, projectID)
+			default:
+				writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+			}
+			return
+		}
+		if len(projectParts) == 2 && projectParts[1] == streamCollectionPath {
+			switch r.Method {
+			case http.MethodPost:
+				s.handleCreateStream(w, r, companyID, projectID)
+			default:
+				writeMethodNotAllowed(w, r, http.MethodPost)
+			}
+			return
+		}
+
+		writeJSONError(
+			w,
+			r,
+			http.StatusNotFound,
+			"not_found",
+			"resource not found",
+			map[string]interface{}{"path": r.URL.Path},
+		)
+		return
+	}
+	if pathRemainder == streamCollectionPath {
+		switch r.Method {
+		case http.MethodGet:
+			s.handleListStreams(w, r, companyID)
+		default:
+			writeMethodNotAllowed(w, r, http.MethodGet)
+		}
+		return
+	}
+	if strings.HasPrefix(pathRemainder, streamItemPrefix) {
+		streamIDRaw := strings.TrimPrefix(pathRemainder, streamItemPrefix)
+		if streamIDRaw == "" || strings.Contains(streamIDRaw, "/") {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"resource not found",
+				map[string]interface{}{"path": r.URL.Path},
+			)
+			return
+		}
+
+		streamID, err := parsePositiveID(streamIDRaw)
+		if err != nil {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid stream_id",
+				map[string]interface{}{"path": r.URL.Path},
+			)
+			return
+		}
 
 		switch r.Method {
 		case http.MethodGet:
-			s.handleGetProject(w, r, companyID, projectID)
+			s.handleGetStream(w, r, companyID, streamID)
 		case http.MethodPatch:
-			s.handlePatchProject(w, r, companyID, projectID)
+			s.handlePatchStream(w, r, companyID, streamID)
 		case http.MethodDelete:
-			s.handleDeleteProject(w, r, companyID, projectID)
+			s.handleDeleteStream(w, r, companyID, streamID)
 		default:
 			writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
 		}
@@ -725,6 +825,401 @@ func (s *apiServer) handleDeleteProject(w http.ResponseWriter, r *http.Request, 
 			"not_found",
 			"project not found",
 			map[string]interface{}{"company_id": companyID, "project_id": projectID},
+		)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, companyID int64, projectID int64) {
+	var request createStreamRequest
+	if err := decodeJSONBody(r, &request); err != nil {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"invalid request body",
+			map[string]interface{}{"error": err.Error()},
+		)
+		return
+	}
+
+	name := strings.TrimSpace(request.Name)
+	if name == "" {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"name is required",
+			map[string]interface{}{"field": "name"},
+		)
+		return
+	}
+	url := strings.TrimSpace(request.URL)
+	if url == "" {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"url is required",
+			map[string]interface{}{"field": "url"},
+		)
+		return
+	}
+
+	isActive := true
+	if request.IsActive != nil {
+		isActive = *request.IsActive
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var item stream
+	err := s.db.QueryRowContext(
+		ctx,
+		`INSERT INTO streams (company_id, project_id, name, url, is_active)
+         SELECT $1, $2, $3, $4, $5
+         WHERE EXISTS (
+             SELECT 1 FROM projects p
+             WHERE p.company_id = $1 AND p.id = $2
+         )
+         RETURNING id, company_id, project_id, name, url, is_active, created_at, updated_at`,
+		companyID,
+		projectID,
+		name,
+		url,
+		isActive,
+	).Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) || isForeignKeyViolation(err) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"project not found for company",
+				map[string]interface{}{"company_id": companyID, "project_id": projectID},
+			)
+			return
+		}
+		if isUniqueViolation(err) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusConflict,
+				"conflict",
+				"stream with the same name already exists in this project",
+				map[string]interface{}{"company_id": companyID, "project_id": projectID, "field": "name"},
+			)
+			return
+		}
+
+		log.Printf("create stream failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := writeJSON(w, http.StatusCreated, item); err != nil {
+		log.Printf("create stream response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handleListStreams(w http.ResponseWriter, r *http.Request, companyID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	args := []interface{}{companyID}
+	conditions := []string{"company_id = $1"}
+	nextPlaceholder := 2
+
+	if projectIDRaw := strings.TrimSpace(r.URL.Query().Get("project_id")); projectIDRaw != "" {
+		projectID, err := parsePositiveID(projectIDRaw)
+		if err != nil {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid project_id filter",
+				map[string]interface{}{"project_id": projectIDRaw},
+			)
+			return
+		}
+
+		conditions = append(conditions, fmt.Sprintf("project_id = $%d", nextPlaceholder))
+		args = append(args, projectID)
+		nextPlaceholder++
+	}
+
+	if isActiveRaw := strings.TrimSpace(r.URL.Query().Get("is_active")); isActiveRaw != "" {
+		isActive, err := strconv.ParseBool(isActiveRaw)
+		if err != nil {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid is_active filter",
+				map[string]interface{}{"is_active": isActiveRaw},
+			)
+			return
+		}
+
+		conditions = append(conditions, fmt.Sprintf("is_active = $%d", nextPlaceholder))
+		args = append(args, isActive)
+		nextPlaceholder++
+	}
+
+	query := fmt.Sprintf(
+		`SELECT id, company_id, project_id, name, url, is_active, created_at, updated_at
+         FROM streams
+         WHERE %s
+         ORDER BY id ASC`,
+		strings.Join(conditions, " AND "),
+	)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		log.Printf("list streams failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+	defer rows.Close()
+
+	items := make([]stream, 0)
+	for rows.Next() {
+		var item stream
+		if err := rows.Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			log.Printf("list streams scan failed: %v", err)
+			writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+			return
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("list streams rows failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	response := streamListResponse{
+		Items:      items,
+		NextCursor: nil,
+	}
+	if err := writeJSON(w, http.StatusOK, response); err != nil {
+		log.Printf("list streams response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handleGetStream(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var item stream
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT id, company_id, project_id, name, url, is_active, created_at, updated_at
+         FROM streams
+         WHERE company_id = $1 AND id = $2`,
+		companyID,
+		streamID,
+	).Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"stream not found",
+				map[string]interface{}{"company_id": companyID, "stream_id": streamID},
+			)
+			return
+		}
+
+		log.Printf("get stream failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := writeJSON(w, http.StatusOK, item); err != nil {
+		log.Printf("get stream response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {
+	var request patchStreamRequest
+	if err := decodeJSONBody(r, &request); err != nil {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"invalid request body",
+			map[string]interface{}{"error": err.Error()},
+		)
+		return
+	}
+
+	setClauses := make([]string, 0, 3)
+	args := make([]interface{}, 0, 5)
+	nextPlaceholder := 1
+
+	if request.Name != nil {
+		name := strings.TrimSpace(*request.Name)
+		if name == "" {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"name must not be empty",
+				map[string]interface{}{"field": "name"},
+			)
+			return
+		}
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", nextPlaceholder))
+		args = append(args, name)
+		nextPlaceholder++
+	}
+	if request.URL != nil {
+		url := strings.TrimSpace(*request.URL)
+		if url == "" {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"url must not be empty",
+				map[string]interface{}{"field": "url"},
+			)
+			return
+		}
+		setClauses = append(setClauses, fmt.Sprintf("url = $%d", nextPlaceholder))
+		args = append(args, url)
+		nextPlaceholder++
+	}
+	if request.IsActive != nil {
+		setClauses = append(setClauses, fmt.Sprintf("is_active = $%d", nextPlaceholder))
+		args = append(args, *request.IsActive)
+		nextPlaceholder++
+	}
+	if len(setClauses) == 0 {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"at least one field is required",
+			map[string]interface{}{"fields": []string{"name", "url", "is_active"}},
+		)
+		return
+	}
+
+	setClauses = append(setClauses, "updated_at = NOW()")
+	companyPlaceholder := nextPlaceholder
+	streamPlaceholder := nextPlaceholder + 1
+	args = append(args, companyID, streamID)
+
+	query := fmt.Sprintf(
+		`UPDATE streams
+         SET %s
+         WHERE company_id = $%d
+           AND id = $%d
+           AND EXISTS (
+               SELECT 1 FROM projects p
+               WHERE p.id = streams.project_id
+                 AND p.company_id = streams.company_id
+           )
+         RETURNING id, company_id, project_id, name, url, is_active, created_at, updated_at`,
+		strings.Join(setClauses, ", "),
+		companyPlaceholder,
+		streamPlaceholder,
+	)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var item stream
+	err := s.db.QueryRowContext(ctx, query, args...).Scan(
+		&item.ID,
+		&item.CompanyID,
+		&item.ProjectID,
+		&item.Name,
+		&item.URL,
+		&item.IsActive,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"stream not found",
+				map[string]interface{}{"company_id": companyID, "stream_id": streamID},
+			)
+			return
+		}
+		if isUniqueViolation(err) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusConflict,
+				"conflict",
+				"stream with the same name already exists in this project",
+				map[string]interface{}{"company_id": companyID, "stream_id": streamID, "field": "name"},
+			)
+			return
+		}
+
+		log.Printf("patch stream failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := writeJSON(w, http.StatusOK, item); err != nil {
+		log.Printf("patch stream response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handleDeleteStream(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	result, err := s.db.ExecContext(
+		ctx,
+		`DELETE FROM streams WHERE company_id = $1 AND id = $2`,
+		companyID,
+		streamID,
+	)
+	if err != nil {
+		log.Printf("delete stream failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("delete stream rows affected failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+	if rowsAffected == 0 {
+		writeJSONError(
+			w,
+			r,
+			http.StatusNotFound,
+			"not_found",
+			"stream not found",
+			map[string]interface{}{"company_id": companyID, "stream_id": streamID},
 		)
 		return
 	}
