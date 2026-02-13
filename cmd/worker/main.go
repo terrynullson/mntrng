@@ -10,7 +10,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os/exec"
 	"os/signal"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -38,6 +40,8 @@ type worker struct {
 	freshnessFail       time.Duration
 	freezeWarn          time.Duration
 	freezeFail          time.Duration
+	blackframeWarnRatio float64
+	blackframeFailRatio float64
 	effectiveWarnRatio  float64
 	effectiveFailRatio  float64
 	retryMax            int
@@ -56,6 +60,7 @@ type playlistSegment struct {
 }
 
 type segmentSample struct {
+	URL         string
 	Downloaded  bool
 	DurationSec float64
 	Bytes       int64
@@ -67,6 +72,8 @@ type declaredBitrateResult struct {
 	Details     map[string]interface{}
 }
 
+var blackframeEventPattern = regexp.MustCompile(`frame:\s*\d+\s+pblack:\s*\d+`)
+
 func main() {
 	pollInterval := time.Duration(intAtLeast(config.GetInt("WORKER_HEARTBEAT_SEC", 15), 1)) * time.Second
 	jobTimeout := time.Duration(intAtLeast(config.GetInt("WORKER_JOB_TIMEOUT_SEC", 30), 1)) * time.Second
@@ -77,6 +84,8 @@ func main() {
 	freshnessFail := time.Duration(intAtLeast(config.GetInt("FRESHNESS_FAIL_SEC", 30), 1)) * time.Second
 	freezeWarn := time.Duration(intAtLeast(config.GetInt("FREEZE_WARN_SEC", 2), 1)) * time.Second
 	freezeFail := time.Duration(intAtLeast(config.GetInt("FREEZE_FAIL_SEC", 5), 1)) * time.Second
+	blackframeWarnRatio := floatInRange(envFloat("BLACKFRAME_WARN_RATIO", 0.9), 0, 1)
+	blackframeFailRatio := floatInRange(envFloat("BLACKFRAME_FAIL_RATIO", 0.98), 0, 1)
 	effectiveWarnRatio := floatAtLeast(envFloat("EFFECTIVE_BITRATE_WARN_RATIO", 0.7), 0)
 	effectiveFailRatio := floatAtLeast(envFloat("EFFECTIVE_BITRATE_FAIL_RATIO", 0.4), 0)
 	if freshnessFail < freshnessWarn {
@@ -84,6 +93,9 @@ func main() {
 	}
 	if freezeFail < freezeWarn {
 		freezeFail = freezeWarn
+	}
+	if blackframeFailRatio < blackframeWarnRatio {
+		blackframeFailRatio = blackframeWarnRatio
 	}
 	retryMax := intAtLeast(config.GetInt("WORKER_DB_RETRY_MAX", 2), 0)
 	retryBackoff := time.Duration(intAtLeast(config.GetInt("WORKER_DB_RETRY_BACKOFF_MS", 500), 1)) * time.Millisecond
@@ -118,6 +130,8 @@ func main() {
 		freshnessFail:       freshnessFail,
 		freezeWarn:          freezeWarn,
 		freezeFail:          freezeFail,
+		blackframeWarnRatio: blackframeWarnRatio,
+		blackframeFailRatio: blackframeFailRatio,
 		effectiveWarnRatio:  effectiveWarnRatio,
 		effectiveFailRatio:  effectiveFailRatio,
 		retryMax:            retryMax,
@@ -125,7 +139,7 @@ func main() {
 	}
 
 	log.Printf(
-		"worker skeleton started: poll_interval=%s, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, retry_max=%d, retry_backoff=%s",
+		"worker skeleton started: poll_interval=%s, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, blackframe_warn_ratio=%.2f, blackframe_fail_ratio=%.2f, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, retry_max=%d, retry_backoff=%s",
 		w.pollInterval,
 		w.jobTimeout,
 		w.playlistTimeout,
@@ -135,6 +149,8 @@ func main() {
 		w.freshnessFail,
 		w.freezeWarn,
 		w.freezeFail,
+		w.blackframeWarnRatio,
+		w.blackframeFailRatio,
 		w.effectiveWarnRatio,
 		w.effectiveFailRatio,
 		w.retryMax,
@@ -269,6 +285,7 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 	freshnessStatus := "FAIL"
 	segmentsStatus := "FAIL"
 	freezeStatus := "FAIL"
+	blackframeStatus := "WARN"
 	declaredBitrate := declaredBitrateResult{
 		Status: "FAIL",
 		Details: map[string]interface{}{
@@ -279,6 +296,12 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 		"max_freeze_sec": w.freezeFail.Seconds(),
 		"reason":         "playlist_unavailable",
 		"source":         "playlist_http",
+	}
+	blackframeDetails := map[string]interface{}{
+		"dark_frame_ratio": 0.0,
+		"analyzed_frames":  0,
+		"reason":           "playlist_unavailable",
+		"source":           "ffmpeg_blackframe",
 	}
 	effectiveBitrateStatus := "FAIL"
 	effectiveBitrateDetails := map[string]interface{}{
@@ -299,6 +322,13 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 		segmentSamples := make([]segmentSample, 0)
 		if segmentParseErr != nil {
 			segmentsStatus = "FAIL"
+			blackframeStatus = "WARN"
+			blackframeDetails = map[string]interface{}{
+				"dark_frame_ratio": 0.0,
+				"analyzed_frames":  0,
+				"reason":           "segments_not_available",
+				"source":           "ffmpeg_blackframe",
+			}
 			effectiveBitrateStatus = "FAIL"
 			effectiveBitrateDetails = map[string]interface{}{
 				"calculated_bps": 0.0,
@@ -309,6 +339,7 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 			}
 		} else {
 			segmentsStatus, segmentSamples = w.checkSegmentsAvailability(jobCtx, segments)
+			blackframeStatus, blackframeDetails = w.checkBlackframe(jobCtx, segmentSamples)
 		}
 
 		declaredBitrate = checkDeclaredBitrate(playlistBody)
@@ -317,7 +348,7 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 		}
 	}
 
-	aggregate := aggregateStatuses(playlistStatus, freshnessStatus, segmentsStatus, freezeStatus, declaredBitrate.Status, effectiveBitrateStatus)
+	aggregate := aggregateStatuses(playlistStatus, freshnessStatus, segmentsStatus, freezeStatus, blackframeStatus, declaredBitrate.Status, effectiveBitrateStatus)
 
 	return checkJobEvaluation{
 		DBStatus:  strings.ToLower(aggregate),
@@ -328,6 +359,8 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 			"segments":                  segmentsStatus,
 			"freeze":                    freezeStatus,
 			"freeze_details":            freezeDetails,
+			"blackframe":                blackframeStatus,
+			"blackframe_details":        blackframeDetails,
 			"declared_bitrate":          declaredBitrate.Status,
 			"declared_bitrate_details":  declaredBitrate.Details,
 			"effective_bitrate":         effectiveBitrateStatus,
@@ -442,6 +475,130 @@ func (w *worker) checkFreeze(playlistBody string) (string, map[string]interface{
 	}
 }
 
+func (w *worker) checkBlackframe(ctx context.Context, samples []segmentSample) (string, map[string]interface{}) {
+	downloadedCount := 0
+	totalAnalyzedFrames := 0
+	totalDarkFrames := 0
+
+	for _, sample := range samples {
+		if !sample.Downloaded || strings.TrimSpace(sample.URL) == "" {
+			continue
+		}
+		downloadedCount++
+
+		analyzeCtx, cancel := context.WithTimeout(ctx, w.segmentTimeout)
+		darkFrames, analyzedFrames, err := analyzeBlackframeForSegment(analyzeCtx, sample.URL)
+		cancel()
+		if err != nil {
+			if errors.Is(err, exec.ErrNotFound) {
+				return "WARN", map[string]interface{}{
+					"dark_frame_ratio": 0.0,
+					"analyzed_frames":  0,
+					"reason":           "blackframe_analyzer_not_available",
+					"source":           "ffmpeg_blackframe",
+				}
+			}
+			continue
+		}
+
+		totalDarkFrames += darkFrames
+		totalAnalyzedFrames += analyzedFrames
+	}
+
+	if downloadedCount == 0 {
+		return "WARN", map[string]interface{}{
+			"dark_frame_ratio": 0.0,
+			"analyzed_frames":  0,
+			"reason":           "no_downloaded_segments",
+			"source":           "ffmpeg_blackframe",
+		}
+	}
+
+	if totalAnalyzedFrames == 0 {
+		return "WARN", map[string]interface{}{
+			"dark_frame_ratio": 0.0,
+			"analyzed_frames":  0,
+			"reason":           "blackframe_analysis_failed",
+			"source":           "ffmpeg_blackframe",
+		}
+	}
+
+	darkFrameRatio := float64(totalDarkFrames) / float64(totalAnalyzedFrames)
+	status := blackframeStatusByThreshold(darkFrameRatio, w.blackframeWarnRatio, w.blackframeFailRatio)
+	reason := "within_threshold"
+	if status == "WARN" {
+		reason = "blackframe_warn_threshold_reached"
+	}
+	if status == "FAIL" {
+		reason = "blackframe_fail_threshold_reached"
+	}
+
+	return status, map[string]interface{}{
+		"dark_frame_ratio": darkFrameRatio,
+		"analyzed_frames":  totalAnalyzedFrames,
+		"reason":           reason,
+		"source":           "ffmpeg_blackframe",
+	}
+}
+
+func analyzeBlackframeForSegment(ctx context.Context, segmentURL string) (int, int, error) {
+	analyzedFrames, err := probeVideoFrameCount(ctx, segmentURL)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	command := exec.CommandContext(
+		ctx,
+		"ffmpeg",
+		"-v", "info",
+		"-hide_banner",
+		"-nostats",
+		"-i", segmentURL,
+		"-vf", "blackframe",
+		"-an",
+		"-f", "null",
+		"-",
+	)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	darkFrames := len(blackframeEventPattern.FindAll(output, -1))
+	return darkFrames, analyzedFrames, nil
+}
+
+func probeVideoFrameCount(ctx context.Context, segmentURL string) (int, error) {
+	command := exec.CommandContext(
+		ctx,
+		"ffprobe",
+		"-v", "error",
+		"-count_frames",
+		"-select_streams", "v:0",
+		"-show_entries", "stream=nb_read_frames",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		segmentURL,
+	)
+	output, err := command.Output()
+	if err != nil {
+		return 0, err
+	}
+
+	value := strings.TrimSpace(string(output))
+	if value == "" || strings.EqualFold(value, "N/A") {
+		return 0, errors.New("ffprobe returned empty frame count")
+	}
+
+	frameCount, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, err
+	}
+	if frameCount <= 0 {
+		return 0, errors.New("ffprobe returned non-positive frame count")
+	}
+	return frameCount, nil
+}
+
 func (w *worker) checkSegmentsAvailability(ctx context.Context, segments []playlistSegment) (string, []segmentSample) {
 	if len(segments) == 0 {
 		return "FAIL", nil
@@ -455,6 +612,7 @@ func (w *worker) checkSegmentsAvailability(ctx context.Context, segments []playl
 		cancel()
 
 		sample := segmentSample{
+			URL:         segment.URL,
 			Downloaded:  err == nil,
 			DurationSec: segment.DurationSec,
 			Bytes:       bytesRead,
@@ -779,6 +937,16 @@ func freezeStatusByThreshold(maxFreezeSec float64, warnSec float64, failSec floa
 	return "OK"
 }
 
+func blackframeStatusByThreshold(darkFrameRatio float64, warnRatio float64, failRatio float64) string {
+	if darkFrameRatio >= failRatio {
+		return "FAIL"
+	}
+	if darkFrameRatio >= warnRatio {
+		return "WARN"
+	}
+	return "OK"
+}
+
 func aggregateStatuses(statuses ...string) string {
 	hasWarn := false
 	for _, status := range statuses {
@@ -993,6 +1161,16 @@ func envFloat(key string, fallback float64) float64 {
 func floatAtLeast(value float64, minimum float64) float64 {
 	if value < minimum {
 		return minimum
+	}
+	return value
+}
+
+func floatInRange(value float64, minimum float64, maximum float64) float64 {
+	if value < minimum {
+		return minimum
+	}
+	if value > maximum {
+		return maximum
 	}
 	return value
 }
