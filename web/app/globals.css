@@ -161,6 +161,11 @@ a {
   border-radius: 10px;
 }
 
+.stream-link {
+  color: #0f766e;
+  text-decoration: underline;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -191,6 +196,76 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
+.stream-details-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.player-card,
+.status-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  background: var(--surface);
+}
+
+.section-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.section-title-small {
+  margin-top: 14px;
+}
+
+.section-meta {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.stream-player {
+  width: 100%;
+  border-radius: 8px;
+  background: #0f172a;
+}
+
+.status-row {
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.status-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-warn {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.status-fail {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.atomic-checks table {
+  margin-top: 8px;
+}
+
 @media (max-width: 960px) {
   .admin-body {
     grid-template-columns: 1fr;
@@ -208,6 +283,10 @@ tbody tr:last-child td {
   }
 
   .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stream-details-grid {
     grid-template-columns: 1fr;
   }
 }

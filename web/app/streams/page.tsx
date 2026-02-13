@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type Company = {
@@ -344,7 +345,14 @@ export default function StreamsPage() {
               {streams.map((stream) => (
                 <tr key={stream.id}>
                   <td>{stream.id}</td>
-                  <td>{stream.name}</td>
+                  <td>
+                    <Link
+                      className="stream-link"
+                      href={`/streams/${stream.id}?companyId=${encodeURIComponent(companyId)}`}
+                    >
+                      {stream.name}
+                    </Link>
+                  </td>
                   <td>{stream.project_id}</td>
                   <td>{stream.is_active ? "true" : "false"}</td>
                   <td>{formatTimestamp(stream.updated_at)}</td>
