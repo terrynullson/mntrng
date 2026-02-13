@@ -38,6 +38,37 @@ docker compose up --build -d
 curl http://localhost:8080/api/v1/health
 ```
 
+## Companies CRUD smoke-check
+
+1. Применить baseline-миграцию в PostgreSQL:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0001_baseline_schema.up.sql
+```
+
+2. Проверить Companies API:
+
+```bash
+# create
+curl -sS -X POST http://localhost:8080/api/v1/companies \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Acme Media"}'
+
+# list
+curl -sS http://localhost:8080/api/v1/companies
+
+# get by id
+curl -sS http://localhost:8080/api/v1/companies/1
+
+# patch
+curl -sS -X PATCH http://localhost:8080/api/v1/companies/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Acme Media Group"}'
+
+# delete
+curl -sS -X DELETE http://localhost:8080/api/v1/companies/1 -i
+```
+
 ## Остановка локального окружения
 
 ```bash
