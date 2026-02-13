@@ -97,6 +97,13 @@ type alertDecision struct {
 	CooldownUntil  *time.Time
 }
 
+type alertTransitionResult struct {
+	Decision          alertDecision
+	NextFailStreak    int
+	NextCooldownUntil sql.NullTime
+	NextLastAlertAt   sql.NullTime
+}
+
 type telegramDeliverySettings struct {
 	IsEnabled     bool
 	ChatID        string
@@ -1197,7 +1204,65 @@ func (w *worker) applyAlertState(ctx context.Context, job claimedJob, resultStat
 	}
 
 	now := time.Now().UTC()
-	cooldownActive := previousCooldownUntil.Valid && previousCooldownUntil.Time.After(now)
+	transition := computeAlertTransition(
+		now,
+		currentStatus,
+		previousStatus,
+		previousFailStreak,
+		previousCooldownUntil,
+		previousLastAlertAt,
+		w.alertFailStreak,
+		w.alertCooldown,
+		w.alertSendRecovered,
+	)
+	decision := transition.Decision
+
+	_, err = tx.ExecContext(
+		ctx,
+		`UPDATE alert_state
+         SET fail_streak = $1,
+             cooldown_until = $2,
+             last_alert_at = $3,
+             last_status = $4,
+             updated_at = NOW()
+	         WHERE company_id = $5
+	           AND stream_id = $6`,
+		transition.NextFailStreak,
+		nullTimeToValue(transition.NextCooldownUntil),
+		nullTimeToValue(transition.NextLastAlertAt),
+		currentStatus,
+		job.CompanyID,
+		job.StreamID,
+	)
+	if err != nil {
+		return alertDecision{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return alertDecision{}, err
+	}
+
+	if transition.NextCooldownUntil.Valid {
+		cooldownCopy := transition.NextCooldownUntil.Time.UTC()
+		decision.CooldownUntil = &cooldownCopy
+	}
+
+	return decision, nil
+}
+
+func computeAlertTransition(
+	now time.Time,
+	currentStatus string,
+	previousStatus string,
+	previousFailStreak int,
+	previousCooldownUntil sql.NullTime,
+	previousLastAlertAt sql.NullTime,
+	failStreakThreshold int,
+	alertCooldown time.Duration,
+	alertSendRecovered bool,
+) alertTransitionResult {
+	nowUTC := now.UTC()
+	cooldownActive := previousCooldownUntil.Valid && previousCooldownUntil.Time.After(nowUTC)
 
 	newFailStreak := 0
 	if currentStatus == "fail" {
@@ -1222,7 +1287,7 @@ func (w *worker) applyAlertState(ctx context.Context, job claimedJob, resultStat
 	nextLastAlertAt := previousLastAlertAt
 
 	if currentStatus == "fail" {
-		if newFailStreak < w.alertFailStreak {
+		if newFailStreak < failStreakThreshold {
 			decision.Reason = "fail_streak_below_threshold"
 		} else if cooldownActive {
 			decision.Reason = "cooldown_active"
@@ -1230,11 +1295,11 @@ func (w *worker) applyAlertState(ctx context.Context, job claimedJob, resultStat
 			decision.ShouldSend = true
 			decision.EventType = "fail"
 			decision.Reason = "fail_streak_threshold_met"
-			nextLastAlertAt = sql.NullTime{Time: now, Valid: true}
-			nextCooldownUntil = sql.NullTime{Time: now.Add(w.alertCooldown), Valid: true}
+			nextLastAlertAt = sql.NullTime{Time: nowUTC, Valid: true}
+			nextCooldownUntil = sql.NullTime{Time: nowUTC.Add(alertCooldown), Valid: true}
 		}
 	} else if currentStatus == "ok" && previousStatus == "fail" {
-		if !w.alertSendRecovered {
+		if !alertSendRecovered {
 			decision.Reason = "recovered_suppressed_by_config"
 		} else if cooldownActive {
 			decision.Reason = "cooldown_active"
@@ -1242,42 +1307,17 @@ func (w *worker) applyAlertState(ctx context.Context, job claimedJob, resultStat
 			decision.ShouldSend = true
 			decision.EventType = "recovered"
 			decision.Reason = "recovered_transition"
-			nextLastAlertAt = sql.NullTime{Time: now, Valid: true}
-			nextCooldownUntil = sql.NullTime{Time: now.Add(w.alertCooldown), Valid: true}
+			nextLastAlertAt = sql.NullTime{Time: nowUTC, Valid: true}
+			nextCooldownUntil = sql.NullTime{Time: nowUTC.Add(alertCooldown), Valid: true}
 		}
 	}
 
-	_, err = tx.ExecContext(
-		ctx,
-		`UPDATE alert_state
-         SET fail_streak = $1,
-             cooldown_until = $2,
-             last_alert_at = $3,
-             last_status = $4,
-             updated_at = NOW()
-         WHERE company_id = $5
-           AND stream_id = $6`,
-		newFailStreak,
-		nullTimeToValue(nextCooldownUntil),
-		nullTimeToValue(nextLastAlertAt),
-		currentStatus,
-		job.CompanyID,
-		job.StreamID,
-	)
-	if err != nil {
-		return alertDecision{}, err
+	return alertTransitionResult{
+		Decision:          decision,
+		NextFailStreak:    newFailStreak,
+		NextCooldownUntil: nextCooldownUntil,
+		NextLastAlertAt:   nextLastAlertAt,
 	}
-
-	if err := tx.Commit(); err != nil {
-		return alertDecision{}, err
-	}
-
-	if nextCooldownUntil.Valid {
-		cooldownCopy := nextCooldownUntil.Time.UTC()
-		decision.CooldownUntil = &cooldownCopy
-	}
-
-	return decision, nil
 }
 
 func (w *worker) logAlertDecision(job claimedJob, decision alertDecision) {
@@ -1456,12 +1496,23 @@ func (w *worker) resolveTelegramBotToken(botTokenRef string) (string, error) {
 		return "", errors.New("telegram bot token ref is invalid")
 	}
 
-	envKey := "TELEGRAM_BOT_TOKEN_" + normalizedRef
+	envKey, err := telegramTokenEnvKey(ref)
+	if err != nil {
+		return "", err
+	}
 	token := strings.TrimSpace(config.GetString(envKey, ""))
 	if token == "" {
 		return "", errors.New("telegram bot token ref is not configured in env")
 	}
 	return token, nil
+}
+
+func telegramTokenEnvKey(botTokenRef string) (string, error) {
+	normalizedRef := normalizeTokenRef(botTokenRef)
+	if normalizedRef == "" {
+		return "", errors.New("telegram bot token ref is invalid")
+	}
+	return "TELEGRAM_BOT_TOKEN_" + normalizedRef, nil
 }
 
 func normalizeTokenRef(value string) string {
