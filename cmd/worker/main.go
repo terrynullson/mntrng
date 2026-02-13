@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	"os/signal"
 	"regexp"
@@ -32,29 +33,32 @@ type claimedJob struct {
 }
 
 type worker struct {
-	db                      *sql.DB
-	pollInterval            time.Duration
-	jobTimeout              time.Duration
-	playlistTimeout         time.Duration
-	segmentTimeout          time.Duration
-	segmentsSampleCount     int
-	freshnessWarn           time.Duration
-	freshnessFail           time.Duration
-	freezeWarn              time.Duration
-	freezeFail              time.Duration
-	blackframeWarnRatio     float64
-	blackframeFailRatio     float64
-	effectiveWarnRatio      float64
-	effectiveFailRatio      float64
-	alertFailStreak         int
-	alertCooldown           time.Duration
-	alertSendRecovered      bool
-	telegramHTTPTimeout     time.Duration
-	telegramRetryMax        int
-	telegramRetryBackoff    time.Duration
-	telegramBotTokenDefault string
-	retryMax                int
-	retryBackoff            time.Duration
+	db                        *sql.DB
+	pollInterval              time.Duration
+	retentionTTL              time.Duration
+	retentionCleanupInterval  time.Duration
+	retentionCleanupBatchSize int
+	jobTimeout                time.Duration
+	playlistTimeout           time.Duration
+	segmentTimeout            time.Duration
+	segmentsSampleCount       int
+	freshnessWarn             time.Duration
+	freshnessFail             time.Duration
+	freezeWarn                time.Duration
+	freezeFail                time.Duration
+	blackframeWarnRatio       float64
+	blackframeFailRatio       float64
+	effectiveWarnRatio        float64
+	effectiveFailRatio        float64
+	alertFailStreak           int
+	alertCooldown             time.Duration
+	alertSendRecovered        bool
+	telegramHTTPTimeout       time.Duration
+	telegramRetryMax          int
+	telegramRetryBackoff      time.Duration
+	telegramBotTokenDefault   string
+	retryMax                  int
+	retryBackoff              time.Duration
 }
 
 type checkJobEvaluation struct {
@@ -100,8 +104,17 @@ type telegramDeliverySettings struct {
 	BotTokenRef   string
 }
 
+type retentionCandidate struct {
+	ID             int64
+	ScreenshotPath string
+}
+
 func main() {
 	pollInterval := time.Duration(intAtLeast(config.GetInt("WORKER_HEARTBEAT_SEC", 15), 1)) * time.Second
+	retentionTTLDays := intAtLeast(config.GetInt("RETENTION_TTL_DAYS", 30), 1)
+	retentionTTL := time.Duration(retentionTTLDays) * 24 * time.Hour
+	retentionCleanupInterval := time.Duration(intAtLeast(config.GetInt("RETENTION_CLEANUP_INTERVAL_MIN", 60), 1)) * time.Minute
+	retentionCleanupBatchSize := intAtLeast(config.GetInt("RETENTION_CLEANUP_BATCH_SIZE", 100), 1)
 	jobTimeout := time.Duration(intAtLeast(config.GetInt("WORKER_JOB_TIMEOUT_SEC", 30), 1)) * time.Second
 	playlistTimeout := time.Duration(intAtLeast(config.GetInt("PLAYLIST_TIMEOUT_MS", 3000), 1)) * time.Millisecond
 	segmentTimeout := time.Duration(intAtLeast(config.GetInt("SEGMENT_TIMEOUT_MS", 5000), 1)) * time.Millisecond
@@ -153,34 +166,40 @@ func main() {
 	defer stop()
 
 	w := &worker{
-		db:                      db,
-		pollInterval:            pollInterval,
-		jobTimeout:              jobTimeout,
-		playlistTimeout:         playlistTimeout,
-		segmentTimeout:          segmentTimeout,
-		segmentsSampleCount:     segmentsSampleCount,
-		freshnessWarn:           freshnessWarn,
-		freshnessFail:           freshnessFail,
-		freezeWarn:              freezeWarn,
-		freezeFail:              freezeFail,
-		blackframeWarnRatio:     blackframeWarnRatio,
-		blackframeFailRatio:     blackframeFailRatio,
-		effectiveWarnRatio:      effectiveWarnRatio,
-		effectiveFailRatio:      effectiveFailRatio,
-		alertFailStreak:         alertFailStreak,
-		alertCooldown:           alertCooldown,
-		alertSendRecovered:      alertSendRecovered,
-		telegramHTTPTimeout:     telegramHTTPTimeout,
-		telegramRetryMax:        telegramRetryMax,
-		telegramRetryBackoff:    telegramRetryBackoff,
-		telegramBotTokenDefault: telegramBotTokenDefault,
-		retryMax:                retryMax,
-		retryBackoff:            retryBackoff,
+		db:                        db,
+		pollInterval:              pollInterval,
+		retentionTTL:              retentionTTL,
+		retentionCleanupInterval:  retentionCleanupInterval,
+		retentionCleanupBatchSize: retentionCleanupBatchSize,
+		jobTimeout:                jobTimeout,
+		playlistTimeout:           playlistTimeout,
+		segmentTimeout:            segmentTimeout,
+		segmentsSampleCount:       segmentsSampleCount,
+		freshnessWarn:             freshnessWarn,
+		freshnessFail:             freshnessFail,
+		freezeWarn:                freezeWarn,
+		freezeFail:                freezeFail,
+		blackframeWarnRatio:       blackframeWarnRatio,
+		blackframeFailRatio:       blackframeFailRatio,
+		effectiveWarnRatio:        effectiveWarnRatio,
+		effectiveFailRatio:        effectiveFailRatio,
+		alertFailStreak:           alertFailStreak,
+		alertCooldown:             alertCooldown,
+		alertSendRecovered:        alertSendRecovered,
+		telegramHTTPTimeout:       telegramHTTPTimeout,
+		telegramRetryMax:          telegramRetryMax,
+		telegramRetryBackoff:      telegramRetryBackoff,
+		telegramBotTokenDefault:   telegramBotTokenDefault,
+		retryMax:                  retryMax,
+		retryBackoff:              retryBackoff,
 	}
 
 	log.Printf(
-		"worker skeleton started: poll_interval=%s, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, blackframe_warn_ratio=%.2f, blackframe_fail_ratio=%.2f, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, alert_fail_streak=%d, alert_cooldown=%s, alert_send_recovered=%t, telegram_http_timeout=%s, telegram_retry_max=%d, telegram_retry_backoff=%s, telegram_default_token_set=%t, retry_max=%d, retry_backoff=%s",
+		"worker skeleton started: poll_interval=%s, retention_ttl=%s, retention_cleanup_interval=%s, retention_cleanup_batch_size=%d, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, blackframe_warn_ratio=%.2f, blackframe_fail_ratio=%.2f, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, alert_fail_streak=%d, alert_cooldown=%s, alert_send_recovered=%t, telegram_http_timeout=%s, telegram_retry_max=%d, telegram_retry_backoff=%s, telegram_default_token_set=%t, retry_max=%d, retry_backoff=%s",
 		w.pollInterval,
+		w.retentionTTL,
+		w.retentionCleanupInterval,
+		w.retentionCleanupBatchSize,
 		w.jobTimeout,
 		w.playlistTimeout,
 		w.segmentTimeout,
@@ -207,19 +226,29 @@ func main() {
 	if err := w.processCycleWithRetry(ctx); err != nil {
 		log.Printf("worker cycle failed: %v", err)
 	}
+	if err := w.runRetentionCleanupWithRetry(ctx); err != nil {
+		log.Printf("worker retention cleanup failed: %v", err)
+	}
 
-	ticker := time.NewTicker(w.pollInterval)
-	defer ticker.Stop()
+	cycleTicker := time.NewTicker(w.pollInterval)
+	defer cycleTicker.Stop()
+	cleanupTicker := time.NewTicker(w.retentionCleanupInterval)
+	defer cleanupTicker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			log.Println("worker skeleton stopped")
 			return
-		case currentTime := <-ticker.C:
+		case currentTime := <-cycleTicker.C:
 			log.Printf("worker skeleton heartbeat: %s", currentTime.UTC().Format(time.RFC3339))
 			if err := w.processCycleWithRetry(ctx); err != nil {
 				log.Printf("worker cycle failed: %v", err)
+			}
+		case currentTime := <-cleanupTicker.C:
+			log.Printf("worker retention cleanup heartbeat: %s", currentTime.UTC().Format(time.RFC3339))
+			if err := w.runRetentionCleanupWithRetry(ctx); err != nil {
+				log.Printf("worker retention cleanup failed: %v", err)
 			}
 		}
 	}
@@ -1555,6 +1584,197 @@ func buildTelegramMessage(job claimedJob, evaluation checkJobEvaluation, decisio
 		strings.ToUpper(evaluation.DBStatus),
 		decision.Reason,
 	)
+}
+
+func (w *worker) runRetentionCleanupWithRetry(ctx context.Context) error {
+	for attempt := 0; ; attempt++ {
+		err := w.runRetentionCleanup(ctx)
+		if err == nil {
+			return nil
+		}
+		if !isRetryableWorkerError(err) || attempt >= w.retryMax {
+			return err
+		}
+
+		backoff := w.retryBackoff * time.Duration(1<<attempt)
+		log.Printf("worker retention cleanup retry attempt=%d backoff=%s err=%v", attempt+1, backoff, err)
+		if err := sleepWithContext(ctx, backoff); err != nil {
+			return err
+		}
+	}
+}
+
+func (w *worker) runRetentionCleanup(ctx context.Context) error {
+	cutoff := time.Now().UTC().Add(-w.retentionTTL)
+	companyIDs, err := w.loadCompanyIDsForRetention(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, companyID := range companyIDs {
+		affectedRows, deletedFiles, errorsCount, cleanupErr := w.cleanupCompanyRetention(ctx, companyID, cutoff)
+		if cleanupErr != nil {
+			return cleanupErr
+		}
+		log.Printf(
+			"worker retention cleanup: company_id=%d affected_rows=%d deleted_files=%d errors_count=%d",
+			companyID,
+			affectedRows,
+			deletedFiles,
+			errorsCount,
+		)
+	}
+	return nil
+}
+
+func (w *worker) loadCompanyIDsForRetention(ctx context.Context) ([]int64, error) {
+	rows, err := w.db.QueryContext(
+		ctx,
+		`SELECT id
+         FROM companies
+         ORDER BY id ASC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	companyIDs := make([]int64, 0)
+	for rows.Next() {
+		var companyID int64
+		if err := rows.Scan(&companyID); err != nil {
+			return nil, err
+		}
+		companyIDs = append(companyIDs, companyID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return companyIDs, nil
+}
+
+func (w *worker) cleanupCompanyRetention(ctx context.Context, companyID int64, cutoff time.Time) (int, int, int, error) {
+	affectedRows := 0
+	deletedFiles := 0
+	errorsCount := 0
+
+	for {
+		if err := ctx.Err(); err != nil {
+			return affectedRows, deletedFiles, errorsCount, err
+		}
+
+		candidates, err := w.loadRetentionCandidates(ctx, companyID, cutoff, w.retentionCleanupBatchSize)
+		if err != nil {
+			return affectedRows, deletedFiles, errorsCount, err
+		}
+		if len(candidates) == 0 {
+			return affectedRows, deletedFiles, errorsCount, nil
+		}
+
+		for _, candidate := range candidates {
+			wasDeleted, fileErr := removeScreenshotFile(candidate.ScreenshotPath)
+			if fileErr != nil {
+				errorsCount++
+				log.Printf(
+					"worker retention cleanup file-delete error: company_id=%d check_result_id=%d reason=%s err=%v",
+					companyID,
+					candidate.ID,
+					"file_delete_failed",
+					fileErr,
+				)
+			}
+			if wasDeleted {
+				deletedFiles++
+			}
+
+			result, err := w.db.ExecContext(
+				ctx,
+				`DELETE FROM check_results
+                 WHERE company_id = $1
+                   AND id = $2
+                   AND created_at < $3`,
+				companyID,
+				candidate.ID,
+				cutoff,
+			)
+			if err != nil {
+				return affectedRows, deletedFiles, errorsCount, err
+			}
+
+			rowsAffected, err := result.RowsAffected()
+			if err != nil {
+				return affectedRows, deletedFiles, errorsCount, err
+			}
+			affectedRows += int(rowsAffected)
+		}
+
+		if len(candidates) < w.retentionCleanupBatchSize {
+			return affectedRows, deletedFiles, errorsCount, nil
+		}
+	}
+}
+
+func (w *worker) loadRetentionCandidates(ctx context.Context, companyID int64, cutoff time.Time, batchSize int) ([]retentionCandidate, error) {
+	rows, err := w.db.QueryContext(
+		ctx,
+		`SELECT id, screenshot_path
+         FROM check_results
+         WHERE company_id = $1
+           AND created_at < $2
+         ORDER BY created_at ASC, id ASC
+         LIMIT $3`,
+		companyID,
+		cutoff,
+		batchSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	candidates := make([]retentionCandidate, 0, batchSize)
+	for rows.Next() {
+		var candidate retentionCandidate
+		var screenshotPath sql.NullString
+		if err := rows.Scan(&candidate.ID, &screenshotPath); err != nil {
+			return nil, err
+		}
+		if screenshotPath.Valid {
+			candidate.ScreenshotPath = strings.TrimSpace(screenshotPath.String)
+		}
+		candidates = append(candidates, candidate)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return candidates, nil
+}
+
+func removeScreenshotFile(path string) (bool, error) {
+	cleanPath := strings.TrimSpace(path)
+	if cleanPath == "" {
+		return false, nil
+	}
+
+	fileInfo, statErr := os.Stat(cleanPath)
+	if statErr != nil {
+		if errors.Is(statErr, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, statErr
+	}
+	if fileInfo.IsDir() {
+		return false, errors.New("screenshot path is a directory")
+	}
+
+	err := os.Remove(cleanPath)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
 }
 
 func (w *worker) finalizeWithRetry(ctx context.Context, job claimedJob, status string, errorMessage string) error {

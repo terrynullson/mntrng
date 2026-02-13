@@ -23,7 +23,7 @@ cp .env.example .env
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
 - `API_PORT`, `REDIS_ADDR`, `WORKER_HEARTBEAT_SEC`
 - `WORKER_JOB_TIMEOUT_SEC`, `WORKER_DB_RETRY_MAX`, `WORKER_DB_RETRY_BACKOFF_MS`
-- `PLAYLIST_TIMEOUT_MS`, `SEGMENT_TIMEOUT_MS`, `SEGMENTS_SAMPLE_COUNT`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`, `FREEZE_WARN_SEC`, `FREEZE_FAIL_SEC`, `BLACKFRAME_WARN_RATIO`, `BLACKFRAME_FAIL_RATIO`, `EFFECTIVE_BITRATE_WARN_RATIO`, `EFFECTIVE_BITRATE_FAIL_RATIO`, `ALERT_FAIL_STREAK`, `ALERT_COOLDOWN_MIN`, `ALERT_SEND_RECOVERED`, `TELEGRAM_HTTP_TIMEOUT_MS`, `TELEGRAM_SEND_RETRY_MAX`, `TELEGRAM_SEND_RETRY_BACKOFF_MS`, `TELEGRAM_BOT_TOKEN_DEFAULT`
+- `PLAYLIST_TIMEOUT_MS`, `SEGMENT_TIMEOUT_MS`, `SEGMENTS_SAMPLE_COUNT`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`, `FREEZE_WARN_SEC`, `FREEZE_FAIL_SEC`, `BLACKFRAME_WARN_RATIO`, `BLACKFRAME_FAIL_RATIO`, `EFFECTIVE_BITRATE_WARN_RATIO`, `EFFECTIVE_BITRATE_FAIL_RATIO`, `ALERT_FAIL_STREAK`, `ALERT_COOLDOWN_MIN`, `ALERT_SEND_RECOVERED`, `TELEGRAM_HTTP_TIMEOUT_MS`, `TELEGRAM_SEND_RETRY_MAX`, `TELEGRAM_SEND_RETRY_BACKOFF_MS`, `TELEGRAM_BOT_TOKEN_DEFAULT`, `RETENTION_TTL_DAYS`, `RETENTION_CLEANUP_INTERVAL_MIN`, `RETENTION_CLEANUP_BATCH_SIZE`
 - `FRONTEND_PORT`, `NEXT_PUBLIC_API_BASE_URL`
 
 Файл `.env` не добавляется в git (трекается только `.env.example`).
@@ -219,6 +219,8 @@ Alert anti-spam decision engine (`alert_state`):
   - если `bot_token_ref` пустой -> используется `TELEGRAM_BOT_TOKEN_DEFAULT`
   - если `bot_token_ref` задан -> используется env `TELEGRAM_BOT_TOKEN_<REF_NORMALIZED>` (`REF_NORMALIZED`: uppercase + неалфанумерные символы заменены `_`)
 - токены и секреты не логируются
+- retention cleanup выполняется только в Worker: каждые `RETENTION_CLEANUP_INTERVAL_MIN` минут удаляются `check_results` старше `RETENTION_TTL_DAYS` и связанные screenshot-файлы батчами по `RETENTION_CLEANUP_BATCH_SIZE` в tenant-scope (`company_id`)
+- ошибки удаления файлов логируются и учитываются в `errors_count`, но не останавливают cleanup цикла
 
 Используемые thresholds:
 - `PLAYLIST_TIMEOUT_MS` (по умолчанию `3000`)
@@ -239,6 +241,9 @@ Alert anti-spam decision engine (`alert_state`):
 - `TELEGRAM_SEND_RETRY_MAX` (по умолчанию `2`)
 - `TELEGRAM_SEND_RETRY_BACKOFF_MS` (по умолчанию `500`)
 - `TELEGRAM_BOT_TOKEN_DEFAULT` (по умолчанию пусто)
+- `RETENTION_TTL_DAYS` (по умолчанию `30`)
+- `RETENTION_CLEANUP_INTERVAL_MIN` (по умолчанию `60`)
+- `RETENTION_CLEANUP_BATCH_SIZE` (по умолчанию `100`)
 
 ## Check results API smoke-check
 
