@@ -22,6 +22,7 @@ cp .env.example .env
 
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
 - `API_PORT`, `REDIS_ADDR`, `WORKER_HEARTBEAT_SEC`
+- `WORKER_JOB_TIMEOUT_SEC`, `WORKER_DB_RETRY_MAX`, `WORKER_DB_RETRY_BACKOFF_MS`, `WORKER_STUB_DURATION_MS`
 - `FRONTEND_PORT`, `NEXT_PUBLIC_API_BASE_URL`
 
 Файл `.env` не добавляется в git (трекается только `.env.example`).
@@ -135,6 +136,22 @@ curl -sS http://localhost:8080/api/v1/companies/1/check-jobs/1
 # history for stream (optional filters: status, from, to)
 curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs?status=queued&from=2026-02-13T00:00:00Z&to=2026-02-14T00:00:00Z"
 ```
+
+## Worker skeleton smoke-check
+
+1. Запустить worker:
+
+```bash
+go run ./cmd/worker
+```
+
+2. Поставить job в очередь (см. раздел Check jobs API smoke-check), затем несколько раз проверить историю:
+
+```bash
+curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
+```
+
+Ожидаемый lifecycle для skeleton: `queued -> running -> done` (или `failed`, если сработал timeout/error path).
 
 ## Check results API smoke-check
 
