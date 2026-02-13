@@ -99,6 +99,8 @@ Allowed `check_jobs.status` values: `queued`, `running`, `done`, `failed`.
 
 ### Check result (read-only)
 
+Atomic check statuses inside `checks` use uppercase values: `OK`, `WARN`, `FAIL`.
+
 ```json
 {
   "id": 7001,

@@ -310,7 +310,7 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 			"segments":                  segmentsStatus,
 			"declared_bitrate":          declaredBitrate.Status,
 			"declared_bitrate_details":  declaredBitrate.Details,
-			"effective_bitrate":         strings.ToLower(effectiveBitrateStatus),
+			"effective_bitrate":         effectiveBitrateStatus,
 			"effective_bitrate_details": effectiveBitrateDetails,
 		},
 	}, nil

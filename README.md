@@ -161,6 +161,8 @@ curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
 - `declared_bitrate` check по тегам `#EXT-X-STREAM-INF` (`BANDWIDTH` / `AVERAGE-BANDWIDTH`)
 - `effective_bitrate` check по уже скачанным сегментам из окна `segments`
 
+Формат статусов atomic-check в `checks`: только UPPERCASE (`OK` / `WARN` / `FAIL`).
+
 Правило `segments`-статуса:
 - `OK`: все выбранные `N` сегментов вернули HTTP `2xx`
 - `WARN`: часть выбранных `N` сегментов недоступна
@@ -179,7 +181,7 @@ curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
 - `WARN`: при отсутствии `FAIL`, если `ratio < EFFECTIVE_BITRATE_WARN_RATIO` (по умолчанию `< 0.7`) или declared bitrate недоступен (`declared_bitrate` неприменим)
 - `OK`: ratio выше/равен warn-порогу
 
-В `checks` сохраняются `effective_bitrate` (`ok/warn/fail`) и `effective_bitrate_details` (`calculated_bps`, `declared_bps`, `ratio`, `reason`, `sample_count`).
+В `checks` сохраняются `effective_bitrate` (`OK/WARN/FAIL`) и `effective_bitrate_details` (`calculated_bps`, `declared_bps`, `ratio`, `reason`, `sample_count`).
 
 Итоговая агрегация статуса: `FAIL > WARN > OK` по чекам `playlist`, `freshness`, `segments`, `declared_bitrate`, `effective_bitrate`.
 
