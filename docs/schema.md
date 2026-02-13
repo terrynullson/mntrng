@@ -1,20 +1,32 @@
 # Database schema and migrations
 
-## Apply baseline migration
+## Apply migrations
 
 Use PostgreSQL `psql` with `ON_ERROR_STOP` enabled.
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0001_baseline_schema.up.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0002_telegram_delivery_settings.up.sql
 ```
 
-## Roll back baseline migration
+## Roll back migrations
 
 ```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0002_telegram_delivery_settings.down.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0001_baseline_schema.down.sql
 ```
 
 For multiple migrations, apply `*.up.sql` in lexical order and roll back using matching `*.down.sql` in reverse order.
+
+## Telegram delivery settings table
+
+Migration `0002_telegram_delivery_settings` adds `telegram_delivery_settings` as a tenant-scoped company-level settings table.
+
+- `company_id` is both `PRIMARY KEY` and `FOREIGN KEY` to `companies(id)` (`ON DELETE CASCADE`), guaranteeing one settings row per tenant company.
+- Delivery flags are explicit booleans: `is_enabled` and `send_recovered`.
+- `chat_id` is required (`NOT NULL`) and constrained by `CHECK (length(trim(chat_id)) > 0)`.
+- Secret material is not stored directly in this table; only `bot_token_ref` (reference/alias) is stored.
+- Reproducible index: `idx_telegram_delivery_settings_created_at` on `created_at`.
 
 ## Key constraints
 
