@@ -115,6 +115,22 @@ type enqueueCheckJobResponse struct {
 	Job checkJob `json:"job"`
 }
 
+type checkResult struct {
+	ID             int64           `json:"id"`
+	CompanyID      int64           `json:"company_id"`
+	JobID          int64           `json:"job_id"`
+	StreamID       int64           `json:"stream_id"`
+	Status         string          `json:"status"`
+	Checks         json.RawMessage `json:"checks"`
+	ScreenshotPath *string         `json:"screenshot_path"`
+	CreatedAt      time.Time       `json:"created_at"`
+}
+
+type checkResultListResponse struct {
+	Items      []checkResult `json:"items"`
+	NextCursor *string       `json:"next_cursor"`
+}
+
 type errorEnvelope struct {
 	Code      string      `json:"code"`
 	Message   string      `json:"message"`
@@ -235,6 +251,8 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 	const streamItemPrefix = "streams/"
 	const checkJobsCollectionPath = "check-jobs"
 	const checkJobsItemPrefix = "check-jobs/"
+	const checkResultsCollectionPath = "check-results"
+	const checkResultsItemPrefix = "check-results/"
 	if pathRemainder == projectCollectionPath {
 		switch r.Method {
 		case http.MethodPost:
@@ -316,8 +334,8 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(pathRemainder, checkJobsItemPrefix) {
-		jobIDRaw := strings.TrimPrefix(pathRemainder, checkJobsItemPrefix)
-		if jobIDRaw == "" || strings.Contains(jobIDRaw, "/") {
+		jobPath := strings.TrimPrefix(pathRemainder, checkJobsItemPrefix)
+		if jobPath == "" {
 			writeJSONError(
 				w,
 				r,
@@ -329,7 +347,8 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		jobID, err := parsePositiveID(jobIDRaw)
+		jobParts := strings.Split(jobPath, "/")
+		jobID, err := parsePositiveID(jobParts[0])
 		if err != nil {
 			writeJSONError(
 				w,
@@ -341,10 +360,65 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			)
 			return
 		}
+		if len(jobParts) == 1 {
+			switch r.Method {
+			case http.MethodGet:
+				s.handleGetCheckJob(w, r, companyID, jobID)
+			default:
+				writeMethodNotAllowed(w, r, http.MethodGet)
+			}
+			return
+		}
+		if len(jobParts) == 2 && jobParts[1] == "result" {
+			switch r.Method {
+			case http.MethodGet:
+				s.handleGetCheckResultByJob(w, r, companyID, jobID)
+			default:
+				writeMethodNotAllowed(w, r, http.MethodGet)
+			}
+			return
+		}
+
+		writeJSONError(
+			w,
+			r,
+			http.StatusNotFound,
+			"not_found",
+			"resource not found",
+			map[string]interface{}{"path": r.URL.Path},
+		)
+		return
+	}
+	if strings.HasPrefix(pathRemainder, checkResultsItemPrefix) {
+		resultIDRaw := strings.TrimPrefix(pathRemainder, checkResultsItemPrefix)
+		if resultIDRaw == "" || strings.Contains(resultIDRaw, "/") {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"resource not found",
+				map[string]interface{}{"path": r.URL.Path},
+			)
+			return
+		}
+
+		resultID, err := parsePositiveID(resultIDRaw)
+		if err != nil {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid result_id",
+				map[string]interface{}{"path": r.URL.Path},
+			)
+			return
+		}
 
 		switch r.Method {
 		case http.MethodGet:
-			s.handleGetCheckJob(w, r, companyID, jobID)
+			s.handleGetCheckResult(w, r, companyID, resultID)
 		default:
 			writeMethodNotAllowed(w, r, http.MethodGet)
 		}
@@ -398,6 +472,15 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 				s.handleListCheckJobs(w, r, companyID, streamID)
 			default:
 				writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
+			}
+			return
+		}
+		if len(streamParts) == 2 && streamParts[1] == checkResultsCollectionPath {
+			switch r.Method {
+			case http.MethodGet:
+				s.handleListCheckResults(w, r, companyID, streamID)
+			default:
+				writeMethodNotAllowed(w, r, http.MethodGet)
 			}
 			return
 		}
@@ -1597,6 +1680,240 @@ func (s *apiServer) handleListCheckJobs(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+func (s *apiServer) handleGetCheckResult(w http.ResponseWriter, r *http.Request, companyID int64, resultID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	row := s.db.QueryRowContext(
+		ctx,
+		`SELECT id, company_id, job_id, stream_id, status, checks, screenshot_path, created_at
+         FROM check_results
+         WHERE company_id = $1 AND id = $2`,
+		companyID,
+		resultID,
+	)
+
+	item, err := scanCheckResult(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"check result not found",
+				map[string]interface{}{"company_id": companyID, "result_id": resultID},
+			)
+			return
+		}
+
+		log.Printf("get check result failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := writeJSON(w, http.StatusOK, item); err != nil {
+		log.Printf("get check result response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handleListCheckResults(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var streamExists int
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT 1 FROM streams WHERE company_id = $1 AND id = $2`,
+		companyID,
+		streamID,
+	).Scan(&streamExists)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"stream not found for company",
+				map[string]interface{}{"company_id": companyID, "stream_id": streamID},
+			)
+			return
+		}
+
+		log.Printf("check stream existence for check results failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	args := []interface{}{companyID, streamID}
+	conditions := []string{"company_id = $1", "stream_id = $2"}
+	nextPlaceholder := 3
+
+	if statusRaw := strings.TrimSpace(r.URL.Query().Get("status")); statusRaw != "" {
+		status, ok := normalizeCheckResultStatus(statusRaw)
+		if !ok {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid status filter",
+				map[string]interface{}{"status": statusRaw, "allowed": []string{"OK", "WARN", "FAIL"}},
+			)
+			return
+		}
+
+		conditions = append(conditions, fmt.Sprintf("status = $%d", nextPlaceholder))
+		args = append(args, status)
+		nextPlaceholder++
+	}
+
+	if fromRaw := strings.TrimSpace(r.URL.Query().Get("from")); fromRaw != "" {
+		fromTime, parseErr := time.Parse(time.RFC3339, fromRaw)
+		if parseErr != nil {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid from filter",
+				map[string]interface{}{"from": fromRaw},
+			)
+			return
+		}
+		conditions = append(conditions, fmt.Sprintf("created_at >= $%d", nextPlaceholder))
+		args = append(args, fromTime.UTC())
+		nextPlaceholder++
+	}
+
+	if toRaw := strings.TrimSpace(r.URL.Query().Get("to")); toRaw != "" {
+		toTime, parseErr := time.Parse(time.RFC3339, toRaw)
+		if parseErr != nil {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid to filter",
+				map[string]interface{}{"to": toRaw},
+			)
+			return
+		}
+		conditions = append(conditions, fmt.Sprintf("created_at <= $%d", nextPlaceholder))
+		args = append(args, toTime.UTC())
+		nextPlaceholder++
+	}
+
+	query := fmt.Sprintf(
+		`SELECT id, company_id, job_id, stream_id, status, checks, screenshot_path, created_at
+         FROM check_results
+         WHERE %s
+         ORDER BY created_at DESC, id DESC`,
+		strings.Join(conditions, " AND "),
+	)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		log.Printf("list check results failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+	defer rows.Close()
+
+	items := make([]checkResult, 0)
+	for rows.Next() {
+		item, scanErr := scanCheckResult(rows)
+		if scanErr != nil {
+			log.Printf("list check results scan failed: %v", scanErr)
+			writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+			return
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("list check results rows failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	response := checkResultListResponse{
+		Items:      items,
+		NextCursor: nil,
+	}
+	if err := writeJSON(w, http.StatusOK, response); err != nil {
+		log.Printf("list check results response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handleGetCheckResultByJob(w http.ResponseWriter, r *http.Request, companyID int64, jobID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	row := s.db.QueryRowContext(
+		ctx,
+		`SELECT id, company_id, job_id, stream_id, status, checks, screenshot_path, created_at
+         FROM check_results
+         WHERE company_id = $1 AND job_id = $2`,
+		companyID,
+		jobID,
+	)
+
+	item, err := scanCheckResult(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"check result not found for job",
+				map[string]interface{}{"company_id": companyID, "job_id": jobID},
+			)
+			return
+		}
+
+		log.Printf("get check result by job failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := writeJSON(w, http.StatusOK, item); err != nil {
+		log.Printf("get check result by job response encode error: %v", err)
+	}
+}
+
+type rowScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func scanCheckResult(scanner rowScanner) (checkResult, error) {
+	var item checkResult
+	var dbStatus string
+	var checksRaw []byte
+
+	err := scanner.Scan(
+		&item.ID,
+		&item.CompanyID,
+		&item.JobID,
+		&item.StreamID,
+		&dbStatus,
+		&checksRaw,
+		&item.ScreenshotPath,
+		&item.CreatedAt,
+	)
+	if err != nil {
+		return checkResult{}, err
+	}
+
+	if len(checksRaw) == 0 {
+		checksRaw = []byte("{}")
+	}
+	item.Checks = json.RawMessage(checksRaw)
+	item.Status = formatCheckResultStatus(dbStatus)
+	return item, nil
+}
+
 func writeJSON(w http.ResponseWriter, statusCode int, payload interface{}) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -1706,6 +2023,32 @@ func normalizeCheckJobStatus(raw string) (string, bool) {
 		return "failed", true
 	default:
 		return "", false
+	}
+}
+
+func normalizeCheckResultStatus(raw string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "ok":
+		return "ok", true
+	case "warn":
+		return "warn", true
+	case "fail":
+		return "fail", true
+	default:
+		return "", false
+	}
+}
+
+func formatCheckResultStatus(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "ok":
+		return "OK"
+	case "warn":
+		return "WARN"
+	case "fail":
+		return "FAIL"
+	default:
+		return strings.ToUpper(strings.TrimSpace(raw))
 	}
 }
 

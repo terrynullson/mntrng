@@ -136,6 +136,21 @@ curl -sS http://localhost:8080/api/v1/companies/1/check-jobs/1
 curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs?status=queued&from=2026-02-13T00:00:00Z&to=2026-02-14T00:00:00Z"
 ```
 
+## Check results API smoke-check
+
+Требуется существующий `company_id`, `stream_id`, `result_id` и `job_id`.
+
+```bash
+# get result by id
+curl -sS http://localhost:8080/api/v1/companies/1/check-results/1
+
+# list results by stream (optional filters: status, from, to)
+curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-results?status=FAIL&from=2026-02-13T00:00:00Z&to=2026-02-14T00:00:00Z"
+
+# get result by job id
+curl -sS http://localhost:8080/api/v1/companies/1/check-jobs/1/result
+```
+
 ## Остановка локального окружения
 
 ```bash
