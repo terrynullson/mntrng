@@ -119,6 +119,23 @@ curl -sS -X PATCH http://localhost:8080/api/v1/companies/1/streams/1 \
 curl -sS -X DELETE http://localhost:8080/api/v1/companies/1/streams/1 -i
 ```
 
+## Check jobs API smoke-check
+
+Требуется существующий `company_id` и `stream_id` (например, `1` и `1`).
+
+```bash
+# enqueue
+curl -sS -X POST http://localhost:8080/api/v1/companies/1/streams/1/check-jobs \
+  -H "Content-Type: application/json" \
+  -d '{"planned_at":"2026-02-13T10:05:00Z"}'
+
+# get status by job id
+curl -sS http://localhost:8080/api/v1/companies/1/check-jobs/1
+
+# history for stream (optional filters: status, from, to)
+curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs?status=queued&from=2026-02-13T00:00:00Z&to=2026-02-14T00:00:00Z"
+```
+
 ## Остановка локального окружения
 
 ```bash

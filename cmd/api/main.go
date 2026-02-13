@@ -90,6 +90,31 @@ type patchStreamRequest struct {
 	IsActive *bool   `json:"is_active"`
 }
 
+type checkJob struct {
+	ID           int64      `json:"id"`
+	CompanyID    int64      `json:"company_id"`
+	StreamID     int64      `json:"stream_id"`
+	PlannedAt    time.Time  `json:"planned_at"`
+	Status       string     `json:"status"`
+	CreatedAt    time.Time  `json:"created_at"`
+	StartedAt    *time.Time `json:"started_at"`
+	FinishedAt   *time.Time `json:"finished_at"`
+	ErrorMessage *string    `json:"error_message"`
+}
+
+type checkJobListResponse struct {
+	Items      []checkJob `json:"items"`
+	NextCursor *string    `json:"next_cursor"`
+}
+
+type enqueueCheckJobRequest struct {
+	PlannedAt string `json:"planned_at"`
+}
+
+type enqueueCheckJobResponse struct {
+	Job checkJob `json:"job"`
+}
+
 type errorEnvelope struct {
 	Code      string      `json:"code"`
 	Message   string      `json:"message"`
@@ -208,6 +233,8 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 	const projectItemPrefix = "projects/"
 	const streamCollectionPath = "streams"
 	const streamItemPrefix = "streams/"
+	const checkJobsCollectionPath = "check-jobs"
+	const checkJobsItemPrefix = "check-jobs/"
 	if pathRemainder == projectCollectionPath {
 		switch r.Method {
 		case http.MethodPost:
@@ -288,9 +315,9 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if strings.HasPrefix(pathRemainder, streamItemPrefix) {
-		streamIDRaw := strings.TrimPrefix(pathRemainder, streamItemPrefix)
-		if streamIDRaw == "" || strings.Contains(streamIDRaw, "/") {
+	if strings.HasPrefix(pathRemainder, checkJobsItemPrefix) {
+		jobIDRaw := strings.TrimPrefix(pathRemainder, checkJobsItemPrefix)
+		if jobIDRaw == "" || strings.Contains(jobIDRaw, "/") {
 			writeJSONError(
 				w,
 				r,
@@ -302,7 +329,43 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		streamID, err := parsePositiveID(streamIDRaw)
+		jobID, err := parsePositiveID(jobIDRaw)
+		if err != nil {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid job_id",
+				map[string]interface{}{"path": r.URL.Path},
+			)
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			s.handleGetCheckJob(w, r, companyID, jobID)
+		default:
+			writeMethodNotAllowed(w, r, http.MethodGet)
+		}
+		return
+	}
+	if strings.HasPrefix(pathRemainder, streamItemPrefix) {
+		streamPath := strings.TrimPrefix(pathRemainder, streamItemPrefix)
+		if streamPath == "" {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"resource not found",
+				map[string]interface{}{"path": r.URL.Path},
+			)
+			return
+		}
+
+		streamParts := strings.Split(streamPath, "/")
+		streamID, err := parsePositiveID(streamParts[0])
 		if err != nil {
 			writeJSONError(
 				w,
@@ -314,17 +377,39 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			)
 			return
 		}
-
-		switch r.Method {
-		case http.MethodGet:
-			s.handleGetStream(w, r, companyID, streamID)
-		case http.MethodPatch:
-			s.handlePatchStream(w, r, companyID, streamID)
-		case http.MethodDelete:
-			s.handleDeleteStream(w, r, companyID, streamID)
-		default:
-			writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+		if len(streamParts) == 1 {
+			switch r.Method {
+			case http.MethodGet:
+				s.handleGetStream(w, r, companyID, streamID)
+			case http.MethodPatch:
+				s.handlePatchStream(w, r, companyID, streamID)
+			case http.MethodDelete:
+				s.handleDeleteStream(w, r, companyID, streamID)
+			default:
+				writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+			}
+			return
 		}
+		if len(streamParts) == 2 && streamParts[1] == checkJobsCollectionPath {
+			switch r.Method {
+			case http.MethodPost:
+				s.handleEnqueueCheckJob(w, r, companyID, streamID)
+			case http.MethodGet:
+				s.handleListCheckJobs(w, r, companyID, streamID)
+			default:
+				writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
+			}
+			return
+		}
+
+		writeJSONError(
+			w,
+			r,
+			http.StatusNotFound,
+			"not_found",
+			"resource not found",
+			map[string]interface{}{"path": r.URL.Path},
+		)
 		return
 	}
 
@@ -1227,6 +1312,291 @@ func (s *apiServer) handleDeleteStream(w http.ResponseWriter, r *http.Request, c
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (s *apiServer) handleEnqueueCheckJob(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {
+	var request enqueueCheckJobRequest
+	if err := decodeJSONBody(r, &request); err != nil {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"invalid request body",
+			map[string]interface{}{"error": err.Error()},
+		)
+		return
+	}
+
+	plannedAtRaw := strings.TrimSpace(request.PlannedAt)
+	if plannedAtRaw == "" {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"planned_at is required",
+			map[string]interface{}{"field": "planned_at"},
+		)
+		return
+	}
+
+	plannedAt, err := time.Parse(time.RFC3339, plannedAtRaw)
+	if err != nil {
+		writeJSONError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_error",
+			"planned_at must be RFC3339 timestamp",
+			map[string]interface{}{"field": "planned_at", "value": plannedAtRaw},
+		)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var item checkJob
+	err = s.db.QueryRowContext(
+		ctx,
+		`INSERT INTO check_jobs (company_id, stream_id, planned_at)
+         SELECT $1, $2, $3
+         WHERE EXISTS (
+             SELECT 1 FROM streams s
+             WHERE s.company_id = $1 AND s.id = $2
+         )
+         RETURNING id, company_id, stream_id, planned_at, status, created_at, started_at, finished_at, error_message`,
+		companyID,
+		streamID,
+		plannedAt.UTC(),
+	).Scan(
+		&item.ID,
+		&item.CompanyID,
+		&item.StreamID,
+		&item.PlannedAt,
+		&item.Status,
+		&item.CreatedAt,
+		&item.StartedAt,
+		&item.FinishedAt,
+		&item.ErrorMessage,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) || isForeignKeyViolation(err) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"stream not found for company",
+				map[string]interface{}{"company_id": companyID, "stream_id": streamID},
+			)
+			return
+		}
+		if isUniqueViolation(err) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusConflict,
+				"conflict",
+				"check job already exists for stream and planned_at",
+				map[string]interface{}{"company_id": companyID, "stream_id": streamID, "planned_at": plannedAtRaw},
+			)
+			return
+		}
+
+		log.Printf("enqueue check job failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := writeJSON(w, http.StatusAccepted, enqueueCheckJobResponse{Job: item}); err != nil {
+		log.Printf("enqueue check job response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handleGetCheckJob(w http.ResponseWriter, r *http.Request, companyID int64, jobID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var item checkJob
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT id, company_id, stream_id, planned_at, status, created_at, started_at, finished_at, error_message
+         FROM check_jobs
+         WHERE company_id = $1 AND id = $2`,
+		companyID,
+		jobID,
+	).Scan(
+		&item.ID,
+		&item.CompanyID,
+		&item.StreamID,
+		&item.PlannedAt,
+		&item.Status,
+		&item.CreatedAt,
+		&item.StartedAt,
+		&item.FinishedAt,
+		&item.ErrorMessage,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"check job not found",
+				map[string]interface{}{"company_id": companyID, "job_id": jobID},
+			)
+			return
+		}
+
+		log.Printf("get check job failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	if err := writeJSON(w, http.StatusOK, item); err != nil {
+		log.Printf("get check job response encode error: %v", err)
+	}
+}
+
+func (s *apiServer) handleListCheckJobs(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var streamExists int
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT 1 FROM streams WHERE company_id = $1 AND id = $2`,
+		companyID,
+		streamID,
+	).Scan(&streamExists)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(
+				w,
+				r,
+				http.StatusNotFound,
+				"not_found",
+				"stream not found for company",
+				map[string]interface{}{"company_id": companyID, "stream_id": streamID},
+			)
+			return
+		}
+
+		log.Printf("check stream existence for check jobs failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	args := []interface{}{companyID, streamID}
+	conditions := []string{"company_id = $1", "stream_id = $2"}
+	nextPlaceholder := 3
+
+	if statusRaw := strings.TrimSpace(r.URL.Query().Get("status")); statusRaw != "" {
+		status, ok := normalizeCheckJobStatus(statusRaw)
+		if !ok {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid status filter",
+				map[string]interface{}{"status": statusRaw, "allowed": []string{"queued", "running", "done", "failed"}},
+			)
+			return
+		}
+		conditions = append(conditions, fmt.Sprintf("status = $%d", nextPlaceholder))
+		args = append(args, status)
+		nextPlaceholder++
+	}
+
+	if fromRaw := strings.TrimSpace(r.URL.Query().Get("from")); fromRaw != "" {
+		fromTime, parseErr := time.Parse(time.RFC3339, fromRaw)
+		if parseErr != nil {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid from filter",
+				map[string]interface{}{"from": fromRaw},
+			)
+			return
+		}
+		conditions = append(conditions, fmt.Sprintf("planned_at >= $%d", nextPlaceholder))
+		args = append(args, fromTime.UTC())
+		nextPlaceholder++
+	}
+
+	if toRaw := strings.TrimSpace(r.URL.Query().Get("to")); toRaw != "" {
+		toTime, parseErr := time.Parse(time.RFC3339, toRaw)
+		if parseErr != nil {
+			writeJSONError(
+				w,
+				r,
+				http.StatusBadRequest,
+				"validation_error",
+				"invalid to filter",
+				map[string]interface{}{"to": toRaw},
+			)
+			return
+		}
+		conditions = append(conditions, fmt.Sprintf("planned_at <= $%d", nextPlaceholder))
+		args = append(args, toTime.UTC())
+		nextPlaceholder++
+	}
+
+	query := fmt.Sprintf(
+		`SELECT id, company_id, stream_id, planned_at, status, created_at, started_at, finished_at, error_message
+         FROM check_jobs
+         WHERE %s
+         ORDER BY planned_at DESC, id DESC`,
+		strings.Join(conditions, " AND "),
+	)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		log.Printf("list check jobs failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+	defer rows.Close()
+
+	items := make([]checkJob, 0)
+	for rows.Next() {
+		var item checkJob
+		if err := rows.Scan(
+			&item.ID,
+			&item.CompanyID,
+			&item.StreamID,
+			&item.PlannedAt,
+			&item.Status,
+			&item.CreatedAt,
+			&item.StartedAt,
+			&item.FinishedAt,
+			&item.ErrorMessage,
+		); err != nil {
+			log.Printf("list check jobs scan failed: %v", err)
+			writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+			return
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("list check jobs rows failed: %v", err)
+		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		return
+	}
+
+	response := checkJobListResponse{
+		Items:      items,
+		NextCursor: nil,
+	}
+	if err := writeJSON(w, http.StatusOK, response); err != nil {
+		log.Printf("list check jobs response encode error: %v", err)
+	}
+}
+
 func writeJSON(w http.ResponseWriter, statusCode int, payload interface{}) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -1322,6 +1692,21 @@ func isUniqueViolation(err error) bool {
 func isForeignKeyViolation(err error) bool {
 	var pgErr *pq.Error
 	return errors.As(err, &pgErr) && string(pgErr.Code) == "23503"
+}
+
+func normalizeCheckJobStatus(raw string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "queued":
+		return "queued", true
+	case "running":
+		return "running", true
+	case "done":
+		return "done", true
+	case "failed":
+		return "failed", true
+	default:
+		return "", false
+	}
 }
 
 func requestIDFromRequest(r *http.Request) string {
