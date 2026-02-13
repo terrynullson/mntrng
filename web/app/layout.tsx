@@ -28,6 +28,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             <nav className="admin-nav" aria-label="Primary navigation">
               <Link href="/">Overview</Link>
               <Link href="/streams">Streams</Link>
+              <Link href="/analytics">Analytics</Link>
             </nav>
 
             <main className="admin-content">{children}</main>
