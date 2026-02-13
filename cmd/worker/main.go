@@ -36,6 +36,8 @@ type worker struct {
 	segmentsSampleCount int
 	freshnessWarn       time.Duration
 	freshnessFail       time.Duration
+	effectiveWarnRatio  float64
+	effectiveFailRatio  float64
 	retryMax            int
 	retryBackoff        time.Duration
 }
@@ -46,6 +48,23 @@ type checkJobEvaluation struct {
 	Checks    map[string]interface{}
 }
 
+type playlistSegment struct {
+	URL         string
+	DurationSec float64
+}
+
+type segmentSample struct {
+	Downloaded  bool
+	DurationSec float64
+	Bytes       int64
+}
+
+type declaredBitrateResult struct {
+	Status      string
+	DeclaredBPS int64
+	Details     map[string]interface{}
+}
+
 func main() {
 	pollInterval := time.Duration(intAtLeast(config.GetInt("WORKER_HEARTBEAT_SEC", 15), 1)) * time.Second
 	jobTimeout := time.Duration(intAtLeast(config.GetInt("WORKER_JOB_TIMEOUT_SEC", 30), 1)) * time.Second
@@ -54,6 +73,8 @@ func main() {
 	segmentsSampleCount := intInRange(config.GetInt("SEGMENTS_SAMPLE_COUNT", 3), 3, 5)
 	freshnessWarn := time.Duration(intAtLeast(config.GetInt("FRESHNESS_WARN_SEC", 10), 1)) * time.Second
 	freshnessFail := time.Duration(intAtLeast(config.GetInt("FRESHNESS_FAIL_SEC", 30), 1)) * time.Second
+	effectiveWarnRatio := floatAtLeast(envFloat("EFFECTIVE_BITRATE_WARN_RATIO", 0.7), 0)
+	effectiveFailRatio := floatAtLeast(envFloat("EFFECTIVE_BITRATE_FAIL_RATIO", 0.4), 0)
 	if freshnessFail < freshnessWarn {
 		freshnessFail = freshnessWarn
 	}
@@ -88,12 +109,14 @@ func main() {
 		segmentsSampleCount: segmentsSampleCount,
 		freshnessWarn:       freshnessWarn,
 		freshnessFail:       freshnessFail,
+		effectiveWarnRatio:  effectiveWarnRatio,
+		effectiveFailRatio:  effectiveFailRatio,
 		retryMax:            retryMax,
 		retryBackoff:        retryBackoff,
 	}
 
 	log.Printf(
-		"worker skeleton started: poll_interval=%s, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, retry_max=%d, retry_backoff=%s",
+		"worker skeleton started: poll_interval=%s, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, retry_max=%d, retry_backoff=%s",
 		w.pollInterval,
 		w.jobTimeout,
 		w.playlistTimeout,
@@ -101,6 +124,8 @@ func main() {
 		w.segmentsSampleCount,
 		w.freshnessWarn,
 		w.freshnessFail,
+		w.effectiveWarnRatio,
+		w.effectiveFailRatio,
 		w.retryMax,
 		w.retryBackoff,
 	)
@@ -232,36 +257,61 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 	playlistStatus := "OK"
 	freshnessStatus := "FAIL"
 	segmentsStatus := "FAIL"
-	declaredBitrateStatus := "FAIL"
-	declaredBitrateDetails := map[string]interface{}{
-		"reason": "playlist_unavailable",
+	declaredBitrate := declaredBitrateResult{
+		Status: "FAIL",
+		Details: map[string]interface{}{
+			"reason": "playlist_unavailable",
+		},
 	}
+	effectiveBitrateStatus := "FAIL"
+	effectiveBitrateDetails := map[string]interface{}{
+		"calculated_bps": 0.0,
+		"declared_bps":   int64(0),
+		"ratio":          nil,
+		"reason":         "playlist_unavailable",
+		"sample_count":   0,
+	}
+
 	if playlistErr != nil {
 		playlistStatus = "FAIL"
 	} else {
 		freshnessStatus = w.checkFreshness(playlistBody)
 
-		segmentURLs, segmentParseErr := extractLatestSegmentURLs(streamURL, playlistBody, w.segmentsSampleCount)
+		segments, segmentParseErr := extractLatestPlaylistSegments(streamURL, playlistBody, w.segmentsSampleCount)
+		segmentSamples := make([]segmentSample, 0)
 		if segmentParseErr != nil {
 			segmentsStatus = "FAIL"
+			effectiveBitrateStatus = "FAIL"
+			effectiveBitrateDetails = map[string]interface{}{
+				"calculated_bps": 0.0,
+				"declared_bps":   int64(0),
+				"ratio":          nil,
+				"reason":         "segments_not_available",
+				"sample_count":   0,
+			}
 		} else {
-			segmentsStatus = w.checkSegmentsAvailability(jobCtx, segmentURLs)
+			segmentsStatus, segmentSamples = w.checkSegmentsAvailability(jobCtx, segments)
 		}
 
-		declaredBitrateStatus, declaredBitrateDetails = checkDeclaredBitrate(playlistBody)
+		declaredBitrate = checkDeclaredBitrate(playlistBody)
+		if segmentParseErr == nil {
+			effectiveBitrateStatus, effectiveBitrateDetails = w.checkEffectiveBitrate(segmentSamples, declaredBitrate)
+		}
 	}
 
-	aggregate := aggregateStatuses(playlistStatus, freshnessStatus, segmentsStatus, declaredBitrateStatus)
+	aggregate := aggregateStatuses(playlistStatus, freshnessStatus, segmentsStatus, declaredBitrate.Status, effectiveBitrateStatus)
 
 	return checkJobEvaluation{
 		DBStatus:  strings.ToLower(aggregate),
 		Aggregate: aggregate,
 		Checks: map[string]interface{}{
-			"playlist":                 playlistStatus,
-			"freshness":                freshnessStatus,
-			"segments":                 segmentsStatus,
-			"declared_bitrate":         declaredBitrateStatus,
-			"declared_bitrate_details": declaredBitrateDetails,
+			"playlist":                  playlistStatus,
+			"freshness":                 freshnessStatus,
+			"segments":                  segmentsStatus,
+			"declared_bitrate":          declaredBitrate.Status,
+			"declared_bitrate_details":  declaredBitrate.Details,
+			"effective_bitrate":         strings.ToLower(effectiveBitrateStatus),
+			"effective_bitrate_details": effectiveBitrateDetails,
 		},
 	}, nil
 }
@@ -341,50 +391,58 @@ func (w *worker) checkFreshness(playlistBody string) string {
 	return "OK"
 }
 
-func (w *worker) checkSegmentsAvailability(ctx context.Context, segmentURLs []string) string {
-	if len(segmentURLs) == 0 {
-		return "FAIL"
+func (w *worker) checkSegmentsAvailability(ctx context.Context, segments []playlistSegment) (string, []segmentSample) {
+	if len(segments) == 0 {
+		return "FAIL", nil
 	}
 
 	availableCount := 0
-	for _, segmentURL := range segmentURLs {
+	samples := make([]segmentSample, 0, len(segments))
+	for _, segment := range segments {
 		requestCtx, cancel := context.WithTimeout(ctx, w.segmentTimeout)
-		err := probeHTTPAvailability(requestCtx, segmentURL)
+		bytesRead, err := downloadSegmentBytes(requestCtx, segment.URL)
 		cancel()
-		if err == nil {
+
+		sample := segmentSample{
+			Downloaded:  err == nil,
+			DurationSec: segment.DurationSec,
+			Bytes:       bytesRead,
+		}
+		samples = append(samples, sample)
+		if sample.Downloaded {
 			availableCount++
 		}
 	}
 
-	if availableCount == len(segmentURLs) {
-		return "OK"
+	if availableCount == len(segments) {
+		return "OK", samples
 	}
 	if availableCount == 0 {
-		return "FAIL"
+		return "FAIL", samples
 	}
-	return "WARN"
+	return "WARN", samples
 }
 
-func probeHTTPAvailability(ctx context.Context, resourceURL string) error {
+func downloadSegmentBytes(ctx context.Context, resourceURL string) (int64, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, resourceURL, nil)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		return errors.New("resource request returned non-2xx")
+		return 0, errors.New("resource request returned non-2xx")
 	}
 
-	return nil
+	return io.Copy(io.Discard, response.Body)
 }
 
-func extractLatestSegmentURLs(playlistURL string, playlistBody string, sampleCount int) ([]string, error) {
+func extractLatestPlaylistSegments(playlistURL string, playlistBody string, sampleCount int) ([]playlistSegment, error) {
 	if sampleCount <= 0 {
 		return nil, errors.New("segments sample count must be positive")
 	}
@@ -394,33 +452,37 @@ func extractLatestSegmentURLs(playlistURL string, playlistBody string, sampleCou
 		return nil, err
 	}
 
-	segmentReferences := extractSegmentReferences(playlistBody)
-	if len(segmentReferences) == 0 {
+	segments := extractPlaylistSegments(playlistBody)
+	if len(segments) == 0 {
 		return nil, errors.New("no segment references found in playlist")
 	}
 
-	startIndex := len(segmentReferences) - sampleCount
+	startIndex := len(segments) - sampleCount
 	if startIndex < 0 {
 		startIndex = 0
 	}
 
-	segmentURLs := make([]string, 0, len(segmentReferences)-startIndex)
-	for _, reference := range segmentReferences[startIndex:] {
-		parsedReference, parseErr := url.Parse(reference)
+	resolvedSegments := make([]playlistSegment, 0, len(segments)-startIndex)
+	for _, segment := range segments[startIndex:] {
+		parsedReference, parseErr := url.Parse(segment.URL)
 		if parseErr != nil {
 			return nil, parseErr
 		}
 		resolvedURL := baseURL.ResolveReference(parsedReference)
-		segmentURLs = append(segmentURLs, resolvedURL.String())
+		resolvedSegments = append(resolvedSegments, playlistSegment{
+			URL:         resolvedURL.String(),
+			DurationSec: segment.DurationSec,
+		})
 	}
 
-	return segmentURLs, nil
+	return resolvedSegments, nil
 }
 
-func extractSegmentReferences(playlistBody string) []string {
+func extractPlaylistSegments(playlistBody string) []playlistSegment {
 	lines := strings.Split(playlistBody, "\n")
-	references := make([]string, 0, len(lines))
+	segments := make([]playlistSegment, 0, len(lines))
 	expectSegmentURI := false
+	currentDuration := 0.0
 
 	for _, rawLine := range lines {
 		line := strings.TrimSpace(rawLine)
@@ -428,6 +490,16 @@ func extractSegmentReferences(playlistBody string) []string {
 			continue
 		}
 		if strings.HasPrefix(line, "#EXTINF:") {
+			durationValue := strings.TrimPrefix(line, "#EXTINF:")
+			if commaIndex := strings.Index(durationValue, ","); commaIndex >= 0 {
+				durationValue = durationValue[:commaIndex]
+			}
+			parsedDuration, err := strconv.ParseFloat(strings.TrimSpace(durationValue), 64)
+			if err == nil && parsedDuration > 0 {
+				currentDuration = parsedDuration
+			} else {
+				currentDuration = 0
+			}
 			expectSegmentURI = true
 			continue
 		}
@@ -435,12 +507,16 @@ func extractSegmentReferences(playlistBody string) []string {
 			continue
 		}
 		if expectSegmentURI {
-			references = append(references, line)
+			segments = append(segments, playlistSegment{
+				URL:         line,
+				DurationSec: currentDuration,
+			})
 			expectSegmentURI = false
+			currentDuration = 0
 		}
 	}
 
-	return references
+	return segments
 }
 
 func extractLatestProgramDateTime(playlist string) (time.Time, bool) {
@@ -469,7 +545,7 @@ func extractLatestProgramDateTime(playlist string) (time.Time, bool) {
 	return latest, found
 }
 
-func checkDeclaredBitrate(playlistBody string) (string, map[string]interface{}) {
+func checkDeclaredBitrate(playlistBody string) declaredBitrateResult {
 	lines := strings.Split(playlistBody, "\n")
 	streamInfoCount := 0
 	invalidCount := 0
@@ -512,20 +588,32 @@ func checkDeclaredBitrate(playlistBody string) (string, map[string]interface{}) 
 
 	if len(declaredValues) == 0 {
 		if streamInfoCount == 0 {
-			return "WARN", map[string]interface{}{
-				"reason": "no_stream_inf_tags",
+			return declaredBitrateResult{
+				Status:      "WARN",
+				DeclaredBPS: 0,
+				Details: map[string]interface{}{
+					"reason": "no_stream_inf_tags",
+				},
 			}
 		}
 		if invalidCount > 0 {
-			return "FAIL", map[string]interface{}{
-				"reason":          "invalid_declared_bitrate",
-				"invalid_entries": invalidCount,
+			return declaredBitrateResult{
+				Status:      "FAIL",
+				DeclaredBPS: 0,
+				Details: map[string]interface{}{
+					"reason":          "invalid_declared_bitrate",
+					"invalid_entries": invalidCount,
+				},
 			}
 		}
-		return "WARN", map[string]interface{}{
-			"reason":                  "declared_bitrate_not_present",
-			"stream_info_entries":     streamInfoCount,
-			"missing_attribute_count": missingAttributeCount,
+		return declaredBitrateResult{
+			Status:      "WARN",
+			DeclaredBPS: 0,
+			Details: map[string]interface{}{
+				"reason":                  "declared_bitrate_not_present",
+				"stream_info_entries":     streamInfoCount,
+				"missing_attribute_count": missingAttributeCount,
+			},
 		}
 	}
 
@@ -541,10 +629,14 @@ func checkDeclaredBitrate(playlistBody string) (string, map[string]interface{}) 
 		bitrateSource = "average_bandwidth"
 	}
 
-	return "OK", map[string]interface{}{
-		"parsed_bitrate_bps":  maxDeclared,
-		"variants_considered": len(declaredValues),
-		"source":              bitrateSource,
+	return declaredBitrateResult{
+		Status:      "OK",
+		DeclaredBPS: maxDeclared,
+		Details: map[string]interface{}{
+			"parsed_bitrate_bps":  maxDeclared,
+			"variants_considered": len(declaredValues),
+			"source":              bitrateSource,
+		},
 	}
 }
 
@@ -568,6 +660,62 @@ func parseM3U8Attributes(attributesRaw string) map[string]string {
 		attributes[strings.ToUpper(key)] = value
 	}
 	return attributes
+}
+
+func (w *worker) checkEffectiveBitrate(samples []segmentSample, declared declaredBitrateResult) (string, map[string]interface{}) {
+	availableSamples := 0
+	totalBytes := int64(0)
+	totalDurationSec := 0.0
+
+	for _, sample := range samples {
+		if !sample.Downloaded {
+			continue
+		}
+		availableSamples++
+		totalBytes += sample.Bytes
+		totalDurationSec += sample.DurationSec
+	}
+
+	details := map[string]interface{}{
+		"calculated_bps": 0.0,
+		"declared_bps":   declared.DeclaredBPS,
+		"ratio":          nil,
+		"reason":         "",
+		"sample_count":   availableSamples,
+	}
+
+	if availableSamples == 0 {
+		details["reason"] = "no_downloaded_segments"
+		return "FAIL", details
+	}
+
+	if totalDurationSec <= 0 {
+		details["reason"] = "invalid_segment_duration"
+		return "FAIL", details
+	}
+
+	calculatedBPS := (float64(totalBytes) * 8.0) / totalDurationSec
+	details["calculated_bps"] = calculatedBPS
+
+	if declared.DeclaredBPS <= 0 {
+		details["reason"] = "declared_bitrate_unavailable"
+		return "WARN", details
+	}
+
+	ratio := calculatedBPS / float64(declared.DeclaredBPS)
+	details["ratio"] = ratio
+
+	if ratio < w.effectiveFailRatio {
+		details["reason"] = "ratio_below_fail_threshold"
+		return "FAIL", details
+	}
+	if ratio < w.effectiveWarnRatio {
+		details["reason"] = "ratio_below_warn_threshold"
+		return "WARN", details
+	}
+
+	details["reason"] = "within_threshold"
+	return "OK", details
 }
 
 func aggregateStatuses(statuses ...string) string {
@@ -765,6 +913,25 @@ func intInRange(value int, minimum int, maximum int) int {
 	}
 	if value > maximum {
 		return maximum
+	}
+	return value
+}
+
+func envFloat(key string, fallback float64) float64 {
+	valueRaw := config.GetString(key, "")
+	if valueRaw == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseFloat(valueRaw, 64)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func floatAtLeast(value float64, minimum float64) float64 {
+	if value < minimum {
+		return minimum
 	}
 	return value
 }
