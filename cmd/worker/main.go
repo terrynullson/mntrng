@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -26,14 +27,16 @@ type claimedJob struct {
 }
 
 type worker struct {
-	db              *sql.DB
-	pollInterval    time.Duration
-	jobTimeout      time.Duration
-	playlistTimeout time.Duration
-	freshnessWarn   time.Duration
-	freshnessFail   time.Duration
-	retryMax        int
-	retryBackoff    time.Duration
+	db                  *sql.DB
+	pollInterval        time.Duration
+	jobTimeout          time.Duration
+	playlistTimeout     time.Duration
+	segmentTimeout      time.Duration
+	segmentsSampleCount int
+	freshnessWarn       time.Duration
+	freshnessFail       time.Duration
+	retryMax            int
+	retryBackoff        time.Duration
 }
 
 type checkJobEvaluation struct {
@@ -46,6 +49,8 @@ func main() {
 	pollInterval := time.Duration(intAtLeast(config.GetInt("WORKER_HEARTBEAT_SEC", 15), 1)) * time.Second
 	jobTimeout := time.Duration(intAtLeast(config.GetInt("WORKER_JOB_TIMEOUT_SEC", 30), 1)) * time.Second
 	playlistTimeout := time.Duration(intAtLeast(config.GetInt("PLAYLIST_TIMEOUT_MS", 3000), 1)) * time.Millisecond
+	segmentTimeout := time.Duration(intAtLeast(config.GetInt("SEGMENT_TIMEOUT_MS", 5000), 1)) * time.Millisecond
+	segmentsSampleCount := intInRange(config.GetInt("SEGMENTS_SAMPLE_COUNT", 3), 3, 5)
 	freshnessWarn := time.Duration(intAtLeast(config.GetInt("FRESHNESS_WARN_SEC", 10), 1)) * time.Second
 	freshnessFail := time.Duration(intAtLeast(config.GetInt("FRESHNESS_FAIL_SEC", 30), 1)) * time.Second
 	if freshnessFail < freshnessWarn {
@@ -74,21 +79,25 @@ func main() {
 	defer stop()
 
 	w := &worker{
-		db:              db,
-		pollInterval:    pollInterval,
-		jobTimeout:      jobTimeout,
-		playlistTimeout: playlistTimeout,
-		freshnessWarn:   freshnessWarn,
-		freshnessFail:   freshnessFail,
-		retryMax:        retryMax,
-		retryBackoff:    retryBackoff,
+		db:                  db,
+		pollInterval:        pollInterval,
+		jobTimeout:          jobTimeout,
+		playlistTimeout:     playlistTimeout,
+		segmentTimeout:      segmentTimeout,
+		segmentsSampleCount: segmentsSampleCount,
+		freshnessWarn:       freshnessWarn,
+		freshnessFail:       freshnessFail,
+		retryMax:            retryMax,
+		retryBackoff:        retryBackoff,
 	}
 
 	log.Printf(
-		"worker skeleton started: poll_interval=%s, job_timeout=%s, playlist_timeout=%s, freshness_warn=%s, freshness_fail=%s, retry_max=%d, retry_backoff=%s",
+		"worker skeleton started: poll_interval=%s, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, retry_max=%d, retry_backoff=%s",
 		w.pollInterval,
 		w.jobTimeout,
 		w.playlistTimeout,
+		w.segmentTimeout,
+		w.segmentsSampleCount,
 		w.freshnessWarn,
 		w.freshnessFail,
 		w.retryMax,
@@ -218,9 +227,24 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 		return checkJobEvaluation{}, err
 	}
 
-	playlistStatus := w.checkPlaylistAvailability(jobCtx, streamURL)
-	freshnessStatus := w.checkFreshness(jobCtx, streamURL, playlistStatus)
-	aggregate := aggregateStatuses(playlistStatus, freshnessStatus)
+	playlistBody, playlistErr := w.fetchPlaylist(jobCtx, streamURL)
+	playlistStatus := "OK"
+	freshnessStatus := "FAIL"
+	segmentsStatus := "FAIL"
+	if playlistErr != nil {
+		playlistStatus = "FAIL"
+	} else {
+		freshnessStatus = w.checkFreshness(playlistBody)
+
+		segmentURLs, segmentParseErr := extractLatestSegmentURLs(streamURL, playlistBody, w.segmentsSampleCount)
+		if segmentParseErr != nil {
+			segmentsStatus = "FAIL"
+		} else {
+			segmentsStatus = w.checkSegmentsAvailability(jobCtx, segmentURLs)
+		}
+	}
+
+	aggregate := aggregateStatuses(playlistStatus, freshnessStatus, segmentsStatus)
 
 	return checkJobEvaluation{
 		DBStatus:  strings.ToLower(aggregate),
@@ -228,6 +252,7 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 		Checks: map[string]string{
 			"playlist":  playlistStatus,
 			"freshness": freshnessStatus,
+			"segments":  segmentsStatus,
 		},
 	}, nil
 }
@@ -256,65 +281,39 @@ func (w *worker) loadStreamURL(ctx context.Context, companyID int64, streamID in
 	return streamURL, nil
 }
 
-func (w *worker) checkPlaylistAvailability(ctx context.Context, streamURL string) string {
+func (w *worker) fetchPlaylist(ctx context.Context, streamURL string) (string, error) {
 	requestCtx, cancel := context.WithTimeout(ctx, w.playlistTimeout)
 	defer cancel()
 
 	request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, streamURL, nil)
 	if err != nil {
-		return "FAIL"
+		return "", err
 	}
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return "FAIL"
+		return "", err
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		return "FAIL"
+		return "", errors.New("playlist request returned non-2xx")
 	}
 
 	body, err := io.ReadAll(io.LimitReader(response.Body, 2*1024*1024))
 	if err != nil {
-		return "FAIL"
+		return "", err
 	}
-	if !strings.Contains(string(body), "#EXTM3U") {
-		return "FAIL"
+	playlistBody := string(body)
+	if !strings.Contains(playlistBody, "#EXTM3U") {
+		return "", errors.New("playlist does not contain EXTM3U marker")
 	}
 
-	return "OK"
+	return playlistBody, nil
 }
 
-func (w *worker) checkFreshness(ctx context.Context, streamURL string, playlistStatus string) string {
-	if playlistStatus == "FAIL" {
-		return "FAIL"
-	}
-
-	requestCtx, cancel := context.WithTimeout(ctx, w.playlistTimeout)
-	defer cancel()
-
-	request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, streamURL, nil)
-	if err != nil {
-		return "FAIL"
-	}
-
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return "FAIL"
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		return "FAIL"
-	}
-
-	body, err := io.ReadAll(io.LimitReader(response.Body, 2*1024*1024))
-	if err != nil {
-		return "FAIL"
-	}
-
-	lastProgramDateTime, ok := extractLatestProgramDateTime(string(body))
+func (w *worker) checkFreshness(playlistBody string) string {
+	lastProgramDateTime, ok := extractLatestProgramDateTime(playlistBody)
 	if !ok {
 		return "FAIL"
 	}
@@ -331,6 +330,108 @@ func (w *worker) checkFreshness(ctx context.Context, streamURL string, playlistS
 		return "WARN"
 	}
 	return "OK"
+}
+
+func (w *worker) checkSegmentsAvailability(ctx context.Context, segmentURLs []string) string {
+	if len(segmentURLs) == 0 {
+		return "FAIL"
+	}
+
+	availableCount := 0
+	for _, segmentURL := range segmentURLs {
+		requestCtx, cancel := context.WithTimeout(ctx, w.segmentTimeout)
+		err := probeHTTPAvailability(requestCtx, segmentURL)
+		cancel()
+		if err == nil {
+			availableCount++
+		}
+	}
+
+	if availableCount == len(segmentURLs) {
+		return "OK"
+	}
+	if availableCount == 0 {
+		return "FAIL"
+	}
+	return "WARN"
+}
+
+func probeHTTPAvailability(ctx context.Context, resourceURL string) error {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, resourceURL, nil)
+	if err != nil {
+		return err
+	}
+
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return errors.New("resource request returned non-2xx")
+	}
+
+	return nil
+}
+
+func extractLatestSegmentURLs(playlistURL string, playlistBody string, sampleCount int) ([]string, error) {
+	if sampleCount <= 0 {
+		return nil, errors.New("segments sample count must be positive")
+	}
+
+	baseURL, err := url.Parse(playlistURL)
+	if err != nil {
+		return nil, err
+	}
+
+	segmentReferences := extractSegmentReferences(playlistBody)
+	if len(segmentReferences) == 0 {
+		return nil, errors.New("no segment references found in playlist")
+	}
+
+	startIndex := len(segmentReferences) - sampleCount
+	if startIndex < 0 {
+		startIndex = 0
+	}
+
+	segmentURLs := make([]string, 0, len(segmentReferences)-startIndex)
+	for _, reference := range segmentReferences[startIndex:] {
+		parsedReference, parseErr := url.Parse(reference)
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		resolvedURL := baseURL.ResolveReference(parsedReference)
+		segmentURLs = append(segmentURLs, resolvedURL.String())
+	}
+
+	return segmentURLs, nil
+}
+
+func extractSegmentReferences(playlistBody string) []string {
+	lines := strings.Split(playlistBody, "\n")
+	references := make([]string, 0, len(lines))
+	expectSegmentURI := false
+
+	for _, rawLine := range lines {
+		line := strings.TrimSpace(rawLine)
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "#EXTINF:") {
+			expectSegmentURI = true
+			continue
+		}
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+		if expectSegmentURI {
+			references = append(references, line)
+			expectSegmentURI = false
+		}
+	}
+
+	return references
 }
 
 func extractLatestProgramDateTime(playlist string) (time.Time, bool) {
@@ -544,6 +645,16 @@ func sleepWithContext(ctx context.Context, duration time.Duration) error {
 func intAtLeast(value int, minimum int) int {
 	if value < minimum {
 		return minimum
+	}
+	return value
+}
+
+func intInRange(value int, minimum int, maximum int) int {
+	if value < minimum {
+		return minimum
+	}
+	if value > maximum {
+		return maximum
 	}
 	return value
 }

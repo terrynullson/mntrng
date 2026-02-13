@@ -23,7 +23,7 @@ cp .env.example .env
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
 - `API_PORT`, `REDIS_ADDR`, `WORKER_HEARTBEAT_SEC`
 - `WORKER_JOB_TIMEOUT_SEC`, `WORKER_DB_RETRY_MAX`, `WORKER_DB_RETRY_BACKOFF_MS`
-- `PLAYLIST_TIMEOUT_MS`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`
+- `PLAYLIST_TIMEOUT_MS`, `SEGMENT_TIMEOUT_MS`, `SEGMENTS_SAMPLE_COUNT`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`
 - `FRONTEND_PORT`, `NEXT_PUBLIC_API_BASE_URL`
 
 Файл `.env` не добавляется в git (трекается только `.env.example`).
@@ -154,12 +154,22 @@ curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
 
 Ожидаемый lifecycle для skeleton: `queued -> running -> done` (или `failed`, если сработал timeout/error path).
 
-В текущем checker-подшаге worker считает только:
+В текущем checker-подшаге worker считает:
 - `playlist` availability check
 - `freshness` check (по `#EXT-X-PROGRAM-DATE-TIME`)
+- `segments` availability check по последним `N` сегментам из playlist
+
+Правило `segments`-статуса:
+- `OK`: все выбранные `N` сегментов вернули HTTP `2xx`
+- `WARN`: часть выбранных `N` сегментов недоступна
+- `FAIL`: ни один выбранный сегмент не доступен, либо сегменты не извлечены из playlist
+
+Итоговая агрегация статуса: `FAIL > WARN > OK` по чекам `playlist`, `freshness`, `segments`.
 
 Используемые thresholds:
 - `PLAYLIST_TIMEOUT_MS` (по умолчанию `3000`)
+- `SEGMENT_TIMEOUT_MS` (по умолчанию `5000`)
+- `SEGMENTS_SAMPLE_COUNT` (по умолчанию `3`, допустимый диапазон `3..5`)
 - `FRESHNESS_WARN_SEC` (по умолчанию `10`)
 - `FRESHNESS_FAIL_SEC` (по умолчанию `30`)
 
