@@ -23,7 +23,7 @@ cp .env.example .env
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
 - `API_PORT`, `REDIS_ADDR`, `WORKER_HEARTBEAT_SEC`
 - `WORKER_JOB_TIMEOUT_SEC`, `WORKER_DB_RETRY_MAX`, `WORKER_DB_RETRY_BACKOFF_MS`
-- `PLAYLIST_TIMEOUT_MS`, `SEGMENT_TIMEOUT_MS`, `SEGMENTS_SAMPLE_COUNT`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`, `FREEZE_WARN_SEC`, `FREEZE_FAIL_SEC`, `BLACKFRAME_WARN_RATIO`, `BLACKFRAME_FAIL_RATIO`, `EFFECTIVE_BITRATE_WARN_RATIO`, `EFFECTIVE_BITRATE_FAIL_RATIO`
+- `PLAYLIST_TIMEOUT_MS`, `SEGMENT_TIMEOUT_MS`, `SEGMENTS_SAMPLE_COUNT`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`, `FREEZE_WARN_SEC`, `FREEZE_FAIL_SEC`, `BLACKFRAME_WARN_RATIO`, `BLACKFRAME_FAIL_RATIO`, `EFFECTIVE_BITRATE_WARN_RATIO`, `EFFECTIVE_BITRATE_FAIL_RATIO`, `ALERT_FAIL_STREAK`, `ALERT_COOLDOWN_MIN`, `ALERT_SEND_RECOVERED`
 - `FRONTEND_PORT`, `NEXT_PUBLIC_API_BASE_URL`
 
 Файл `.env` не добавляется в git (трекается только `.env.example`).
@@ -209,6 +209,12 @@ curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
 
 Итоговая агрегация статуса: `FAIL > WARN > OK` по чекам `playlist`, `freshness`, `segments`, `freeze`, `blackframe`, `declared_bitrate`, `effective_bitrate`.
 
+Alert anti-spam decision engine (`alert_state`):
+- fail alert отправляется только после `ALERT_FAIL_STREAK` подряд `FAIL` (по умолчанию `2`)
+- после решения `should_send=true` включается cooldown на `ALERT_COOLDOWN_MIN` минут (по умолчанию `10`)
+- recovered decision активен только для перехода `FAIL -> OK` и только если `ALERT_SEND_RECOVERED=true` (по умолчанию `false`), также с учетом cooldown
+- в этом шаге worker не отправляет сообщения во внешние каналы: только считает `should_send` и обновляет `alert_state`
+
 Используемые thresholds:
 - `PLAYLIST_TIMEOUT_MS` (по умолчанию `3000`)
 - `SEGMENT_TIMEOUT_MS` (по умолчанию `5000`)
@@ -221,6 +227,9 @@ curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
 - `BLACKFRAME_FAIL_RATIO` (по умолчанию `0.98`)
 - `EFFECTIVE_BITRATE_WARN_RATIO` (по умолчанию `0.7`)
 - `EFFECTIVE_BITRATE_FAIL_RATIO` (по умолчанию `0.4`)
+- `ALERT_FAIL_STREAK` (по умолчанию `2`)
+- `ALERT_COOLDOWN_MIN` (по умолчанию `10`)
+- `ALERT_SEND_RECOVERED` (по умолчанию `false`)
 
 ## Check results API smoke-check
 

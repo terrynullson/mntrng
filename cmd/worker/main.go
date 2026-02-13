@@ -44,6 +44,9 @@ type worker struct {
 	blackframeFailRatio float64
 	effectiveWarnRatio  float64
 	effectiveFailRatio  float64
+	alertFailStreak     int
+	alertCooldown       time.Duration
+	alertSendRecovered  bool
 	retryMax            int
 	retryBackoff        time.Duration
 }
@@ -74,6 +77,16 @@ type declaredBitrateResult struct {
 
 var blackframeEventPattern = regexp.MustCompile(`frame:\s*\d+\s+pblack:\s*\d+`)
 
+type alertDecision struct {
+	ShouldSend     bool
+	EventType      string
+	Reason         string
+	CurrentStatus  string
+	PreviousStatus string
+	FailStreak     int
+	CooldownUntil  *time.Time
+}
+
 func main() {
 	pollInterval := time.Duration(intAtLeast(config.GetInt("WORKER_HEARTBEAT_SEC", 15), 1)) * time.Second
 	jobTimeout := time.Duration(intAtLeast(config.GetInt("WORKER_JOB_TIMEOUT_SEC", 30), 1)) * time.Second
@@ -88,6 +101,9 @@ func main() {
 	blackframeFailRatio := floatInRange(envFloat("BLACKFRAME_FAIL_RATIO", 0.98), 0, 1)
 	effectiveWarnRatio := floatAtLeast(envFloat("EFFECTIVE_BITRATE_WARN_RATIO", 0.7), 0)
 	effectiveFailRatio := floatAtLeast(envFloat("EFFECTIVE_BITRATE_FAIL_RATIO", 0.4), 0)
+	alertFailStreak := intAtLeast(config.GetInt("ALERT_FAIL_STREAK", 2), 1)
+	alertCooldown := time.Duration(intAtLeast(config.GetInt("ALERT_COOLDOWN_MIN", 10), 1)) * time.Minute
+	alertSendRecovered := envBool("ALERT_SEND_RECOVERED", false)
 	if freshnessFail < freshnessWarn {
 		freshnessFail = freshnessWarn
 	}
@@ -134,12 +150,15 @@ func main() {
 		blackframeFailRatio: blackframeFailRatio,
 		effectiveWarnRatio:  effectiveWarnRatio,
 		effectiveFailRatio:  effectiveFailRatio,
+		alertFailStreak:     alertFailStreak,
+		alertCooldown:       alertCooldown,
+		alertSendRecovered:  alertSendRecovered,
 		retryMax:            retryMax,
 		retryBackoff:        retryBackoff,
 	}
 
 	log.Printf(
-		"worker skeleton started: poll_interval=%s, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, blackframe_warn_ratio=%.2f, blackframe_fail_ratio=%.2f, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, retry_max=%d, retry_backoff=%s",
+		"worker skeleton started: poll_interval=%s, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, blackframe_warn_ratio=%.2f, blackframe_fail_ratio=%.2f, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, alert_fail_streak=%d, alert_cooldown=%s, alert_send_recovered=%t, retry_max=%d, retry_backoff=%s",
 		w.pollInterval,
 		w.jobTimeout,
 		w.playlistTimeout,
@@ -153,6 +172,9 @@ func main() {
 		w.blackframeFailRatio,
 		w.effectiveWarnRatio,
 		w.effectiveFailRatio,
+		w.alertFailStreak,
+		w.alertCooldown,
+		w.alertSendRecovered,
 		w.retryMax,
 		w.retryBackoff,
 	)
@@ -229,6 +251,16 @@ func (w *worker) processSingleJobCycle(ctx context.Context) error {
 		log.Printf("worker finalized job as failed: id=%d company_id=%d reason=%s", job.ID, job.CompanyID, persistErr.Error())
 		return nil
 	}
+
+	alertDecision, alertErr := w.applyAlertStateWithRetry(ctx, job, evaluation.DBStatus)
+	if alertErr != nil {
+		if finalizeErr := w.finalizeWithRetry(ctx, job, "failed", alertErr.Error()); finalizeErr != nil {
+			return finalizeErr
+		}
+		log.Printf("worker finalized job as failed: id=%d company_id=%d reason=%s", job.ID, job.CompanyID, alertErr.Error())
+		return nil
+	}
+	w.logAlertDecision(job, alertDecision)
 
 	if finalizeErr := w.finalizeWithRetry(ctx, job, "done", ""); finalizeErr != nil {
 		return finalizeErr
@@ -1038,6 +1070,181 @@ func (w *worker) persistCheckResult(ctx context.Context, job claimedJob, evaluat
 	return nil
 }
 
+func (w *worker) applyAlertStateWithRetry(ctx context.Context, job claimedJob, resultStatus string) (alertDecision, error) {
+	for attempt := 0; ; attempt++ {
+		decision, err := w.applyAlertState(ctx, job, resultStatus)
+		if err == nil {
+			return decision, nil
+		}
+		if !isRetryableWorkerError(err) || attempt >= w.retryMax {
+			return alertDecision{}, err
+		}
+
+		backoff := w.retryBackoff * time.Duration(1<<attempt)
+		log.Printf("worker alert_state retry attempt=%d job_id=%d backoff=%s err=%v", attempt+1, job.ID, backoff, err)
+		if err := sleepWithContext(ctx, backoff); err != nil {
+			return alertDecision{}, err
+		}
+	}
+}
+
+func (w *worker) applyAlertState(ctx context.Context, job claimedJob, resultStatus string) (alertDecision, error) {
+	currentStatus, err := normalizeAlertStatus(resultStatus)
+	if err != nil {
+		return alertDecision{}, err
+	}
+
+	tx, err := w.db.BeginTx(ctx, nil)
+	if err != nil {
+		return alertDecision{}, err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(
+		ctx,
+		`INSERT INTO alert_state (company_id, stream_id, fail_streak, cooldown_until, last_alert_at, last_status, created_at, updated_at)
+         VALUES ($1, $2, 0, NULL, NULL, NULL, NOW(), NOW())
+         ON CONFLICT (stream_id) DO NOTHING`,
+		job.CompanyID,
+		job.StreamID,
+	)
+	if err != nil {
+		return alertDecision{}, err
+	}
+
+	var previousFailStreak int
+	var previousCooldownUntil sql.NullTime
+	var previousLastAlertAt sql.NullTime
+	var previousStatusRaw sql.NullString
+	scanErr := tx.QueryRowContext(
+		ctx,
+		`SELECT fail_streak, cooldown_until, last_alert_at, last_status
+         FROM alert_state
+         WHERE company_id = $1
+           AND stream_id = $2
+         FOR UPDATE`,
+		job.CompanyID,
+		job.StreamID,
+	).Scan(&previousFailStreak, &previousCooldownUntil, &previousLastAlertAt, &previousStatusRaw)
+	if scanErr != nil {
+		if errors.Is(scanErr, sql.ErrNoRows) {
+			return alertDecision{}, errors.New("alert_state row not found in tenant context")
+		}
+		return alertDecision{}, scanErr
+	}
+
+	previousStatus := ""
+	if previousStatusRaw.Valid {
+		normalizedPrevious, prevErr := normalizeAlertStatus(previousStatusRaw.String)
+		if prevErr == nil {
+			previousStatus = normalizedPrevious
+		}
+	}
+
+	now := time.Now().UTC()
+	cooldownActive := previousCooldownUntil.Valid && previousCooldownUntil.Time.After(now)
+
+	newFailStreak := 0
+	if currentStatus == "fail" {
+		if previousStatus == "fail" {
+			newFailStreak = previousFailStreak + 1
+		} else {
+			newFailStreak = 1
+		}
+	}
+
+	decision := alertDecision{
+		ShouldSend:     false,
+		EventType:      "",
+		Reason:         "no_alert_condition",
+		CurrentStatus:  currentStatus,
+		PreviousStatus: previousStatus,
+		FailStreak:     newFailStreak,
+		CooldownUntil:  nil,
+	}
+
+	nextCooldownUntil := previousCooldownUntil
+	nextLastAlertAt := previousLastAlertAt
+
+	if currentStatus == "fail" {
+		if newFailStreak < w.alertFailStreak {
+			decision.Reason = "fail_streak_below_threshold"
+		} else if cooldownActive {
+			decision.Reason = "cooldown_active"
+		} else {
+			decision.ShouldSend = true
+			decision.EventType = "fail"
+			decision.Reason = "fail_streak_threshold_met"
+			nextLastAlertAt = sql.NullTime{Time: now, Valid: true}
+			nextCooldownUntil = sql.NullTime{Time: now.Add(w.alertCooldown), Valid: true}
+		}
+	} else if currentStatus == "ok" && previousStatus == "fail" {
+		if !w.alertSendRecovered {
+			decision.Reason = "recovered_suppressed_by_config"
+		} else if cooldownActive {
+			decision.Reason = "cooldown_active"
+		} else {
+			decision.ShouldSend = true
+			decision.EventType = "recovered"
+			decision.Reason = "recovered_transition"
+			nextLastAlertAt = sql.NullTime{Time: now, Valid: true}
+			nextCooldownUntil = sql.NullTime{Time: now.Add(w.alertCooldown), Valid: true}
+		}
+	}
+
+	_, err = tx.ExecContext(
+		ctx,
+		`UPDATE alert_state
+         SET fail_streak = $1,
+             cooldown_until = $2,
+             last_alert_at = $3,
+             last_status = $4,
+             updated_at = NOW()
+         WHERE company_id = $5
+           AND stream_id = $6`,
+		newFailStreak,
+		nullTimeToValue(nextCooldownUntil),
+		nullTimeToValue(nextLastAlertAt),
+		currentStatus,
+		job.CompanyID,
+		job.StreamID,
+	)
+	if err != nil {
+		return alertDecision{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return alertDecision{}, err
+	}
+
+	if nextCooldownUntil.Valid {
+		cooldownCopy := nextCooldownUntil.Time.UTC()
+		decision.CooldownUntil = &cooldownCopy
+	}
+
+	return decision, nil
+}
+
+func (w *worker) logAlertDecision(job claimedJob, decision alertDecision) {
+	cooldownUntil := "null"
+	if decision.CooldownUntil != nil {
+		cooldownUntil = decision.CooldownUntil.Format(time.RFC3339)
+	}
+	log.Printf(
+		"worker alert decision: company_id=%d stream_id=%d current_status=%s previous_status=%s fail_streak=%d fail_threshold=%d cooldown_until=%s should_send=%t event_type=%s reason=%s",
+		job.CompanyID,
+		job.StreamID,
+		decision.CurrentStatus,
+		decision.PreviousStatus,
+		decision.FailStreak,
+		w.alertFailStreak,
+		cooldownUntil,
+		decision.ShouldSend,
+		decision.EventType,
+		decision.Reason,
+	)
+}
+
 func (w *worker) finalizeWithRetry(ctx context.Context, job claimedJob, status string, errorMessage string) error {
 	for attempt := 0; ; attempt++ {
 		err := w.finalizeJob(ctx, job, status, errorMessage)
@@ -1173,4 +1380,36 @@ func floatInRange(value float64, minimum float64, maximum float64) float64 {
 		return maximum
 	}
 	return value
+}
+
+func envBool(key string, fallback bool) bool {
+	valueRaw := strings.TrimSpace(strings.ToLower(config.GetString(key, "")))
+	if valueRaw == "" {
+		return fallback
+	}
+	switch valueRaw {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
+}
+
+func normalizeAlertStatus(statusRaw string) (string, error) {
+	normalized := strings.TrimSpace(strings.ToLower(statusRaw))
+	switch normalized {
+	case "ok", "warn", "fail":
+		return normalized, nil
+	default:
+		return "", errors.New("unsupported alert status: " + statusRaw)
+	}
+}
+
+func nullTimeToValue(value sql.NullTime) interface{} {
+	if !value.Valid {
+		return nil
+	}
+	return value.Time
 }
