@@ -294,11 +294,20 @@ export default function StreamsPage() {
       {companiesError ? (
         <p className="state state-error">Failed to load companies: {companiesError}</p>
       ) : null}
+      {!companiesLoading && !companiesError && companies.length === 0 ? (
+        <p className="state state-info">No companies available.</p>
+      ) : null}
       {projectsError ? (
         <p className="state state-error">Failed to load projects: {projectsError}</p>
       ) : null}
       {companyId && projectsLoading ? (
         <p className="state state-info">Loading projects...</p>
+      ) : null}
+      {companyId &&
+      !projectsLoading &&
+      !projectsError &&
+      projects.length === 0 ? (
+        <p className="state state-info">No projects found for selected company.</p>
       ) : null}
 
       {!companyId ? (
