@@ -158,13 +158,21 @@ curl -sS "http://localhost:8080/api/v1/companies/1/streams/1/check-jobs"
 - `playlist` availability check
 - `freshness` check (по `#EXT-X-PROGRAM-DATE-TIME`)
 - `segments` availability check по последним `N` сегментам из playlist
+- `declared_bitrate` check по тегам `#EXT-X-STREAM-INF` (`BANDWIDTH` / `AVERAGE-BANDWIDTH`)
 
 Правило `segments`-статуса:
 - `OK`: все выбранные `N` сегментов вернули HTTP `2xx`
 - `WARN`: часть выбранных `N` сегментов недоступна
 - `FAIL`: ни один выбранный сегмент не доступен, либо сегменты не извлечены из playlist
 
-Итоговая агрегация статуса: `FAIL > WARN > OK` по чекам `playlist`, `freshness`, `segments`.
+Правило `declared_bitrate`-статуса:
+- `OK`: найден минимум один корректный declared bitrate (`BANDWIDTH` или `AVERAGE-BANDWIDTH`)
+- `WARN`: теги `#EXT-X-STREAM-INF` отсутствуют или в них нет declared bitrate (неприменимо для части media-playlist)
+- `FAIL`: теги присутствуют, но declared bitrate невалиден (нечисловой/<=0) или playlist недоступен
+
+В `checks` сохраняются диагностические детали по `declared_bitrate` (например, `parsed_bitrate_bps`, `source`, `reason`) без секретов.
+
+Итоговая агрегация статуса: `FAIL > WARN > OK` по чекам `playlist`, `freshness`, `segments`, `declared_bitrate`.
 
 Используемые thresholds:
 - `PLAYLIST_TIMEOUT_MS` (по умолчанию `3000`)

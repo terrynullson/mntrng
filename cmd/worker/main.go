@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -42,7 +43,7 @@ type worker struct {
 type checkJobEvaluation struct {
 	DBStatus  string
 	Aggregate string
-	Checks    map[string]string
+	Checks    map[string]interface{}
 }
 
 func main() {
@@ -231,6 +232,10 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 	playlistStatus := "OK"
 	freshnessStatus := "FAIL"
 	segmentsStatus := "FAIL"
+	declaredBitrateStatus := "FAIL"
+	declaredBitrateDetails := map[string]interface{}{
+		"reason": "playlist_unavailable",
+	}
 	if playlistErr != nil {
 		playlistStatus = "FAIL"
 	} else {
@@ -242,17 +247,21 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 		} else {
 			segmentsStatus = w.checkSegmentsAvailability(jobCtx, segmentURLs)
 		}
+
+		declaredBitrateStatus, declaredBitrateDetails = checkDeclaredBitrate(playlistBody)
 	}
 
-	aggregate := aggregateStatuses(playlistStatus, freshnessStatus, segmentsStatus)
+	aggregate := aggregateStatuses(playlistStatus, freshnessStatus, segmentsStatus, declaredBitrateStatus)
 
 	return checkJobEvaluation{
 		DBStatus:  strings.ToLower(aggregate),
 		Aggregate: aggregate,
-		Checks: map[string]string{
-			"playlist":  playlistStatus,
-			"freshness": freshnessStatus,
-			"segments":  segmentsStatus,
+		Checks: map[string]interface{}{
+			"playlist":                 playlistStatus,
+			"freshness":                freshnessStatus,
+			"segments":                 segmentsStatus,
+			"declared_bitrate":         declaredBitrateStatus,
+			"declared_bitrate_details": declaredBitrateDetails,
 		},
 	}, nil
 }
@@ -458,6 +467,107 @@ func extractLatestProgramDateTime(playlist string) (time.Time, bool) {
 	}
 
 	return latest, found
+}
+
+func checkDeclaredBitrate(playlistBody string) (string, map[string]interface{}) {
+	lines := strings.Split(playlistBody, "\n")
+	streamInfoCount := 0
+	invalidCount := 0
+	missingAttributeCount := 0
+	declaredValues := make([]int64, 0, 4)
+	usedAverageBandwidth := false
+
+	for _, rawLine := range lines {
+		line := strings.TrimSpace(rawLine)
+		if !strings.HasPrefix(line, "#EXT-X-STREAM-INF:") {
+			continue
+		}
+
+		streamInfoCount++
+		attributes := parseM3U8Attributes(strings.TrimPrefix(line, "#EXT-X-STREAM-INF:"))
+
+		if valueRaw, ok := attributes["BANDWIDTH"]; ok {
+			value, err := strconv.ParseInt(valueRaw, 10, 64)
+			if err != nil || value <= 0 {
+				invalidCount++
+				continue
+			}
+			declaredValues = append(declaredValues, value)
+			continue
+		}
+
+		if valueRaw, ok := attributes["AVERAGE-BANDWIDTH"]; ok {
+			value, err := strconv.ParseInt(valueRaw, 10, 64)
+			if err != nil || value <= 0 {
+				invalidCount++
+				continue
+			}
+			declaredValues = append(declaredValues, value)
+			usedAverageBandwidth = true
+			continue
+		}
+
+		missingAttributeCount++
+	}
+
+	if len(declaredValues) == 0 {
+		if streamInfoCount == 0 {
+			return "WARN", map[string]interface{}{
+				"reason": "no_stream_inf_tags",
+			}
+		}
+		if invalidCount > 0 {
+			return "FAIL", map[string]interface{}{
+				"reason":          "invalid_declared_bitrate",
+				"invalid_entries": invalidCount,
+			}
+		}
+		return "WARN", map[string]interface{}{
+			"reason":                  "declared_bitrate_not_present",
+			"stream_info_entries":     streamInfoCount,
+			"missing_attribute_count": missingAttributeCount,
+		}
+	}
+
+	maxDeclared := declaredValues[0]
+	for _, value := range declaredValues[1:] {
+		if value > maxDeclared {
+			maxDeclared = value
+		}
+	}
+
+	bitrateSource := "bandwidth"
+	if usedAverageBandwidth {
+		bitrateSource = "average_bandwidth"
+	}
+
+	return "OK", map[string]interface{}{
+		"parsed_bitrate_bps":  maxDeclared,
+		"variants_considered": len(declaredValues),
+		"source":              bitrateSource,
+	}
+}
+
+func parseM3U8Attributes(attributesRaw string) map[string]string {
+	attributes := make(map[string]string)
+	parts := strings.Split(attributesRaw, ",")
+	for _, part := range parts {
+		item := strings.TrimSpace(part)
+		if item == "" {
+			continue
+		}
+		keyValue := strings.SplitN(item, "=", 2)
+		if len(keyValue) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(keyValue[0])
+		value := strings.Trim(strings.TrimSpace(keyValue[1]), "\"")
+		if key == "" || value == "" {
+			continue
+		}
+		attributes[strings.ToUpper(key)] = value
+	}
+	return attributes
 }
 
 func aggregateStatuses(statuses ...string) string {
