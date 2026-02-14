@@ -13,151 +13,34 @@ import (
 	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/config"
+	"github.com/example/hls-monitoring-platform/internal/domain"
 	"github.com/lib/pq"
 )
 
-type healthResponse struct {
-	Status  string `json:"status"`
-	Service string `json:"service"`
-	Time    string `json:"time"`
-}
-
-type company struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-type companyListResponse struct {
-	Items      []company `json:"items"`
-	NextCursor *string   `json:"next_cursor"`
-}
-
-type createCompanyRequest struct {
-	Name string `json:"name"`
-}
-
-type patchCompanyRequest struct {
-	Name string `json:"name"`
-}
-
-type project struct {
-	ID        int64     `json:"id"`
-	CompanyID int64     `json:"company_id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type projectListResponse struct {
-	Items      []project `json:"items"`
-	NextCursor *string   `json:"next_cursor"`
-}
-
-type createProjectRequest struct {
-	Name string `json:"name"`
-}
-
-type patchProjectRequest struct {
-	Name string `json:"name"`
-}
-
-type stream struct {
-	ID        int64     `json:"id"`
-	CompanyID int64     `json:"company_id"`
-	ProjectID int64     `json:"project_id"`
-	Name      string    `json:"name"`
-	URL       string    `json:"url"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type streamListResponse struct {
-	Items      []stream `json:"items"`
-	NextCursor *string  `json:"next_cursor"`
-}
-
-type createStreamRequest struct {
-	Name     string `json:"name"`
-	URL      string `json:"url"`
-	IsActive *bool  `json:"is_active"`
-}
-
-type patchStreamRequest struct {
-	Name     *string `json:"name"`
-	URL      *string `json:"url"`
-	IsActive *bool   `json:"is_active"`
-}
-
-type checkJob struct {
-	ID           int64      `json:"id"`
-	CompanyID    int64      `json:"company_id"`
-	StreamID     int64      `json:"stream_id"`
-	PlannedAt    time.Time  `json:"planned_at"`
-	Status       string     `json:"status"`
-	CreatedAt    time.Time  `json:"created_at"`
-	StartedAt    *time.Time `json:"started_at"`
-	FinishedAt   *time.Time `json:"finished_at"`
-	ErrorMessage *string    `json:"error_message"`
-}
-
-type checkJobListResponse struct {
-	Items      []checkJob `json:"items"`
-	NextCursor *string    `json:"next_cursor"`
-}
-
-type enqueueCheckJobRequest struct {
-	PlannedAt string `json:"planned_at"`
-}
-
-type enqueueCheckJobResponse struct {
-	Job checkJob `json:"job"`
-}
-
-type checkResult struct {
-	ID             int64           `json:"id"`
-	CompanyID      int64           `json:"company_id"`
-	JobID          int64           `json:"job_id"`
-	StreamID       int64           `json:"stream_id"`
-	Status         string          `json:"status"`
-	Checks         json.RawMessage `json:"checks"`
-	ScreenshotPath *string         `json:"screenshot_path"`
-	CreatedAt      time.Time       `json:"created_at"`
-}
-
-type checkResultListResponse struct {
-	Items      []checkResult `json:"items"`
-	NextCursor *string       `json:"next_cursor"`
-}
-
-type errorEnvelope struct {
-	Code      string      `json:"code"`
-	Message   string      `json:"message"`
-	Details   interface{} `json:"details"`
-	RequestID string      `json:"request_id"`
-}
+type healthResponse = domain.HealthResponse
+type company = domain.Company
+type companyListResponse = domain.CompanyListResponse
+type createCompanyRequest = domain.CreateCompanyRequest
+type patchCompanyRequest = domain.PatchCompanyRequest
+type project = domain.Project
+type projectListResponse = domain.ProjectListResponse
+type createProjectRequest = domain.CreateProjectRequest
+type patchProjectRequest = domain.PatchProjectRequest
+type stream = domain.Stream
+type streamListResponse = domain.StreamListResponse
+type createStreamRequest = domain.CreateStreamRequest
+type patchStreamRequest = domain.PatchStreamRequest
+type checkJob = domain.CheckJob
+type checkJobListResponse = domain.CheckJobListResponse
+type enqueueCheckJobRequest = domain.EnqueueCheckJobRequest
+type enqueueCheckJobResponse = domain.EnqueueCheckJobResponse
+type checkResult = domain.CheckResult
+type checkResultListResponse = domain.CheckResultListResponse
+type errorEnvelope = domain.ErrorEnvelope
 
 type apiServer struct {
 	db *sql.DB
 }
-
-const (
-	auditActorTypeAPI        = "api"
-	auditActorIDSystem       = "system"
-	auditEntityTypeCompany   = "company"
-	auditEntityTypeProject   = "project"
-	auditEntityTypeStream    = "stream"
-	auditActionCompanyCreate = "create"
-	auditActionCompanyUpdate = "update"
-	auditActionCompanyDelete = "delete"
-	auditActionProjectCreate = "create"
-	auditActionProjectUpdate = "update"
-	auditActionProjectDelete = "delete"
-	auditActionStreamCreate  = "create"
-	auditActionStreamUpdate  = "update"
-	auditActionStreamDelete  = "delete"
-)
 
 func main() {
 	port := config.GetString("API_PORT", "8080")
@@ -592,11 +475,11 @@ func (s *apiServer) handleCreateCompany(w http.ResponseWriter, r *http.Request) 
 		ctx,
 		tx,
 		item.ID,
-		auditActorTypeAPI,
-		auditActorIDSystem,
-		auditEntityTypeCompany,
+		domain.AuditActorTypeAPI,
+		domain.AuditActorIDSystem,
+		domain.AuditEntityTypeCompany,
 		item.ID,
-		auditActionCompanyCreate,
+		domain.AuditActionCompanyCreate,
 		auditPayload,
 	); err != nil {
 		log.Printf("create company audit insert failed: %v", err)
@@ -771,11 +654,11 @@ func (s *apiServer) handlePatchCompany(w http.ResponseWriter, r *http.Request, c
 		ctx,
 		tx,
 		item.ID,
-		auditActorTypeAPI,
-		auditActorIDSystem,
-		auditEntityTypeCompany,
+		domain.AuditActorTypeAPI,
+		domain.AuditActorIDSystem,
+		domain.AuditEntityTypeCompany,
 		item.ID,
-		auditActionCompanyUpdate,
+		domain.AuditActionCompanyUpdate,
 		auditPayload,
 	); err != nil {
 		log.Printf("patch company audit insert failed: %v", err)
@@ -840,11 +723,11 @@ func (s *apiServer) handleDeleteCompany(w http.ResponseWriter, r *http.Request, 
 		ctx,
 		tx,
 		existing.ID,
-		auditActorTypeAPI,
-		auditActorIDSystem,
-		auditEntityTypeCompany,
+		domain.AuditActorTypeAPI,
+		domain.AuditActorIDSystem,
+		domain.AuditEntityTypeCompany,
 		existing.ID,
-		auditActionCompanyDelete,
+		domain.AuditActionCompanyDelete,
 		auditPayload,
 	); err != nil {
 		log.Printf("delete company audit insert failed: %v", err)
@@ -971,11 +854,11 @@ func (s *apiServer) handleCreateProject(w http.ResponseWriter, r *http.Request, 
 		ctx,
 		tx,
 		companyID,
-		auditActorTypeAPI,
-		auditActorIDSystem,
-		auditEntityTypeProject,
+		domain.AuditActorTypeAPI,
+		domain.AuditActorIDSystem,
+		domain.AuditEntityTypeProject,
 		item.ID,
-		auditActionProjectCreate,
+		domain.AuditActionProjectCreate,
 		auditPayload,
 	); err != nil {
 		log.Printf("create project audit insert failed: %v", err)
@@ -1153,11 +1036,11 @@ func (s *apiServer) handlePatchProject(w http.ResponseWriter, r *http.Request, c
 		ctx,
 		tx,
 		companyID,
-		auditActorTypeAPI,
-		auditActorIDSystem,
-		auditEntityTypeProject,
+		domain.AuditActorTypeAPI,
+		domain.AuditActorIDSystem,
+		domain.AuditEntityTypeProject,
 		item.ID,
-		auditActionProjectUpdate,
+		domain.AuditActionProjectUpdate,
 		auditPayload,
 	); err != nil {
 		log.Printf("patch project audit insert failed: %v", err)
@@ -1228,11 +1111,11 @@ func (s *apiServer) handleDeleteProject(w http.ResponseWriter, r *http.Request, 
 		ctx,
 		tx,
 		companyID,
-		auditActorTypeAPI,
-		auditActorIDSystem,
-		auditEntityTypeProject,
+		domain.AuditActorTypeAPI,
+		domain.AuditActorIDSystem,
+		domain.AuditEntityTypeProject,
 		deleted.ID,
-		auditActionProjectDelete,
+		domain.AuditActionProjectDelete,
 		auditPayload,
 	); err != nil {
 		log.Printf("delete project audit insert failed: %v", err)
@@ -1359,11 +1242,11 @@ func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, c
 		ctx,
 		tx,
 		companyID,
-		auditActorTypeAPI,
-		auditActorIDSystem,
-		auditEntityTypeStream,
+		domain.AuditActorTypeAPI,
+		domain.AuditActorIDSystem,
+		domain.AuditEntityTypeStream,
 		item.ID,
-		auditActionStreamCreate,
+		domain.AuditActionStreamCreate,
 		auditPayload,
 	); err != nil {
 		log.Printf("create stream audit insert failed: %v", err)
@@ -1658,11 +1541,11 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 		ctx,
 		tx,
 		companyID,
-		auditActorTypeAPI,
-		auditActorIDSystem,
-		auditEntityTypeStream,
+		domain.AuditActorTypeAPI,
+		domain.AuditActorIDSystem,
+		domain.AuditEntityTypeStream,
 		item.ID,
-		auditActionStreamUpdate,
+		domain.AuditActionStreamUpdate,
 		auditPayload,
 	); err != nil {
 		log.Printf("patch stream audit insert failed: %v", err)
@@ -1739,11 +1622,11 @@ func (s *apiServer) handleDeleteStream(w http.ResponseWriter, r *http.Request, c
 		ctx,
 		tx,
 		companyID,
-		auditActorTypeAPI,
-		auditActorIDSystem,
-		auditEntityTypeStream,
+		domain.AuditActorTypeAPI,
+		domain.AuditActorIDSystem,
+		domain.AuditEntityTypeStream,
 		deleted.ID,
-		auditActionStreamDelete,
+		domain.AuditActionStreamDelete,
 		auditPayload,
 	); err != nil {
 		log.Printf("delete stream audit insert failed: %v", err)
