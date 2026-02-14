@@ -29,7 +29,6 @@ type checkResult = domain.CheckResult
 type checkResultListResponse = domain.CheckResultListResponse
 
 type Server struct {
-	db                 *sql.DB
 	companyService     *serviceapi.CompanyService
 	projectService     *serviceapi.ProjectService
 	streamService      *serviceapi.StreamService
@@ -39,7 +38,6 @@ type Server struct {
 
 func NewServer(db *sql.DB) *Server {
 	return &Server{
-		db:                 db,
 		companyService:     serviceapi.NewCompanyService(postgres.NewAPICompanyRepo(db)),
 		projectService:     serviceapi.NewProjectService(postgres.NewAPIProjectRepo(db)),
 		streamService:      serviceapi.NewStreamService(postgres.NewAPIStreamRepo(db)),

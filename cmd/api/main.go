@@ -30,14 +30,7 @@ func main() {
 		log.Fatalf("failed to ping database: %v", err)
 	}
 
-	apiServer := httpapi.NewServer(db)
-	mux := httpapi.NewRouter(apiServer.RouterHandlers())
-
-	server := &http.Server{
-		Addr:              ":" + port,
-		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
-	}
+	server := httpapi.NewHTTPServer(":"+port, db)
 
 	log.Printf("api skeleton listening on :%s", port)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
