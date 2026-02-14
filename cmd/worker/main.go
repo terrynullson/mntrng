@@ -23,6 +23,7 @@ import (
 
 	"github.com/example/hls-monitoring-platform/internal/config"
 	"github.com/example/hls-monitoring-platform/internal/domain"
+	workerservice "github.com/example/hls-monitoring-platform/internal/service/worker"
 	"github.com/lib/pq"
 )
 
@@ -183,53 +184,16 @@ func main() {
 		w.retryBackoff,
 	)
 
-	if err := w.processCycleWithRetry(ctx); err != nil {
-		log.Printf("worker cycle failed: %v", err)
-	}
-	if err := w.runRetentionCleanupWithRetry(ctx); err != nil {
-		log.Printf("worker retention cleanup failed: %v", err)
-	}
-
-	cycleTicker := time.NewTicker(w.pollInterval)
-	defer cycleTicker.Stop()
-	cleanupTicker := time.NewTicker(w.retentionCleanupInterval)
-	defer cleanupTicker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			log.Println("worker skeleton stopped")
-			return
-		case currentTime := <-cycleTicker.C:
-			log.Printf("worker skeleton heartbeat: %s", currentTime.UTC().Format(time.RFC3339))
-			if err := w.processCycleWithRetry(ctx); err != nil {
-				log.Printf("worker cycle failed: %v", err)
-			}
-		case currentTime := <-cleanupTicker.C:
-			log.Printf("worker retention cleanup heartbeat: %s", currentTime.UTC().Format(time.RFC3339))
-			if err := w.runRetentionCleanupWithRetry(ctx); err != nil {
-				log.Printf("worker retention cleanup failed: %v", err)
-			}
-		}
-	}
-}
-
-func (w *worker) processCycleWithRetry(ctx context.Context) error {
-	for attempt := 0; ; attempt++ {
-		err := w.processSingleJobCycle(ctx)
-		if err == nil {
-			return nil
-		}
-		if !isRetryableWorkerError(err) || attempt >= w.retryMax {
-			return err
-		}
-
-		backoff := w.retryBackoff * time.Duration(1<<attempt)
-		log.Printf("worker retry attempt=%d backoff=%s err=%v", attempt+1, backoff, err)
-		if err := sleepWithContext(ctx, backoff); err != nil {
-			return err
-		}
-	}
+	app := workerservice.NewApp(
+		w.pollInterval,
+		w.retentionCleanupInterval,
+		w.retryMax,
+		w.retryBackoff,
+		isRetryableWorkerError,
+		w.processSingleJobCycle,
+		w.runRetentionCleanup,
+	)
+	app.Run(ctx)
 }
 
 func (w *worker) processSingleJobCycle(ctx context.Context) error {
@@ -1590,24 +1554,6 @@ func buildTelegramMessage(job claimedJob, evaluation checkJobEvaluation, decisio
 		strings.ToUpper(evaluation.DBStatus),
 		decision.Reason,
 	)
-}
-
-func (w *worker) runRetentionCleanupWithRetry(ctx context.Context) error {
-	for attempt := 0; ; attempt++ {
-		err := w.runRetentionCleanup(ctx)
-		if err == nil {
-			return nil
-		}
-		if !isRetryableWorkerError(err) || attempt >= w.retryMax {
-			return err
-		}
-
-		backoff := w.retryBackoff * time.Duration(1<<attempt)
-		log.Printf("worker retention cleanup retry attempt=%d backoff=%s err=%v", attempt+1, backoff, err)
-		if err := sleepWithContext(ctx, backoff); err != nil {
-			return err
-		}
-	}
 }
 
 func (w *worker) runRetentionCleanup(ctx context.Context) error {
