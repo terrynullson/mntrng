@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	workeralerts "github.com/example/hls-monitoring-platform/internal/service/worker/alerts"
+	"github.com/example/hls-monitoring-platform/internal/domain"
 )
 
 func (w *worker) persistCheckResultWithRetry(ctx context.Context, job claimedJob, evaluation checkJobEvaluation) error {
@@ -94,7 +94,7 @@ func computeAlertTransition(
 	alertCooldown time.Duration,
 	alertSendRecovered bool,
 ) alertTransitionResult {
-	return workeralerts.ComputeTransition(
+	return domain.ComputeWorkerAlertTransition(
 		now,
 		currentStatus,
 		previousStatus,

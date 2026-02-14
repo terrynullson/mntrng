@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
-	workeralerts "github.com/example/hls-monitoring-platform/internal/service/worker/alerts"
 )
 
 type alertStateSnapshot struct {
@@ -44,7 +43,7 @@ func (r *WorkerRepo) ApplyAlertState(
 	}
 
 	now := time.Now().UTC()
-	transition := workeralerts.ComputeTransition(
+	transition := domain.ComputeWorkerAlertTransition(
 		now,
 		currentStatus,
 		snapshot.PreviousState,
