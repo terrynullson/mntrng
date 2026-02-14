@@ -8,7 +8,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	workeralerts "github.com/example/hls-monitoring-platform/internal/service/worker/alerts"
 )
 
 func (w *worker) persistCheckResultWithRetry(ctx context.Context, job claimedJob, evaluation checkJobEvaluation) error {
@@ -158,7 +158,7 @@ func (w *worker) applyAlertState(ctx context.Context, job claimedJob, resultStat
 	}
 
 	now := time.Now().UTC()
-	transition := computeAlertTransition(
+	transition := workeralerts.ComputeTransition(
 		now,
 		currentStatus,
 		previousStatus,
@@ -215,63 +215,17 @@ func computeAlertTransition(
 	alertCooldown time.Duration,
 	alertSendRecovered bool,
 ) alertTransitionResult {
-	nowUTC := now.UTC()
-	cooldownActive := previousCooldownUntil.Valid && previousCooldownUntil.Time.After(nowUTC)
-
-	newFailStreak := 0
-	if currentStatus == domain.WorkerStatusDBFail {
-		if previousStatus == domain.WorkerStatusDBFail {
-			newFailStreak = previousFailStreak + 1
-		} else {
-			newFailStreak = 1
-		}
-	}
-
-	decision := alertDecision{
-		ShouldSend:     false,
-		EventType:      "",
-		Reason:         "no_alert_condition",
-		CurrentStatus:  currentStatus,
-		PreviousStatus: previousStatus,
-		FailStreak:     newFailStreak,
-		CooldownUntil:  nil,
-	}
-
-	nextCooldownUntil := previousCooldownUntil
-	nextLastAlertAt := previousLastAlertAt
-
-	if currentStatus == domain.WorkerStatusDBFail {
-		if newFailStreak < failStreakThreshold {
-			decision.Reason = "fail_streak_below_threshold"
-		} else if cooldownActive {
-			decision.Reason = "cooldown_active"
-		} else {
-			decision.ShouldSend = true
-			decision.EventType = domain.WorkerAlertEventFail
-			decision.Reason = "fail_streak_threshold_met"
-			nextLastAlertAt = sql.NullTime{Time: nowUTC, Valid: true}
-			nextCooldownUntil = sql.NullTime{Time: nowUTC.Add(alertCooldown), Valid: true}
-		}
-	} else if currentStatus == domain.WorkerStatusDBOK && previousStatus == domain.WorkerStatusDBFail {
-		if !alertSendRecovered {
-			decision.Reason = "recovered_suppressed_by_config"
-		} else if cooldownActive {
-			decision.Reason = "cooldown_active"
-		} else {
-			decision.ShouldSend = true
-			decision.EventType = domain.WorkerAlertEventRecovered
-			decision.Reason = "recovered_transition"
-			nextLastAlertAt = sql.NullTime{Time: nowUTC, Valid: true}
-			nextCooldownUntil = sql.NullTime{Time: nowUTC.Add(alertCooldown), Valid: true}
-		}
-	}
-
-	return alertTransitionResult{
-		Decision:          decision,
-		NextFailStreak:    newFailStreak,
-		NextCooldownUntil: nextCooldownUntil,
-		NextLastAlertAt:   nextLastAlertAt,
-	}
+	return workeralerts.ComputeTransition(
+		now,
+		currentStatus,
+		previousStatus,
+		previousFailStreak,
+		previousCooldownUntil,
+		previousLastAlertAt,
+		failStreakThreshold,
+		alertCooldown,
+		alertSendRecovered,
+	)
 }
 
 func (w *worker) logAlertDecision(job claimedJob, decision alertDecision) {
