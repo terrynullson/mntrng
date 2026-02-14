@@ -22,15 +22,11 @@ import (
 	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/config"
+	"github.com/example/hls-monitoring-platform/internal/domain"
 	"github.com/lib/pq"
 )
 
-type claimedJob struct {
-	ID        int64
-	CompanyID int64
-	StreamID  int64
-	PlannedAt time.Time
-}
+type claimedJob = domain.WorkerClaimedJob
 
 type worker struct {
 	db                        *sql.DB
@@ -61,60 +57,17 @@ type worker struct {
 	retryBackoff              time.Duration
 }
 
-type checkJobEvaluation struct {
-	DBStatus  string
-	Aggregate string
-	Checks    map[string]interface{}
-}
-
-type playlistSegment struct {
-	URL         string
-	DurationSec float64
-}
-
-type segmentSample struct {
-	URL         string
-	Downloaded  bool
-	DurationSec float64
-	Bytes       int64
-}
-
-type declaredBitrateResult struct {
-	Status      string
-	DeclaredBPS int64
-	Details     map[string]interface{}
-}
+type checkJobEvaluation = domain.WorkerCheckJobEvaluation
+type playlistSegment = domain.WorkerPlaylistSegment
+type segmentSample = domain.WorkerSegmentSample
+type declaredBitrateResult = domain.WorkerDeclaredBitrateResult
 
 var blackframeEventPattern = regexp.MustCompile(`frame:\s*\d+\s+pblack:\s*\d+`)
 
-type alertDecision struct {
-	ShouldSend     bool
-	EventType      string
-	Reason         string
-	CurrentStatus  string
-	PreviousStatus string
-	FailStreak     int
-	CooldownUntil  *time.Time
-}
-
-type alertTransitionResult struct {
-	Decision          alertDecision
-	NextFailStreak    int
-	NextCooldownUntil sql.NullTime
-	NextLastAlertAt   sql.NullTime
-}
-
-type telegramDeliverySettings struct {
-	IsEnabled     bool
-	ChatID        string
-	SendRecovered bool
-	BotTokenRef   string
-}
-
-type retentionCandidate struct {
-	ID             int64
-	ScreenshotPath string
-}
+type alertDecision = domain.WorkerAlertDecision
+type alertTransitionResult = domain.WorkerAlertTransitionResult
+type telegramDeliverySettings = domain.WorkerTelegramDeliverySettings
+type retentionCandidate = domain.WorkerRetentionCandidate
 
 func main() {
 	pollInterval := time.Duration(intAtLeast(config.GetInt("WORKER_HEARTBEAT_SEC", 15), 1)) * time.Second
@@ -298,7 +251,7 @@ func (w *worker) processSingleJobCycle(ctx context.Context) error {
 
 	evaluation, processErr := w.processJob(ctx, job)
 	if processErr != nil {
-		if finalizeErr := w.finalizeWithRetry(ctx, job, "failed", processErr.Error()); finalizeErr != nil {
+		if finalizeErr := w.finalizeWithRetry(ctx, job, domain.WorkerJobStatusFailed, processErr.Error()); finalizeErr != nil {
 			return finalizeErr
 		}
 		log.Printf("worker finalized job as failed: id=%d company_id=%d reason=%s", job.ID, job.CompanyID, processErr.Error())
@@ -306,7 +259,7 @@ func (w *worker) processSingleJobCycle(ctx context.Context) error {
 	}
 
 	if persistErr := w.persistCheckResultWithRetry(ctx, job, evaluation); persistErr != nil {
-		if finalizeErr := w.finalizeWithRetry(ctx, job, "failed", persistErr.Error()); finalizeErr != nil {
+		if finalizeErr := w.finalizeWithRetry(ctx, job, domain.WorkerJobStatusFailed, persistErr.Error()); finalizeErr != nil {
 			return finalizeErr
 		}
 		log.Printf("worker finalized job as failed: id=%d company_id=%d reason=%s", job.ID, job.CompanyID, persistErr.Error())
@@ -315,7 +268,7 @@ func (w *worker) processSingleJobCycle(ctx context.Context) error {
 
 	alertDecision, alertErr := w.applyAlertStateWithRetry(ctx, job, evaluation.DBStatus)
 	if alertErr != nil {
-		if finalizeErr := w.finalizeWithRetry(ctx, job, "failed", alertErr.Error()); finalizeErr != nil {
+		if finalizeErr := w.finalizeWithRetry(ctx, job, domain.WorkerJobStatusFailed, alertErr.Error()); finalizeErr != nil {
 			return finalizeErr
 		}
 		log.Printf("worker finalized job as failed: id=%d company_id=%d reason=%s", job.ID, job.CompanyID, alertErr.Error())
@@ -324,7 +277,7 @@ func (w *worker) processSingleJobCycle(ctx context.Context) error {
 	w.logAlertDecision(job, alertDecision)
 	w.processTelegramDelivery(ctx, job, evaluation, alertDecision)
 
-	if finalizeErr := w.finalizeWithRetry(ctx, job, "done", ""); finalizeErr != nil {
+	if finalizeErr := w.finalizeWithRetry(ctx, job, domain.WorkerJobStatusDone, ""); finalizeErr != nil {
 		return finalizeErr
 	}
 	log.Printf("worker finalized job as done: id=%d company_id=%d", job.ID, job.CompanyID)
@@ -337,21 +290,23 @@ func (w *worker) claimNextQueuedJob(ctx context.Context) (claimedJob, bool, erro
 		`WITH candidate AS (
              SELECT id, company_id
              FROM check_jobs
-             WHERE status = 'queued'
+             WHERE status = $1
              ORDER BY planned_at ASC, id ASC
              FOR UPDATE SKIP LOCKED
              LIMIT 1
          )
          UPDATE check_jobs AS j
-         SET status = 'running',
+         SET status = $2,
              started_at = NOW(),
              finished_at = NULL,
              error_message = NULL
          FROM candidate AS c
          WHERE j.id = c.id
            AND j.company_id = c.company_id
-           AND j.status = 'queued'
+           AND j.status = $1
          RETURNING j.id, j.company_id, j.stream_id, j.planned_at`,
+		domain.WorkerJobStatusQueued,
+		domain.WorkerJobStatusRunning,
 	)
 
 	var job claimedJob
@@ -375,13 +330,13 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 	}
 
 	playlistBody, playlistErr := w.fetchPlaylist(jobCtx, streamURL)
-	playlistStatus := "OK"
-	freshnessStatus := "FAIL"
-	segmentsStatus := "FAIL"
-	freezeStatus := "FAIL"
-	blackframeStatus := "WARN"
+	playlistStatus := domain.WorkerStatusOK
+	freshnessStatus := domain.WorkerStatusFail
+	segmentsStatus := domain.WorkerStatusFail
+	freezeStatus := domain.WorkerStatusFail
+	blackframeStatus := domain.WorkerStatusWarn
 	declaredBitrate := declaredBitrateResult{
-		Status: "FAIL",
+		Status: domain.WorkerStatusFail,
 		Details: map[string]interface{}{
 			"reason": "playlist_unavailable",
 		},
@@ -397,7 +352,7 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 		"reason":           "playlist_unavailable",
 		"source":           "ffmpeg_blackframe",
 	}
-	effectiveBitrateStatus := "FAIL"
+	effectiveBitrateStatus := domain.WorkerStatusFail
 	effectiveBitrateDetails := map[string]interface{}{
 		"calculated_bps": 0.0,
 		"declared_bps":   int64(0),
@@ -407,7 +362,7 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 	}
 
 	if playlistErr != nil {
-		playlistStatus = "FAIL"
+		playlistStatus = domain.WorkerStatusFail
 	} else {
 		freshnessStatus = w.checkFreshness(playlistBody)
 		freezeStatus, freezeDetails = w.checkFreeze(playlistBody)
@@ -415,15 +370,15 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 		segments, segmentParseErr := extractLatestPlaylistSegments(streamURL, playlistBody, w.segmentsSampleCount)
 		segmentSamples := make([]segmentSample, 0)
 		if segmentParseErr != nil {
-			segmentsStatus = "FAIL"
-			blackframeStatus = "WARN"
+			segmentsStatus = domain.WorkerStatusFail
+			blackframeStatus = domain.WorkerStatusWarn
 			blackframeDetails = map[string]interface{}{
 				"dark_frame_ratio": 0.0,
 				"analyzed_frames":  0,
 				"reason":           "segments_not_available",
 				"source":           "ffmpeg_blackframe",
 			}
-			effectiveBitrateStatus = "FAIL"
+			effectiveBitrateStatus = domain.WorkerStatusFail
 			effectiveBitrateDetails = map[string]interface{}{
 				"calculated_bps": 0.0,
 				"declared_bps":   int64(0),
@@ -445,7 +400,7 @@ func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvalua
 	aggregate := aggregateStatuses(playlistStatus, freshnessStatus, segmentsStatus, freezeStatus, blackframeStatus, declaredBitrate.Status, effectiveBitrateStatus)
 
 	return checkJobEvaluation{
-		DBStatus:  strings.ToLower(aggregate),
+		DBStatus:  checkStatusToDBStatus(aggregate),
 		Aggregate: aggregate,
 		Checks: map[string]interface{}{
 			"playlist":                  playlistStatus,
@@ -521,7 +476,7 @@ func (w *worker) fetchPlaylist(ctx context.Context, streamURL string) (string, e
 func (w *worker) checkFreshness(playlistBody string) string {
 	lastProgramDateTime, ok := extractLatestProgramDateTime(playlistBody)
 	if !ok {
-		return "FAIL"
+		return domain.WorkerStatusFail
 	}
 
 	age := time.Since(lastProgramDateTime)
@@ -530,12 +485,12 @@ func (w *worker) checkFreshness(playlistBody string) string {
 	}
 
 	if age >= w.freshnessFail {
-		return "FAIL"
+		return domain.WorkerStatusFail
 	}
 	if age >= w.freshnessWarn {
-		return "WARN"
+		return domain.WorkerStatusWarn
 	}
-	return "OK"
+	return domain.WorkerStatusOK
 }
 
 func (w *worker) checkFreeze(playlistBody string) (string, map[string]interface{}) {
@@ -555,10 +510,10 @@ func (w *worker) checkFreeze(playlistBody string) (string, map[string]interface{
 
 	status := freezeStatusByThreshold(maxFreezeSec, w.freezeWarn.Seconds(), w.freezeFail.Seconds())
 	reason := "within_threshold"
-	if status == "WARN" {
+	if status == domain.WorkerStatusWarn {
 		reason = "freeze_warn_threshold_reached"
 	}
-	if status == "FAIL" {
+	if status == domain.WorkerStatusFail {
 		reason = "freeze_fail_threshold_reached"
 	}
 
@@ -585,7 +540,7 @@ func (w *worker) checkBlackframe(ctx context.Context, samples []segmentSample) (
 		cancel()
 		if err != nil {
 			if errors.Is(err, exec.ErrNotFound) {
-				return "WARN", map[string]interface{}{
+				return domain.WorkerStatusWarn, map[string]interface{}{
 					"dark_frame_ratio": 0.0,
 					"analyzed_frames":  0,
 					"reason":           "blackframe_analyzer_not_available",
@@ -600,7 +555,7 @@ func (w *worker) checkBlackframe(ctx context.Context, samples []segmentSample) (
 	}
 
 	if downloadedCount == 0 {
-		return "WARN", map[string]interface{}{
+		return domain.WorkerStatusWarn, map[string]interface{}{
 			"dark_frame_ratio": 0.0,
 			"analyzed_frames":  0,
 			"reason":           "no_downloaded_segments",
@@ -609,7 +564,7 @@ func (w *worker) checkBlackframe(ctx context.Context, samples []segmentSample) (
 	}
 
 	if totalAnalyzedFrames == 0 {
-		return "WARN", map[string]interface{}{
+		return domain.WorkerStatusWarn, map[string]interface{}{
 			"dark_frame_ratio": 0.0,
 			"analyzed_frames":  0,
 			"reason":           "blackframe_analysis_failed",
@@ -620,10 +575,10 @@ func (w *worker) checkBlackframe(ctx context.Context, samples []segmentSample) (
 	darkFrameRatio := float64(totalDarkFrames) / float64(totalAnalyzedFrames)
 	status := blackframeStatusByThreshold(darkFrameRatio, w.blackframeWarnRatio, w.blackframeFailRatio)
 	reason := "within_threshold"
-	if status == "WARN" {
+	if status == domain.WorkerStatusWarn {
 		reason = "blackframe_warn_threshold_reached"
 	}
-	if status == "FAIL" {
+	if status == domain.WorkerStatusFail {
 		reason = "blackframe_fail_threshold_reached"
 	}
 
@@ -695,7 +650,7 @@ func probeVideoFrameCount(ctx context.Context, segmentURL string) (int, error) {
 
 func (w *worker) checkSegmentsAvailability(ctx context.Context, segments []playlistSegment) (string, []segmentSample) {
 	if len(segments) == 0 {
-		return "FAIL", nil
+		return domain.WorkerStatusFail, nil
 	}
 
 	availableCount := 0
@@ -718,12 +673,12 @@ func (w *worker) checkSegmentsAvailability(ctx context.Context, segments []playl
 	}
 
 	if availableCount == len(segments) {
-		return "OK", samples
+		return domain.WorkerStatusOK, samples
 	}
 	if availableCount == 0 {
-		return "FAIL", samples
+		return domain.WorkerStatusFail, samples
 	}
-	return "WARN", samples
+	return domain.WorkerStatusWarn, samples
 }
 
 func downloadSegmentBytes(ctx context.Context, resourceURL string) (int64, error) {
@@ -892,7 +847,7 @@ func checkDeclaredBitrate(playlistBody string) declaredBitrateResult {
 	if len(declaredValues) == 0 {
 		if streamInfoCount == 0 {
 			return declaredBitrateResult{
-				Status:      "WARN",
+				Status:      domain.WorkerStatusWarn,
 				DeclaredBPS: 0,
 				Details: map[string]interface{}{
 					"reason": "no_stream_inf_tags",
@@ -901,7 +856,7 @@ func checkDeclaredBitrate(playlistBody string) declaredBitrateResult {
 		}
 		if invalidCount > 0 {
 			return declaredBitrateResult{
-				Status:      "FAIL",
+				Status:      domain.WorkerStatusFail,
 				DeclaredBPS: 0,
 				Details: map[string]interface{}{
 					"reason":          "invalid_declared_bitrate",
@@ -910,7 +865,7 @@ func checkDeclaredBitrate(playlistBody string) declaredBitrateResult {
 			}
 		}
 		return declaredBitrateResult{
-			Status:      "WARN",
+			Status:      domain.WorkerStatusWarn,
 			DeclaredBPS: 0,
 			Details: map[string]interface{}{
 				"reason":                  "declared_bitrate_not_present",
@@ -933,7 +888,7 @@ func checkDeclaredBitrate(playlistBody string) declaredBitrateResult {
 	}
 
 	return declaredBitrateResult{
-		Status:      "OK",
+		Status:      domain.WorkerStatusOK,
 		DeclaredBPS: maxDeclared,
 		Details: map[string]interface{}{
 			"parsed_bitrate_bps":  maxDeclared,
@@ -989,12 +944,12 @@ func (w *worker) checkEffectiveBitrate(samples []segmentSample, declared declare
 
 	if availableSamples == 0 {
 		details["reason"] = "no_downloaded_segments"
-		return "FAIL", details
+		return domain.WorkerStatusFail, details
 	}
 
 	if totalDurationSec <= 0 {
 		details["reason"] = "invalid_segment_duration"
-		return "FAIL", details
+		return domain.WorkerStatusFail, details
 	}
 
 	calculatedBPS := (float64(totalBytes) * 8.0) / totalDurationSec
@@ -1002,7 +957,7 @@ func (w *worker) checkEffectiveBitrate(samples []segmentSample, declared declare
 
 	if declared.DeclaredBPS <= 0 {
 		details["reason"] = "declared_bitrate_unavailable"
-		return "WARN", details
+		return domain.WorkerStatusWarn, details
 	}
 
 	ratio := calculatedBPS / float64(declared.DeclaredBPS)
@@ -1010,51 +965,51 @@ func (w *worker) checkEffectiveBitrate(samples []segmentSample, declared declare
 
 	if ratio < w.effectiveFailRatio {
 		details["reason"] = "ratio_below_fail_threshold"
-		return "FAIL", details
+		return domain.WorkerStatusFail, details
 	}
 	if ratio < w.effectiveWarnRatio {
 		details["reason"] = "ratio_below_warn_threshold"
-		return "WARN", details
+		return domain.WorkerStatusWarn, details
 	}
 
 	details["reason"] = "within_threshold"
-	return "OK", details
+	return domain.WorkerStatusOK, details
 }
 
 func freezeStatusByThreshold(maxFreezeSec float64, warnSec float64, failSec float64) string {
 	if maxFreezeSec >= failSec {
-		return "FAIL"
+		return domain.WorkerStatusFail
 	}
 	if maxFreezeSec >= warnSec {
-		return "WARN"
+		return domain.WorkerStatusWarn
 	}
-	return "OK"
+	return domain.WorkerStatusOK
 }
 
 func blackframeStatusByThreshold(darkFrameRatio float64, warnRatio float64, failRatio float64) string {
 	if darkFrameRatio >= failRatio {
-		return "FAIL"
+		return domain.WorkerStatusFail
 	}
 	if darkFrameRatio >= warnRatio {
-		return "WARN"
+		return domain.WorkerStatusWarn
 	}
-	return "OK"
+	return domain.WorkerStatusOK
 }
 
 func aggregateStatuses(statuses ...string) string {
 	hasWarn := false
 	for _, status := range statuses {
 		switch status {
-		case "FAIL":
-			return "FAIL"
-		case "WARN":
+		case domain.WorkerStatusFail:
+			return domain.WorkerStatusFail
+		case domain.WorkerStatusWarn:
 			hasWarn = true
 		}
 	}
 	if hasWarn {
-		return "WARN"
+		return domain.WorkerStatusWarn
 	}
-	return "OK"
+	return domain.WorkerStatusOK
 }
 
 func (w *worker) persistCheckResultWithRetry(ctx context.Context, job claimedJob, evaluation checkJobEvaluation) error {
@@ -1265,8 +1220,8 @@ func computeAlertTransition(
 	cooldownActive := previousCooldownUntil.Valid && previousCooldownUntil.Time.After(nowUTC)
 
 	newFailStreak := 0
-	if currentStatus == "fail" {
-		if previousStatus == "fail" {
+	if currentStatus == domain.WorkerStatusDBFail {
+		if previousStatus == domain.WorkerStatusDBFail {
 			newFailStreak = previousFailStreak + 1
 		} else {
 			newFailStreak = 1
@@ -1286,26 +1241,26 @@ func computeAlertTransition(
 	nextCooldownUntil := previousCooldownUntil
 	nextLastAlertAt := previousLastAlertAt
 
-	if currentStatus == "fail" {
+	if currentStatus == domain.WorkerStatusDBFail {
 		if newFailStreak < failStreakThreshold {
 			decision.Reason = "fail_streak_below_threshold"
 		} else if cooldownActive {
 			decision.Reason = "cooldown_active"
 		} else {
 			decision.ShouldSend = true
-			decision.EventType = "fail"
+			decision.EventType = domain.WorkerAlertEventFail
 			decision.Reason = "fail_streak_threshold_met"
 			nextLastAlertAt = sql.NullTime{Time: nowUTC, Valid: true}
 			nextCooldownUntil = sql.NullTime{Time: nowUTC.Add(alertCooldown), Valid: true}
 		}
-	} else if currentStatus == "ok" && previousStatus == "fail" {
+	} else if currentStatus == domain.WorkerStatusDBOK && previousStatus == domain.WorkerStatusDBFail {
 		if !alertSendRecovered {
 			decision.Reason = "recovered_suppressed_by_config"
 		} else if cooldownActive {
 			decision.Reason = "cooldown_active"
 		} else {
 			decision.ShouldSend = true
-			decision.EventType = "recovered"
+			decision.EventType = domain.WorkerAlertEventRecovered
 			decision.Reason = "recovered_transition"
 			nextLastAlertAt = sql.NullTime{Time: nowUTC, Valid: true}
 			nextCooldownUntil = sql.NullTime{Time: nowUTC.Add(alertCooldown), Valid: true}
@@ -1404,7 +1359,7 @@ func (w *worker) processTelegramDelivery(ctx context.Context, job claimedJob, ev
 		)
 		return
 	}
-	if decision.EventType == "recovered" && !settings.SendRecovered {
+	if decision.EventType == domain.WorkerAlertEventRecovered && !settings.SendRecovered {
 		log.Printf(
 			"worker telegram delivery: company_id=%d stream_id=%d event_type=%s should_send=%t delivery_result=%s reason=%s",
 			job.CompanyID,
@@ -1862,11 +1817,12 @@ func (w *worker) finalizeJob(ctx context.Context, job claimedJob, status string,
              error_message = $2
          WHERE id = $3
            AND company_id = $4
-           AND status = 'running'`,
+           AND status = $5`,
 		status,
 		nullableErrorMessage,
 		job.ID,
 		job.CompanyID,
+		domain.WorkerJobStatusRunning,
 	)
 	if err != nil {
 		return err
@@ -1980,10 +1936,23 @@ func envBool(key string, fallback bool) bool {
 	}
 }
 
+func checkStatusToDBStatus(status string) string {
+	switch strings.TrimSpace(strings.ToUpper(status)) {
+	case domain.WorkerStatusOK:
+		return domain.WorkerStatusDBOK
+	case domain.WorkerStatusWarn:
+		return domain.WorkerStatusDBWarn
+	case domain.WorkerStatusFail:
+		return domain.WorkerStatusDBFail
+	default:
+		return strings.TrimSpace(strings.ToLower(status))
+	}
+}
+
 func normalizeAlertStatus(statusRaw string) (string, error) {
-	normalized := strings.TrimSpace(strings.ToLower(statusRaw))
+	normalized := checkStatusToDBStatus(statusRaw)
 	switch normalized {
-	case "ok", "warn", "fail":
+	case domain.WorkerStatusDBOK, domain.WorkerStatusDBWarn, domain.WorkerStatusDBFail:
 		return normalized, nil
 	default:
 		return "", errors.New("unsupported alert status: " + statusRaw)
