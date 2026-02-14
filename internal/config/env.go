@@ -54,15 +54,10 @@ func GetBool(key string, fallback bool) bool {
 		return fallback
 	}
 
-	parsed, err := strconv.ParseBool(value)
-	if err == nil {
-		return parsed
-	}
-
 	switch value {
-	case "yes", "on":
+	case "1", "true", "yes", "on":
 		return true
-	case "no", "off":
+	case "0", "false", "no", "off":
 		return false
 	default:
 		return fallback
