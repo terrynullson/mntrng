@@ -7,11 +7,13 @@ Use PostgreSQL `psql` with `ON_ERROR_STOP` enabled.
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0001_baseline_schema.up.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0002_telegram_delivery_settings.up.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_preserve_company_audit_history.up.sql
 ```
 
 ## Roll back migrations
 
 ```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_preserve_company_audit_history.down.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0002_telegram_delivery_settings.down.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0001_baseline_schema.down.sql
 ```
@@ -34,4 +36,5 @@ Migration `0002_telegram_delivery_settings` adds `telegram_delivery_settings` as
 - Cross-tenant protection: child tables use composite foreign keys with `(id, company_id)`.
 - Job idempotency: `check_jobs` has `UNIQUE(stream_id, planned_at)`.
 - `check_results` immutability: `BEFORE UPDATE` trigger raises an exception.
+- `audit_log` is append-only operational history and must persist after `companies` deletion; migration `0003_preserve_company_audit_history` removes cascade deletion for `audit_log`.
 - Required indexes are present on `company_id`, `stream_id`, and `created_at` where applicable.
