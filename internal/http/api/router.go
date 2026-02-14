@@ -7,6 +7,17 @@ import (
 	"strings"
 )
 
+const (
+	projectCollectionPath      = "projects"
+	projectItemPrefix          = "projects/"
+	streamCollectionPath       = "streams"
+	streamItemPrefix           = "streams/"
+	checkJobsCollectionPath    = "check-jobs"
+	checkJobsItemPrefix        = "check-jobs/"
+	checkResultsCollectionPath = "check-results"
+	checkResultsItemPrefix     = "check-results/"
+)
+
 type companyHandler func(http.ResponseWriter, *http.Request, int64)
 type companyResourceHandler func(http.ResponseWriter, *http.Request, int64, int64)
 
@@ -65,50 +76,51 @@ func routeCompanies(w http.ResponseWriter, r *http.Request, handlers RouterHandl
 func routeCompanyByID(w http.ResponseWriter, r *http.Request, handlers RouterHandlers) {
 	companyID, pathRemainder, pathErr := parseCompanyPath(r.URL.Path)
 	if pathErr == "not_found" {
-		WriteJSONError(
-			w,
-			r,
-			http.StatusNotFound,
-			"not_found",
-			"resource not found",
-			map[string]interface{}{"path": r.URL.Path},
-		)
+		writeRouterPathNotFound(w, r)
 		return
 	}
 	if pathErr == "validation_error" {
-		WriteJSONError(
-			w,
-			r,
-			http.StatusBadRequest,
-			"validation_error",
-			"invalid company_id",
-			map[string]interface{}{"path": r.URL.Path},
-		)
+		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid company_id", map[string]interface{}{"path": r.URL.Path})
 		return
 	}
 
 	if pathRemainder == "" {
-		switch r.Method {
-		case http.MethodGet:
-			handlers.HandleGetCompany(w, r, companyID)
-		case http.MethodPatch:
-			handlers.HandlePatchCompany(w, r, companyID)
-		case http.MethodDelete:
-			handlers.HandleDeleteCompany(w, r, companyID)
-		default:
-			WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
-		}
+		routeCompanyRoot(w, r, handlers, companyID)
+		return
+	}
+	if routeCompanyProjectPath(w, r, handlers, companyID, pathRemainder) {
+		return
+	}
+	if routeCompanyStreamCollection(w, r, handlers, companyID, pathRemainder) {
+		return
+	}
+	if routeCompanyCheckJobsPath(w, r, handlers, companyID, pathRemainder) {
+		return
+	}
+	if routeCompanyCheckResultsPath(w, r, handlers, companyID, pathRemainder) {
+		return
+	}
+	if routeCompanyStreamPath(w, r, handlers, companyID, pathRemainder) {
 		return
 	}
 
-	const projectCollectionPath = "projects"
-	const projectItemPrefix = "projects/"
-	const streamCollectionPath = "streams"
-	const streamItemPrefix = "streams/"
-	const checkJobsCollectionPath = "check-jobs"
-	const checkJobsItemPrefix = "check-jobs/"
-	const checkResultsCollectionPath = "check-results"
-	const checkResultsItemPrefix = "check-results/"
+	writeRouterPathNotFound(w, r)
+}
+
+func routeCompanyRoot(w http.ResponseWriter, r *http.Request, handlers RouterHandlers, companyID int64) {
+	switch r.Method {
+	case http.MethodGet:
+		handlers.HandleGetCompany(w, r, companyID)
+	case http.MethodPatch:
+		handlers.HandlePatchCompany(w, r, companyID)
+	case http.MethodDelete:
+		handlers.HandleDeleteCompany(w, r, companyID)
+	default:
+		WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+	}
+}
+
+func routeCompanyProjectPath(w http.ResponseWriter, r *http.Request, handlers RouterHandlers, companyID int64, pathRemainder string) bool {
 	if pathRemainder == projectCollectionPath {
 		switch r.Method {
 		case http.MethodPost:
@@ -118,248 +130,188 @@ func routeCompanyByID(w http.ResponseWriter, r *http.Request, handlers RouterHan
 		default:
 			WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
 		}
-		return
+		return true
 	}
-	if strings.HasPrefix(pathRemainder, projectItemPrefix) {
-		projectPath := strings.TrimPrefix(pathRemainder, projectItemPrefix)
-		if projectPath == "" {
-			WriteJSONError(
-				w,
-				r,
-				http.StatusNotFound,
-				"not_found",
-				"resource not found",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-
-		projectParts := strings.Split(projectPath, "/")
-		projectID, err := parsePositiveID(projectParts[0])
-		if err != nil {
-			WriteJSONError(
-				w,
-				r,
-				http.StatusBadRequest,
-				"validation_error",
-				"invalid project_id",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-		if len(projectParts) == 1 {
-			switch r.Method {
-			case http.MethodGet:
-				handlers.HandleGetProject(w, r, companyID, projectID)
-			case http.MethodPatch:
-				handlers.HandlePatchProject(w, r, companyID, projectID)
-			case http.MethodDelete:
-				handlers.HandleDeleteProject(w, r, companyID, projectID)
-			default:
-				WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
-			}
-			return
-		}
-		if len(projectParts) == 2 && projectParts[1] == streamCollectionPath {
-			switch r.Method {
-			case http.MethodPost:
-				handlers.HandleCreateStream(w, r, companyID, projectID)
-			default:
-				WriteMethodNotAllowed(w, r, http.MethodPost)
-			}
-			return
-		}
-
-		WriteJSONError(
-			w,
-			r,
-			http.StatusNotFound,
-			"not_found",
-			"resource not found",
-			map[string]interface{}{"path": r.URL.Path},
-		)
-		return
+	if !strings.HasPrefix(pathRemainder, projectItemPrefix) {
+		return false
 	}
-	if pathRemainder == streamCollectionPath {
-		switch r.Method {
-		case http.MethodGet:
-			handlers.HandleListStreams(w, r, companyID)
-		default:
+
+	projectPath := strings.TrimPrefix(pathRemainder, projectItemPrefix)
+	if projectPath == "" {
+		writeRouterPathNotFound(w, r)
+		return true
+	}
+	projectParts := strings.Split(projectPath, "/")
+	projectID, err := parsePositiveID(projectParts[0])
+	if err != nil {
+		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid project_id", map[string]interface{}{"path": r.URL.Path})
+		return true
+	}
+	if len(projectParts) == 1 {
+		routeProjectItem(w, r, handlers, companyID, projectID)
+		return true
+	}
+	if len(projectParts) == 2 && projectParts[1] == streamCollectionPath {
+		if r.Method == http.MethodPost {
+			handlers.HandleCreateStream(w, r, companyID, projectID)
+		} else {
+			WriteMethodNotAllowed(w, r, http.MethodPost)
+		}
+		return true
+	}
+
+	writeRouterPathNotFound(w, r)
+	return true
+}
+
+func routeProjectItem(w http.ResponseWriter, r *http.Request, handlers RouterHandlers, companyID int64, projectID int64) {
+	switch r.Method {
+	case http.MethodGet:
+		handlers.HandleGetProject(w, r, companyID, projectID)
+	case http.MethodPatch:
+		handlers.HandlePatchProject(w, r, companyID, projectID)
+	case http.MethodDelete:
+		handlers.HandleDeleteProject(w, r, companyID, projectID)
+	default:
+		WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+	}
+}
+
+func routeCompanyStreamCollection(w http.ResponseWriter, r *http.Request, handlers RouterHandlers, companyID int64, pathRemainder string) bool {
+	if pathRemainder != streamCollectionPath {
+		return false
+	}
+	if r.Method == http.MethodGet {
+		handlers.HandleListStreams(w, r, companyID)
+	} else {
+		WriteMethodNotAllowed(w, r, http.MethodGet)
+	}
+	return true
+}
+
+func routeCompanyCheckJobsPath(w http.ResponseWriter, r *http.Request, handlers RouterHandlers, companyID int64, pathRemainder string) bool {
+	if !strings.HasPrefix(pathRemainder, checkJobsItemPrefix) {
+		return false
+	}
+	jobPath := strings.TrimPrefix(pathRemainder, checkJobsItemPrefix)
+	if jobPath == "" {
+		writeRouterPathNotFound(w, r)
+		return true
+	}
+
+	jobParts := strings.Split(jobPath, "/")
+	jobID, err := parsePositiveID(jobParts[0])
+	if err != nil {
+		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid job_id", map[string]interface{}{"path": r.URL.Path})
+		return true
+	}
+	if len(jobParts) == 1 {
+		if r.Method == http.MethodGet {
+			handlers.HandleGetCheckJob(w, r, companyID, jobID)
+		} else {
 			WriteMethodNotAllowed(w, r, http.MethodGet)
 		}
-		return
+		return true
 	}
-	if strings.HasPrefix(pathRemainder, checkJobsItemPrefix) {
-		jobPath := strings.TrimPrefix(pathRemainder, checkJobsItemPrefix)
-		if jobPath == "" {
-			WriteJSONError(
-				w,
-				r,
-				http.StatusNotFound,
-				"not_found",
-				"resource not found",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-
-		jobParts := strings.Split(jobPath, "/")
-		jobID, err := parsePositiveID(jobParts[0])
-		if err != nil {
-			WriteJSONError(
-				w,
-				r,
-				http.StatusBadRequest,
-				"validation_error",
-				"invalid job_id",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-		if len(jobParts) == 1 {
-			switch r.Method {
-			case http.MethodGet:
-				handlers.HandleGetCheckJob(w, r, companyID, jobID)
-			default:
-				WriteMethodNotAllowed(w, r, http.MethodGet)
-			}
-			return
-		}
-		if len(jobParts) == 2 && jobParts[1] == "result" {
-			switch r.Method {
-			case http.MethodGet:
-				handlers.HandleGetCheckResultByJob(w, r, companyID, jobID)
-			default:
-				WriteMethodNotAllowed(w, r, http.MethodGet)
-			}
-			return
-		}
-
-		WriteJSONError(
-			w,
-			r,
-			http.StatusNotFound,
-			"not_found",
-			"resource not found",
-			map[string]interface{}{"path": r.URL.Path},
-		)
-		return
-	}
-	if strings.HasPrefix(pathRemainder, checkResultsItemPrefix) {
-		resultIDRaw := strings.TrimPrefix(pathRemainder, checkResultsItemPrefix)
-		if resultIDRaw == "" || strings.Contains(resultIDRaw, "/") {
-			WriteJSONError(
-				w,
-				r,
-				http.StatusNotFound,
-				"not_found",
-				"resource not found",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-
-		resultID, err := parsePositiveID(resultIDRaw)
-		if err != nil {
-			WriteJSONError(
-				w,
-				r,
-				http.StatusBadRequest,
-				"validation_error",
-				"invalid result_id",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-
-		switch r.Method {
-		case http.MethodGet:
-			handlers.HandleGetCheckResult(w, r, companyID, resultID)
-		default:
+	if len(jobParts) == 2 && jobParts[1] == "result" {
+		if r.Method == http.MethodGet {
+			handlers.HandleGetCheckResultByJob(w, r, companyID, jobID)
+		} else {
 			WriteMethodNotAllowed(w, r, http.MethodGet)
 		}
-		return
-	}
-	if strings.HasPrefix(pathRemainder, streamItemPrefix) {
-		streamPath := strings.TrimPrefix(pathRemainder, streamItemPrefix)
-		if streamPath == "" {
-			WriteJSONError(
-				w,
-				r,
-				http.StatusNotFound,
-				"not_found",
-				"resource not found",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-
-		streamParts := strings.Split(streamPath, "/")
-		streamID, err := parsePositiveID(streamParts[0])
-		if err != nil {
-			WriteJSONError(
-				w,
-				r,
-				http.StatusBadRequest,
-				"validation_error",
-				"invalid stream_id",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-		if len(streamParts) == 1 {
-			switch r.Method {
-			case http.MethodGet:
-				handlers.HandleGetStream(w, r, companyID, streamID)
-			case http.MethodPatch:
-				handlers.HandlePatchStream(w, r, companyID, streamID)
-			case http.MethodDelete:
-				handlers.HandleDeleteStream(w, r, companyID, streamID)
-			default:
-				WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
-			}
-			return
-		}
-		if len(streamParts) == 2 && streamParts[1] == checkJobsCollectionPath {
-			switch r.Method {
-			case http.MethodPost:
-				handlers.HandleEnqueueCheckJob(w, r, companyID, streamID)
-			case http.MethodGet:
-				handlers.HandleListCheckJobs(w, r, companyID, streamID)
-			default:
-				WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
-			}
-			return
-		}
-		if len(streamParts) == 2 && streamParts[1] == checkResultsCollectionPath {
-			switch r.Method {
-			case http.MethodGet:
-				handlers.HandleListCheckResults(w, r, companyID, streamID)
-			default:
-				WriteMethodNotAllowed(w, r, http.MethodGet)
-			}
-			return
-		}
-
-		WriteJSONError(
-			w,
-			r,
-			http.StatusNotFound,
-			"not_found",
-			"resource not found",
-			map[string]interface{}{"path": r.URL.Path},
-		)
-		return
+		return true
 	}
 
-	WriteJSONError(
-		w,
-		r,
-		http.StatusNotFound,
-		"not_found",
-		"resource not found",
-		map[string]interface{}{"path": r.URL.Path},
-	)
+	writeRouterPathNotFound(w, r)
+	return true
+}
+
+func routeCompanyCheckResultsPath(w http.ResponseWriter, r *http.Request, handlers RouterHandlers, companyID int64, pathRemainder string) bool {
+	if !strings.HasPrefix(pathRemainder, checkResultsItemPrefix) {
+		return false
+	}
+	resultIDRaw := strings.TrimPrefix(pathRemainder, checkResultsItemPrefix)
+	if resultIDRaw == "" || strings.Contains(resultIDRaw, "/") {
+		writeRouterPathNotFound(w, r)
+		return true
+	}
+
+	resultID, err := parsePositiveID(resultIDRaw)
+	if err != nil {
+		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid result_id", map[string]interface{}{"path": r.URL.Path})
+		return true
+	}
+	if r.Method == http.MethodGet {
+		handlers.HandleGetCheckResult(w, r, companyID, resultID)
+	} else {
+		WriteMethodNotAllowed(w, r, http.MethodGet)
+	}
+	return true
+}
+
+func routeCompanyStreamPath(w http.ResponseWriter, r *http.Request, handlers RouterHandlers, companyID int64, pathRemainder string) bool {
+	if !strings.HasPrefix(pathRemainder, streamItemPrefix) {
+		return false
+	}
+	streamPath := strings.TrimPrefix(pathRemainder, streamItemPrefix)
+	if streamPath == "" {
+		writeRouterPathNotFound(w, r)
+		return true
+	}
+
+	streamParts := strings.Split(streamPath, "/")
+	streamID, err := parsePositiveID(streamParts[0])
+	if err != nil {
+		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid stream_id", map[string]interface{}{"path": r.URL.Path})
+		return true
+	}
+	if len(streamParts) == 1 {
+		routeStreamItem(w, r, handlers, companyID, streamID)
+		return true
+	}
+	if len(streamParts) == 2 && streamParts[1] == checkJobsCollectionPath {
+		routeStreamCheckJobsCollection(w, r, handlers, companyID, streamID)
+		return true
+	}
+	if len(streamParts) == 2 && streamParts[1] == checkResultsCollectionPath {
+		if r.Method == http.MethodGet {
+			handlers.HandleListCheckResults(w, r, companyID, streamID)
+		} else {
+			WriteMethodNotAllowed(w, r, http.MethodGet)
+		}
+		return true
+	}
+
+	writeRouterPathNotFound(w, r)
+	return true
+}
+
+func routeStreamItem(w http.ResponseWriter, r *http.Request, handlers RouterHandlers, companyID int64, streamID int64) {
+	switch r.Method {
+	case http.MethodGet:
+		handlers.HandleGetStream(w, r, companyID, streamID)
+	case http.MethodPatch:
+		handlers.HandlePatchStream(w, r, companyID, streamID)
+	case http.MethodDelete:
+		handlers.HandleDeleteStream(w, r, companyID, streamID)
+	default:
+		WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+	}
+}
+
+func routeStreamCheckJobsCollection(w http.ResponseWriter, r *http.Request, handlers RouterHandlers, companyID int64, streamID int64) {
+	switch r.Method {
+	case http.MethodPost:
+		handlers.HandleEnqueueCheckJob(w, r, companyID, streamID)
+	case http.MethodGet:
+		handlers.HandleListCheckJobs(w, r, companyID, streamID)
+	default:
+		WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
+	}
+}
+
+func writeRouterPathNotFound(w http.ResponseWriter, r *http.Request) {
+	WriteJSONError(w, r, http.StatusNotFound, "not_found", "resource not found", map[string]interface{}{"path": r.URL.Path})
 }
 
 func parseCompanyPath(path string) (int64, string, string) {
