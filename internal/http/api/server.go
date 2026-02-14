@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/example/hls-monitoring-platform/internal/repo/postgres"
 	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
 )
 
@@ -37,9 +38,9 @@ type Server struct {
 func NewServer(db *sql.DB) *Server {
 	return &Server{
 		db:             db,
-		companyService: serviceapi.NewCompanyService(newCompanyStore(db)),
-		projectService: serviceapi.NewProjectService(newProjectStore(db)),
-		streamService:  serviceapi.NewStreamService(newStreamStore(db)),
+		companyService: serviceapi.NewCompanyService(postgres.NewAPICompanyRepo(db)),
+		projectService: serviceapi.NewProjectService(postgres.NewAPIProjectRepo(db)),
+		streamService:  serviceapi.NewStreamService(postgres.NewAPIStreamRepo(db)),
 	}
 }
 

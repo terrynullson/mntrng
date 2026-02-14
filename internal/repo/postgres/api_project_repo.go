@@ -1,4 +1,4 @@
-package api
+package postgres
 
 import (
 	"context"
@@ -9,16 +9,16 @@ import (
 	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
 )
 
-type projectStore struct {
+type APIProjectRepo struct {
 	db *sql.DB
 }
 
-func newProjectStore(db *sql.DB) *projectStore {
-	return &projectStore{db: db}
+func NewAPIProjectRepo(db *sql.DB) *APIProjectRepo {
+	return &APIProjectRepo{db: db}
 }
 
-func (s *projectStore) CreateProject(ctx context.Context, companyID int64, name string) (domain.Project, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
+func (r *APIProjectRepo) CreateProject(ctx context.Context, companyID int64, name string) (domain.Project, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Project{}, err
 	}
@@ -62,8 +62,8 @@ func (s *projectStore) CreateProject(ctx context.Context, companyID int64, name 
 	return item, nil
 }
 
-func (s *projectStore) ListProjects(ctx context.Context, companyID int64) ([]domain.Project, error) {
-	rows, err := s.db.QueryContext(
+func (r *APIProjectRepo) ListProjects(ctx context.Context, companyID int64) ([]domain.Project, error) {
+	rows, err := r.db.QueryContext(
 		ctx,
 		`SELECT id, company_id, name, created_at, updated_at FROM projects WHERE company_id = $1 ORDER BY id ASC`,
 		companyID,
@@ -88,9 +88,9 @@ func (s *projectStore) ListProjects(ctx context.Context, companyID int64) ([]dom
 	return items, nil
 }
 
-func (s *projectStore) GetProject(ctx context.Context, companyID int64, projectID int64) (domain.Project, error) {
+func (r *APIProjectRepo) GetProject(ctx context.Context, companyID int64, projectID int64) (domain.Project, error) {
 	var item domain.Project
-	err := s.db.QueryRowContext(
+	err := r.db.QueryRowContext(
 		ctx,
 		`SELECT id, company_id, name, created_at, updated_at FROM projects WHERE company_id = $1 AND id = $2`,
 		companyID,
@@ -105,8 +105,8 @@ func (s *projectStore) GetProject(ctx context.Context, companyID int64, projectI
 	return item, nil
 }
 
-func (s *projectStore) UpdateProject(ctx context.Context, companyID int64, projectID int64, name string) (domain.Project, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
+func (r *APIProjectRepo) UpdateProject(ctx context.Context, companyID int64, projectID int64, name string) (domain.Project, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Project{}, err
 	}
@@ -150,8 +150,8 @@ func (s *projectStore) UpdateProject(ctx context.Context, companyID int64, proje
 	return item, nil
 }
 
-func (s *projectStore) DeleteProject(ctx context.Context, companyID int64, projectID int64) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+func (r *APIProjectRepo) DeleteProject(ctx context.Context, companyID int64, projectID int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}

@@ -1,24 +1,26 @@
-package api
+package postgres
 
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
 	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
+	"github.com/lib/pq"
 )
 
-type companyStore struct {
+type APICompanyRepo struct {
 	db *sql.DB
 }
 
-func newCompanyStore(db *sql.DB) *companyStore {
-	return &companyStore{db: db}
+func NewAPICompanyRepo(db *sql.DB) *APICompanyRepo {
+	return &APICompanyRepo{db: db}
 }
 
-func (s *companyStore) CreateCompany(ctx context.Context, name string) (domain.Company, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
+func (r *APICompanyRepo) CreateCompany(ctx context.Context, name string) (domain.Company, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Company{}, err
 	}
@@ -58,8 +60,8 @@ func (s *companyStore) CreateCompany(ctx context.Context, name string) (domain.C
 	return item, nil
 }
 
-func (s *companyStore) ListCompanies(ctx context.Context) ([]domain.Company, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, created_at FROM companies ORDER BY id ASC`)
+func (r *APICompanyRepo) ListCompanies(ctx context.Context) ([]domain.Company, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, name, created_at FROM companies ORDER BY id ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -80,9 +82,9 @@ func (s *companyStore) ListCompanies(ctx context.Context) ([]domain.Company, err
 	return items, nil
 }
 
-func (s *companyStore) GetCompany(ctx context.Context, companyID int64) (domain.Company, error) {
+func (r *APICompanyRepo) GetCompany(ctx context.Context, companyID int64) (domain.Company, error) {
 	var item domain.Company
-	err := s.db.QueryRowContext(
+	err := r.db.QueryRowContext(
 		ctx,
 		`SELECT id, name, created_at FROM companies WHERE id = $1`,
 		companyID,
@@ -96,8 +98,8 @@ func (s *companyStore) GetCompany(ctx context.Context, companyID int64) (domain.
 	return item, nil
 }
 
-func (s *companyStore) UpdateCompany(ctx context.Context, companyID int64, name string) (domain.Company, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
+func (r *APICompanyRepo) UpdateCompany(ctx context.Context, companyID int64, name string) (domain.Company, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Company{}, err
 	}
@@ -140,8 +142,8 @@ func (s *companyStore) UpdateCompany(ctx context.Context, companyID int64, name 
 	return item, nil
 }
 
-func (s *companyStore) DeleteCompany(ctx context.Context, companyID int64) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+func (r *APICompanyRepo) DeleteCompany(ctx context.Context, companyID int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -194,4 +196,45 @@ func (s *companyStore) DeleteCompany(ctx context.Context, companyID int64) error
 		return err
 	}
 	return nil
+}
+
+func insertAuditLogTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	companyID int64,
+	actorType string,
+	actorID string,
+	entityType string,
+	entityID int64,
+	action string,
+	payload map[string]interface{},
+) error {
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(
+		ctx,
+		`INSERT INTO audit_log (company_id, actor_type, actor_id, entity_type, entity_id, action, payload)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+		companyID,
+		actorType,
+		actorID,
+		entityType,
+		entityID,
+		action,
+		string(payloadJSON),
+	)
+	return err
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pq.Error
+	return errors.As(err, &pgErr) && string(pgErr.Code) == "23505"
+}
+
+func isForeignKeyViolation(err error) bool {
+	var pgErr *pq.Error
+	return errors.As(err, &pgErr) && string(pgErr.Code) == "23503"
 }

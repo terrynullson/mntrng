@@ -1,4 +1,4 @@
-package api
+package postgres
 
 import (
 	"context"
@@ -11,15 +11,15 @@ import (
 	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
 )
 
-type streamStore struct {
+type APIStreamRepo struct {
 	db *sql.DB
 }
 
-func newStreamStore(db *sql.DB) *streamStore {
-	return &streamStore{db: db}
+func NewAPIStreamRepo(db *sql.DB) *APIStreamRepo {
+	return &APIStreamRepo{db: db}
 }
 
-func (s *streamStore) CreateStream(
+func (r *APIStreamRepo) CreateStream(
 	ctx context.Context,
 	companyID int64,
 	projectID int64,
@@ -27,7 +27,7 @@ func (s *streamStore) CreateStream(
 	url string,
 	isActive bool,
 ) (domain.Stream, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Stream{}, err
 	}
@@ -85,7 +85,7 @@ func (s *streamStore) CreateStream(
 	return item, nil
 }
 
-func (s *streamStore) ListStreams(ctx context.Context, companyID int64, filter serviceapi.StreamListFilter) ([]domain.Stream, error) {
+func (r *APIStreamRepo) ListStreams(ctx context.Context, companyID int64, filter serviceapi.StreamListFilter) ([]domain.Stream, error) {
 	args := []interface{}{companyID}
 	conditions := []string{"company_id = $1"}
 	nextPlaceholder := 2
@@ -110,7 +110,7 @@ func (s *streamStore) ListStreams(ctx context.Context, companyID int64, filter s
 		strings.Join(conditions, " AND "),
 	)
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -131,9 +131,9 @@ func (s *streamStore) ListStreams(ctx context.Context, companyID int64, filter s
 	return items, nil
 }
 
-func (s *streamStore) GetStream(ctx context.Context, companyID int64, streamID int64) (domain.Stream, error) {
+func (r *APIStreamRepo) GetStream(ctx context.Context, companyID int64, streamID int64) (domain.Stream, error) {
 	var item domain.Stream
-	err := s.db.QueryRowContext(
+	err := r.db.QueryRowContext(
 		ctx,
 		`SELECT id, company_id, project_id, name, url, is_active, created_at, updated_at
          FROM streams
@@ -150,7 +150,7 @@ func (s *streamStore) GetStream(ctx context.Context, companyID int64, streamID i
 	return item, nil
 }
 
-func (s *streamStore) PatchStream(
+func (r *APIStreamRepo) PatchStream(
 	ctx context.Context,
 	companyID int64,
 	streamID int64,
@@ -158,7 +158,7 @@ func (s *streamStore) PatchStream(
 ) (domain.Stream, error) {
 	query, args, changePayload := buildStreamPatchQuery(patch, companyID, streamID)
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Stream{}, err
 	}
@@ -196,6 +196,63 @@ func (s *streamStore) PatchStream(
 		return domain.Stream{}, err
 	}
 	return item, nil
+}
+
+func (r *APIStreamRepo) DeleteStream(ctx context.Context, companyID int64, streamID int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var deleted domain.Stream
+	err = tx.QueryRowContext(
+		ctx,
+		`DELETE FROM streams
+         WHERE company_id = $1 AND id = $2
+         RETURNING id, company_id, project_id, name, url, is_active, created_at, updated_at`,
+		companyID,
+		streamID,
+	).Scan(
+		&deleted.ID,
+		&deleted.CompanyID,
+		&deleted.ProjectID,
+		&deleted.Name,
+		&deleted.URL,
+		&deleted.IsActive,
+		&deleted.CreatedAt,
+		&deleted.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return serviceapi.ErrStreamNotFound
+		}
+		return err
+	}
+
+	if err := insertAuditLogTx(
+		ctx,
+		tx,
+		companyID,
+		domain.AuditActorTypeAPI,
+		domain.AuditActorIDSystem,
+		domain.AuditEntityTypeStream,
+		deleted.ID,
+		domain.AuditActionStreamDelete,
+		map[string]interface{}{
+			"project_id": deleted.ProjectID,
+			"name":       deleted.Name,
+			"url":        deleted.URL,
+			"is_active":  deleted.IsActive,
+		},
+	); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func buildStreamPatchQuery(patch serviceapi.StreamPatchInput, companyID int64, streamID int64) (string, []interface{}, map[string]interface{}) {
@@ -259,61 +316,4 @@ func runStreamPatchQueryTx(ctx context.Context, tx *sql.Tx, query string, args [
 		&item.UpdatedAt,
 	)
 	return item, err
-}
-
-func (s *streamStore) DeleteStream(ctx context.Context, companyID int64, streamID int64) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	var deleted domain.Stream
-	err = tx.QueryRowContext(
-		ctx,
-		`DELETE FROM streams
-         WHERE company_id = $1 AND id = $2
-         RETURNING id, company_id, project_id, name, url, is_active, created_at, updated_at`,
-		companyID,
-		streamID,
-	).Scan(
-		&deleted.ID,
-		&deleted.CompanyID,
-		&deleted.ProjectID,
-		&deleted.Name,
-		&deleted.URL,
-		&deleted.IsActive,
-		&deleted.CreatedAt,
-		&deleted.UpdatedAt,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return serviceapi.ErrStreamNotFound
-		}
-		return err
-	}
-
-	if err := insertAuditLogTx(
-		ctx,
-		tx,
-		companyID,
-		domain.AuditActorTypeAPI,
-		domain.AuditActorIDSystem,
-		domain.AuditEntityTypeStream,
-		deleted.ID,
-		domain.AuditActionStreamDelete,
-		map[string]interface{}{
-			"project_id": deleted.ProjectID,
-			"name":       deleted.Name,
-			"url":        deleted.URL,
-			"is_active":  deleted.IsActive,
-		},
-	); err != nil {
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	return nil
 }
