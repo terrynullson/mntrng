@@ -62,10 +62,30 @@ func main() {
 	}
 
 	serverAPI := &apiServer{db: db}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/health", serverAPI.handleHealth)
-	mux.HandleFunc("/api/v1/companies", serverAPI.handleCompanies)
-	mux.HandleFunc("/api/v1/companies/", serverAPI.handleCompanyByID)
+	mux := httpapi.NewRouter(httpapi.RouterHandlers{
+		HandleHealth:              serverAPI.handleHealth,
+		HandleCreateCompany:       serverAPI.handleCreateCompany,
+		HandleListCompanies:       serverAPI.handleListCompanies,
+		HandleGetCompany:          serverAPI.handleGetCompany,
+		HandlePatchCompany:        serverAPI.handlePatchCompany,
+		HandleDeleteCompany:       serverAPI.handleDeleteCompany,
+		HandleCreateProject:       serverAPI.handleCreateProject,
+		HandleListProjects:        serverAPI.handleListProjects,
+		HandleGetProject:          serverAPI.handleGetProject,
+		HandlePatchProject:        serverAPI.handlePatchProject,
+		HandleDeleteProject:       serverAPI.handleDeleteProject,
+		HandleCreateStream:        serverAPI.handleCreateStream,
+		HandleListStreams:         serverAPI.handleListStreams,
+		HandleGetStream:           serverAPI.handleGetStream,
+		HandlePatchStream:         serverAPI.handlePatchStream,
+		HandleDeleteStream:        serverAPI.handleDeleteStream,
+		HandleEnqueueCheckJob:     serverAPI.handleEnqueueCheckJob,
+		HandleGetCheckJob:         serverAPI.handleGetCheckJob,
+		HandleListCheckJobs:       serverAPI.handleListCheckJobs,
+		HandleGetCheckResult:      serverAPI.handleGetCheckResult,
+		HandleListCheckResults:    serverAPI.handleListCheckResults,
+		HandleGetCheckResultByJob: serverAPI.handleGetCheckResultByJob,
+	})
 
 	server := &http.Server{
 		Addr:              ":" + port,
@@ -93,317 +113,6 @@ func (s *apiServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if err := httpapi.WriteJSON(w, http.StatusOK, response); err != nil {
 		log.Printf("health response encode error: %v", err)
 	}
-}
-
-func (s *apiServer) handleCompanies(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		s.handleCreateCompany(w, r)
-	case http.MethodGet:
-		s.handleListCompanies(w, r)
-	default:
-		httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
-	}
-}
-
-func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
-	companyID, pathRemainder, pathErr := httpapi.ParseCompanyPath(r.URL.Path)
-	if pathErr == "not_found" {
-		httpapi.WriteJSONError(
-			w,
-			r,
-			http.StatusNotFound,
-			"not_found",
-			"resource not found",
-			map[string]interface{}{"path": r.URL.Path},
-		)
-		return
-	}
-	if pathErr == "validation_error" {
-		httpapi.WriteJSONError(
-			w,
-			r,
-			http.StatusBadRequest,
-			"validation_error",
-			"invalid company_id",
-			map[string]interface{}{"path": r.URL.Path},
-		)
-		return
-	}
-
-	if pathRemainder == "" {
-		switch r.Method {
-		case http.MethodGet:
-			s.handleGetCompany(w, r, companyID)
-		case http.MethodPatch:
-			s.handlePatchCompany(w, r, companyID)
-		case http.MethodDelete:
-			s.handleDeleteCompany(w, r, companyID)
-		default:
-			httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
-		}
-		return
-	}
-
-	const projectCollectionPath = "projects"
-	const projectItemPrefix = "projects/"
-	const streamCollectionPath = "streams"
-	const streamItemPrefix = "streams/"
-	const checkJobsCollectionPath = "check-jobs"
-	const checkJobsItemPrefix = "check-jobs/"
-	const checkResultsCollectionPath = "check-results"
-	const checkResultsItemPrefix = "check-results/"
-	if pathRemainder == projectCollectionPath {
-		switch r.Method {
-		case http.MethodPost:
-			s.handleCreateProject(w, r, companyID)
-		case http.MethodGet:
-			s.handleListProjects(w, r, companyID)
-		default:
-			httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
-		}
-		return
-	}
-	if strings.HasPrefix(pathRemainder, projectItemPrefix) {
-		projectPath := strings.TrimPrefix(pathRemainder, projectItemPrefix)
-		if projectPath == "" {
-			httpapi.WriteJSONError(
-				w,
-				r,
-				http.StatusNotFound,
-				"not_found",
-				"resource not found",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-
-		projectParts := strings.Split(projectPath, "/")
-		projectID, err := httpapi.ParsePositiveID(projectParts[0])
-		if err != nil {
-			httpapi.WriteJSONError(
-				w,
-				r,
-				http.StatusBadRequest,
-				"validation_error",
-				"invalid project_id",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-		if len(projectParts) == 1 {
-			switch r.Method {
-			case http.MethodGet:
-				s.handleGetProject(w, r, companyID, projectID)
-			case http.MethodPatch:
-				s.handlePatchProject(w, r, companyID, projectID)
-			case http.MethodDelete:
-				s.handleDeleteProject(w, r, companyID, projectID)
-			default:
-				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
-			}
-			return
-		}
-		if len(projectParts) == 2 && projectParts[1] == streamCollectionPath {
-			switch r.Method {
-			case http.MethodPost:
-				s.handleCreateStream(w, r, companyID, projectID)
-			default:
-				httpapi.WriteMethodNotAllowed(w, r, http.MethodPost)
-			}
-			return
-		}
-
-		httpapi.WriteJSONError(
-			w,
-			r,
-			http.StatusNotFound,
-			"not_found",
-			"resource not found",
-			map[string]interface{}{"path": r.URL.Path},
-		)
-		return
-	}
-	if pathRemainder == streamCollectionPath {
-		switch r.Method {
-		case http.MethodGet:
-			s.handleListStreams(w, r, companyID)
-		default:
-			httpapi.WriteMethodNotAllowed(w, r, http.MethodGet)
-		}
-		return
-	}
-	if strings.HasPrefix(pathRemainder, checkJobsItemPrefix) {
-		jobPath := strings.TrimPrefix(pathRemainder, checkJobsItemPrefix)
-		if jobPath == "" {
-			httpapi.WriteJSONError(
-				w,
-				r,
-				http.StatusNotFound,
-				"not_found",
-				"resource not found",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-
-		jobParts := strings.Split(jobPath, "/")
-		jobID, err := httpapi.ParsePositiveID(jobParts[0])
-		if err != nil {
-			httpapi.WriteJSONError(
-				w,
-				r,
-				http.StatusBadRequest,
-				"validation_error",
-				"invalid job_id",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-		if len(jobParts) == 1 {
-			switch r.Method {
-			case http.MethodGet:
-				s.handleGetCheckJob(w, r, companyID, jobID)
-			default:
-				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet)
-			}
-			return
-		}
-		if len(jobParts) == 2 && jobParts[1] == "result" {
-			switch r.Method {
-			case http.MethodGet:
-				s.handleGetCheckResultByJob(w, r, companyID, jobID)
-			default:
-				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet)
-			}
-			return
-		}
-
-		httpapi.WriteJSONError(
-			w,
-			r,
-			http.StatusNotFound,
-			"not_found",
-			"resource not found",
-			map[string]interface{}{"path": r.URL.Path},
-		)
-		return
-	}
-	if strings.HasPrefix(pathRemainder, checkResultsItemPrefix) {
-		resultIDRaw := strings.TrimPrefix(pathRemainder, checkResultsItemPrefix)
-		if resultIDRaw == "" || strings.Contains(resultIDRaw, "/") {
-			httpapi.WriteJSONError(
-				w,
-				r,
-				http.StatusNotFound,
-				"not_found",
-				"resource not found",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-
-		resultID, err := httpapi.ParsePositiveID(resultIDRaw)
-		if err != nil {
-			httpapi.WriteJSONError(
-				w,
-				r,
-				http.StatusBadRequest,
-				"validation_error",
-				"invalid result_id",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-
-		switch r.Method {
-		case http.MethodGet:
-			s.handleGetCheckResult(w, r, companyID, resultID)
-		default:
-			httpapi.WriteMethodNotAllowed(w, r, http.MethodGet)
-		}
-		return
-	}
-	if strings.HasPrefix(pathRemainder, streamItemPrefix) {
-		streamPath := strings.TrimPrefix(pathRemainder, streamItemPrefix)
-		if streamPath == "" {
-			httpapi.WriteJSONError(
-				w,
-				r,
-				http.StatusNotFound,
-				"not_found",
-				"resource not found",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-
-		streamParts := strings.Split(streamPath, "/")
-		streamID, err := httpapi.ParsePositiveID(streamParts[0])
-		if err != nil {
-			httpapi.WriteJSONError(
-				w,
-				r,
-				http.StatusBadRequest,
-				"validation_error",
-				"invalid stream_id",
-				map[string]interface{}{"path": r.URL.Path},
-			)
-			return
-		}
-		if len(streamParts) == 1 {
-			switch r.Method {
-			case http.MethodGet:
-				s.handleGetStream(w, r, companyID, streamID)
-			case http.MethodPatch:
-				s.handlePatchStream(w, r, companyID, streamID)
-			case http.MethodDelete:
-				s.handleDeleteStream(w, r, companyID, streamID)
-			default:
-				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
-			}
-			return
-		}
-		if len(streamParts) == 2 && streamParts[1] == checkJobsCollectionPath {
-			switch r.Method {
-			case http.MethodPost:
-				s.handleEnqueueCheckJob(w, r, companyID, streamID)
-			case http.MethodGet:
-				s.handleListCheckJobs(w, r, companyID, streamID)
-			default:
-				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
-			}
-			return
-		}
-		if len(streamParts) == 2 && streamParts[1] == checkResultsCollectionPath {
-			switch r.Method {
-			case http.MethodGet:
-				s.handleListCheckResults(w, r, companyID, streamID)
-			default:
-				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet)
-			}
-			return
-		}
-
-		httpapi.WriteJSONError(
-			w,
-			r,
-			http.StatusNotFound,
-			"not_found",
-			"resource not found",
-			map[string]interface{}{"path": r.URL.Path},
-		)
-		return
-	}
-
-	httpapi.WriteJSONError(
-		w,
-		r,
-		http.StatusNotFound,
-		"not_found",
-		"resource not found",
-		map[string]interface{}{"path": r.URL.Path},
-	)
 }
 
 func (s *apiServer) handleCreateCompany(w http.ResponseWriter, r *http.Request) {
