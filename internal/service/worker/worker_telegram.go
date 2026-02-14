@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -133,26 +132,7 @@ func (w *worker) processTelegramDelivery(ctx context.Context, job claimedJob, ev
 }
 
 func (w *worker) loadTelegramDeliverySettings(ctx context.Context, companyID int64) (telegramDeliverySettings, bool, error) {
-	var settings telegramDeliverySettings
-	var botTokenRef sql.NullString
-	err := w.db.QueryRowContext(
-		ctx,
-		`SELECT is_enabled, chat_id, send_recovered, bot_token_ref
-         FROM telegram_delivery_settings
-         WHERE company_id = $1`,
-		companyID,
-	).Scan(&settings.IsEnabled, &settings.ChatID, &settings.SendRecovered, &botTokenRef)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return telegramDeliverySettings{}, false, nil
-		}
-		return telegramDeliverySettings{}, false, err
-	}
-	if botTokenRef.Valid {
-		settings.BotTokenRef = strings.TrimSpace(botTokenRef.String)
-	}
-	settings.ChatID = strings.TrimSpace(settings.ChatID)
-	return settings, true, nil
+	return w.telegramSettingsRepo.LoadTelegramDeliverySettings(ctx, companyID)
 }
 
 func (w *worker) resolveTelegramBotToken(botTokenRef string) (string, error) {

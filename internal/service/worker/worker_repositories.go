@@ -1,0 +1,52 @@
+package worker
+
+import (
+	"context"
+	"time"
+
+	"github.com/example/hls-monitoring-platform/internal/domain"
+)
+
+type JobRepository interface {
+	ClaimNextQueuedJob(ctx context.Context) (domain.WorkerClaimedJob, bool, error)
+	FinalizeJob(ctx context.Context, job domain.WorkerClaimedJob, status string, errorMessage string) (int64, error)
+}
+
+type StreamRepository interface {
+	LoadStreamURL(ctx context.Context, companyID int64, streamID int64) (string, error)
+}
+
+type CheckResultRepository interface {
+	PersistCheckResult(ctx context.Context, job domain.WorkerClaimedJob, dbStatus string, checksJSON string) error
+}
+
+type AlertStateRepository interface {
+	ApplyAlertState(
+		ctx context.Context,
+		companyID int64,
+		streamID int64,
+		currentStatus string,
+		failStreakThreshold int,
+		alertCooldown time.Duration,
+		alertSendRecovered bool,
+	) (domain.WorkerAlertDecision, error)
+}
+
+type TelegramSettingsRepository interface {
+	LoadTelegramDeliverySettings(ctx context.Context, companyID int64) (domain.WorkerTelegramDeliverySettings, bool, error)
+}
+
+type RetentionRepository interface {
+	ListCompanyIDsForRetention(ctx context.Context) ([]int64, error)
+	ListRetentionCandidates(ctx context.Context, companyID int64, cutoff time.Time, batchSize int) ([]domain.WorkerRetentionCandidate, error)
+	DeleteStaleCheckResult(ctx context.Context, companyID int64, resultID int64, cutoff time.Time) (int64, error)
+}
+
+type Repositories struct {
+	JobRepo              JobRepository
+	StreamRepo           StreamRepository
+	CheckResultRepo      CheckResultRepository
+	AlertStateRepo       AlertStateRepository
+	TelegramSettingsRepo TelegramSettingsRepository
+	RetentionRepo        RetentionRepository
+}

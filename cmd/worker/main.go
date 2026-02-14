@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/config"
+	postgresrepo "github.com/example/hls-monitoring-platform/internal/repo/postgres"
 	workerservice "github.com/example/hls-monitoring-platform/internal/service/worker"
 	_ "github.com/lib/pq"
 )
@@ -127,7 +128,18 @@ func main() {
 		workerConfig.RetryBackoff,
 	)
 
-	w := workerservice.NewWorker(db, workerConfig)
+	workerRepo := postgresrepo.NewWorkerRepo(db)
+	w := workerservice.NewWorker(
+		workerConfig,
+		workerservice.Repositories{
+			JobRepo:              workerRepo,
+			StreamRepo:           workerRepo,
+			CheckResultRepo:      workerRepo,
+			AlertStateRepo:       workerRepo,
+			TelegramSettingsRepo: workerRepo,
+			RetentionRepo:        workerRepo,
+		},
+	)
 	app := workerservice.NewApp(
 		workerConfig.PollInterval,
 		workerConfig.RetentionCleanupInterval,

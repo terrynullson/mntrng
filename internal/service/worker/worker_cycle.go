@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"strings"
 
@@ -147,20 +146,8 @@ func (w *worker) buildJobEvaluation(state jobProcessingState) checkJobEvaluation
 }
 
 func (w *worker) loadStreamURL(ctx context.Context, companyID int64, streamID int64) (string, error) {
-	var streamURL string
-	err := w.db.QueryRowContext(
-		ctx,
-		`SELECT url
-         FROM streams
-         WHERE company_id = $1
-           AND id = $2`,
-		companyID,
-		streamID,
-	).Scan(&streamURL)
+	streamURL, err := w.streamRepo.LoadStreamURL(ctx, companyID, streamID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", errors.New("stream not found in tenant context")
-		}
 		return "", err
 	}
 	streamURL = strings.TrimSpace(streamURL)

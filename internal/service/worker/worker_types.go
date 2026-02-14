@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
@@ -39,7 +38,12 @@ type Config struct {
 type claimedJob = domain.WorkerClaimedJob
 
 type worker struct {
-	db                        *sql.DB
+	jobRepo                   JobRepository
+	streamRepo                StreamRepository
+	checkResultRepo           CheckResultRepository
+	alertStateRepo            AlertStateRepository
+	telegramSettingsRepo      TelegramSettingsRepository
+	retentionRepo             RetentionRepository
 	pollInterval              time.Duration
 	retentionTTL              time.Duration
 	retentionCleanupInterval  time.Duration
@@ -77,9 +81,14 @@ type alertTransitionResult = domain.WorkerAlertTransitionResult
 type telegramDeliverySettings = domain.WorkerTelegramDeliverySettings
 type retentionCandidate = domain.WorkerRetentionCandidate
 
-func NewWorker(db *sql.DB, cfg Config) *worker {
+func NewWorker(cfg Config, repos Repositories) *worker {
 	return &worker{
-		db:                        db,
+		jobRepo:                   repos.JobRepo,
+		streamRepo:                repos.StreamRepo,
+		checkResultRepo:           repos.CheckResultRepo,
+		alertStateRepo:            repos.AlertStateRepo,
+		telegramSettingsRepo:      repos.TelegramSettingsRepo,
+		retentionRepo:             repos.RetentionRepo,
 		pollInterval:              cfg.PollInterval,
 		retentionTTL:              cfg.RetentionTTL,
 		retentionCleanupInterval:  cfg.RetentionCleanupInterval,

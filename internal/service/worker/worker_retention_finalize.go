@@ -40,29 +40,7 @@ func (w *worker) runRetentionCleanup(ctx context.Context) error {
 }
 
 func (w *worker) loadCompanyIDsForRetention(ctx context.Context) ([]int64, error) {
-	rows, err := w.db.QueryContext(
-		ctx,
-		`SELECT id
-         FROM companies
-         ORDER BY id ASC`,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	companyIDs := make([]int64, 0)
-	for rows.Next() {
-		var companyID int64
-		if err := rows.Scan(&companyID); err != nil {
-			return nil, err
-		}
-		companyIDs = append(companyIDs, companyID)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return companyIDs, nil
+	return w.retentionRepo.ListCompanyIDsForRetention(ctx)
 }
 
 func (w *worker) cleanupCompanyRetention(ctx context.Context, companyID int64, cutoff time.Time) (int, int, int, error) {
@@ -99,21 +77,7 @@ func (w *worker) cleanupCompanyRetention(ctx context.Context, companyID int64, c
 				deletedFiles++
 			}
 
-			result, err := w.db.ExecContext(
-				ctx,
-				`DELETE FROM check_results
-                 WHERE company_id = $1
-                   AND id = $2
-                   AND created_at < $3`,
-				companyID,
-				candidate.ID,
-				cutoff,
-			)
-			if err != nil {
-				return affectedRows, deletedFiles, errorsCount, err
-			}
-
-			rowsAffected, err := result.RowsAffected()
+			rowsAffected, err := w.retentionRepo.DeleteStaleCheckResult(ctx, companyID, candidate.ID, cutoff)
 			if err != nil {
 				return affectedRows, deletedFiles, errorsCount, err
 			}
@@ -127,39 +91,7 @@ func (w *worker) cleanupCompanyRetention(ctx context.Context, companyID int64, c
 }
 
 func (w *worker) loadRetentionCandidates(ctx context.Context, companyID int64, cutoff time.Time, batchSize int) ([]retentionCandidate, error) {
-	rows, err := w.db.QueryContext(
-		ctx,
-		`SELECT id, screenshot_path
-         FROM check_results
-         WHERE company_id = $1
-           AND created_at < $2
-         ORDER BY created_at ASC, id ASC
-         LIMIT $3`,
-		companyID,
-		cutoff,
-		batchSize,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	candidates := make([]retentionCandidate, 0, batchSize)
-	for rows.Next() {
-		var candidate retentionCandidate
-		var screenshotPath sql.NullString
-		if err := rows.Scan(&candidate.ID, &screenshotPath); err != nil {
-			return nil, err
-		}
-		if screenshotPath.Valid {
-			candidate.ScreenshotPath = strings.TrimSpace(screenshotPath.String)
-		}
-		candidates = append(candidates, candidate)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return candidates, nil
+	return w.retentionRepo.ListRetentionCandidates(ctx, companyID, cutoff, batchSize)
 }
 
 func removeScreenshotFile(path string) (bool, error) {
@@ -208,33 +140,7 @@ func (w *worker) finalizeWithRetry(ctx context.Context, job claimedJob, status s
 }
 
 func (w *worker) finalizeJob(ctx context.Context, job claimedJob, status string, errorMessage string) error {
-	var nullableErrorMessage interface{}
-	if errorMessage == "" {
-		nullableErrorMessage = nil
-	} else {
-		nullableErrorMessage = errorMessage
-	}
-
-	result, err := w.db.ExecContext(
-		ctx,
-		`UPDATE check_jobs
-         SET status = $1,
-             finished_at = NOW(),
-             error_message = $2
-         WHERE id = $3
-           AND company_id = $4
-           AND status = $5`,
-		status,
-		nullableErrorMessage,
-		job.ID,
-		job.CompanyID,
-		domain.WorkerJobStatusRunning,
-	)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
+	rowsAffected, err := w.jobRepo.FinalizeJob(ctx, job, status, errorMessage)
 	if err != nil {
 		return err
 	}
@@ -387,11 +293,4 @@ func normalizeAlertStatus(statusRaw string) (string, error) {
 	default:
 		return "", errors.New("unsupported alert status: " + statusRaw)
 	}
-}
-
-func nullTimeToValue(value sql.NullTime) interface{} {
-	if !value.Valid {
-		return nil
-	}
-	return value.Time
 }
