@@ -3,7 +3,6 @@ package worker
 import (
 	"context"
 	"database/sql"
-	"regexp"
 	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
@@ -72,8 +71,6 @@ type checkJobEvaluation = domain.WorkerCheckJobEvaluation
 type playlistSegment = domain.WorkerPlaylistSegment
 type segmentSample = domain.WorkerSegmentSample
 type declaredBitrateResult = domain.WorkerDeclaredBitrateResult
-
-var blackframeEventPattern = regexp.MustCompile(`frame:\s*\d+\s+pblack:\s*\d+`)
 
 type alertDecision = domain.WorkerAlertDecision
 type alertTransitionResult = domain.WorkerAlertTransitionResult
