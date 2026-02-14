@@ -14,6 +14,7 @@ import (
 
 	"github.com/example/hls-monitoring-platform/internal/config"
 	"github.com/example/hls-monitoring-platform/internal/domain"
+	httpapi "github.com/example/hls-monitoring-platform/internal/http/api"
 	"github.com/lib/pq"
 )
 
@@ -36,7 +37,6 @@ type enqueueCheckJobRequest = domain.EnqueueCheckJobRequest
 type enqueueCheckJobResponse = domain.EnqueueCheckJobResponse
 type checkResult = domain.CheckResult
 type checkResultListResponse = domain.CheckResultListResponse
-type errorEnvelope = domain.ErrorEnvelope
 
 type apiServer struct {
 	db *sql.DB
@@ -81,7 +81,7 @@ func main() {
 
 func (s *apiServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeMethodNotAllowed(w, r, http.MethodGet)
+		httpapi.WriteMethodNotAllowed(w, r, http.MethodGet)
 		return
 	}
 
@@ -90,7 +90,7 @@ func (s *apiServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 		Service: "api",
 		Time:    time.Now().UTC().Format(time.RFC3339),
 	}
-	if err := writeJSON(w, http.StatusOK, response); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, response); err != nil {
 		log.Printf("health response encode error: %v", err)
 	}
 }
@@ -102,14 +102,14 @@ func (s *apiServer) handleCompanies(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		s.handleListCompanies(w, r)
 	default:
-		writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
+		httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
 	}
 }
 
 func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
-	companyID, pathRemainder, pathErr := parseCompanyPath(r.URL.Path)
+	companyID, pathRemainder, pathErr := httpapi.ParseCompanyPath(r.URL.Path)
 	if pathErr == "not_found" {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusNotFound,
@@ -120,7 +120,7 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if pathErr == "validation_error" {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -140,7 +140,7 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		case http.MethodDelete:
 			s.handleDeleteCompany(w, r, companyID)
 		default:
-			writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+			httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
 		}
 		return
 	}
@@ -160,14 +160,14 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		case http.MethodGet:
 			s.handleListProjects(w, r, companyID)
 		default:
-			writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
+			httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
 		}
 		return
 	}
 	if strings.HasPrefix(pathRemainder, projectItemPrefix) {
 		projectPath := strings.TrimPrefix(pathRemainder, projectItemPrefix)
 		if projectPath == "" {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -179,9 +179,9 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		}
 
 		projectParts := strings.Split(projectPath, "/")
-		projectID, err := parsePositiveID(projectParts[0])
+		projectID, err := httpapi.ParsePositiveID(projectParts[0])
 		if err != nil {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -200,7 +200,7 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			case http.MethodDelete:
 				s.handleDeleteProject(w, r, companyID, projectID)
 			default:
-				writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
 			}
 			return
 		}
@@ -209,12 +209,12 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			case http.MethodPost:
 				s.handleCreateStream(w, r, companyID, projectID)
 			default:
-				writeMethodNotAllowed(w, r, http.MethodPost)
+				httpapi.WriteMethodNotAllowed(w, r, http.MethodPost)
 			}
 			return
 		}
 
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusNotFound,
@@ -229,14 +229,14 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		case http.MethodGet:
 			s.handleListStreams(w, r, companyID)
 		default:
-			writeMethodNotAllowed(w, r, http.MethodGet)
+			httpapi.WriteMethodNotAllowed(w, r, http.MethodGet)
 		}
 		return
 	}
 	if strings.HasPrefix(pathRemainder, checkJobsItemPrefix) {
 		jobPath := strings.TrimPrefix(pathRemainder, checkJobsItemPrefix)
 		if jobPath == "" {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -248,9 +248,9 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		}
 
 		jobParts := strings.Split(jobPath, "/")
-		jobID, err := parsePositiveID(jobParts[0])
+		jobID, err := httpapi.ParsePositiveID(jobParts[0])
 		if err != nil {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -265,7 +265,7 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			case http.MethodGet:
 				s.handleGetCheckJob(w, r, companyID, jobID)
 			default:
-				writeMethodNotAllowed(w, r, http.MethodGet)
+				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet)
 			}
 			return
 		}
@@ -274,12 +274,12 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			case http.MethodGet:
 				s.handleGetCheckResultByJob(w, r, companyID, jobID)
 			default:
-				writeMethodNotAllowed(w, r, http.MethodGet)
+				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet)
 			}
 			return
 		}
 
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusNotFound,
@@ -292,7 +292,7 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(pathRemainder, checkResultsItemPrefix) {
 		resultIDRaw := strings.TrimPrefix(pathRemainder, checkResultsItemPrefix)
 		if resultIDRaw == "" || strings.Contains(resultIDRaw, "/") {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -303,9 +303,9 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		resultID, err := parsePositiveID(resultIDRaw)
+		resultID, err := httpapi.ParsePositiveID(resultIDRaw)
 		if err != nil {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -320,14 +320,14 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		case http.MethodGet:
 			s.handleGetCheckResult(w, r, companyID, resultID)
 		default:
-			writeMethodNotAllowed(w, r, http.MethodGet)
+			httpapi.WriteMethodNotAllowed(w, r, http.MethodGet)
 		}
 		return
 	}
 	if strings.HasPrefix(pathRemainder, streamItemPrefix) {
 		streamPath := strings.TrimPrefix(pathRemainder, streamItemPrefix)
 		if streamPath == "" {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -339,9 +339,9 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		}
 
 		streamParts := strings.Split(streamPath, "/")
-		streamID, err := parsePositiveID(streamParts[0])
+		streamID, err := httpapi.ParsePositiveID(streamParts[0])
 		if err != nil {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -360,7 +360,7 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			case http.MethodDelete:
 				s.handleDeleteStream(w, r, companyID, streamID)
 			default:
-				writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
 			}
 			return
 		}
@@ -371,7 +371,7 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			case http.MethodGet:
 				s.handleListCheckJobs(w, r, companyID, streamID)
 			default:
-				writeMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
+				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
 			}
 			return
 		}
@@ -380,12 +380,12 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 			case http.MethodGet:
 				s.handleListCheckResults(w, r, companyID, streamID)
 			default:
-				writeMethodNotAllowed(w, r, http.MethodGet)
+				httpapi.WriteMethodNotAllowed(w, r, http.MethodGet)
 			}
 			return
 		}
 
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusNotFound,
@@ -396,7 +396,7 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSONError(
+	httpapi.WriteJSONError(
 		w,
 		r,
 		http.StatusNotFound,
@@ -408,8 +408,8 @@ func (s *apiServer) handleCompanyByID(w http.ResponseWriter, r *http.Request) {
 
 func (s *apiServer) handleCreateCompany(w http.ResponseWriter, r *http.Request) {
 	var request createCompanyRequest
-	if err := decodeJSONBody(r, &request); err != nil {
-		writeJSONError(
+	if err := httpapi.DecodeJSONBody(r, &request); err != nil {
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -422,7 +422,7 @@ func (s *apiServer) handleCreateCompany(w http.ResponseWriter, r *http.Request) 
 
 	name := strings.TrimSpace(request.Name)
 	if name == "" {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -439,7 +439,7 @@ func (s *apiServer) handleCreateCompany(w http.ResponseWriter, r *http.Request) 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("create company tx begin failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer tx.Rollback()
@@ -452,7 +452,7 @@ func (s *apiServer) handleCreateCompany(w http.ResponseWriter, r *http.Request) 
 	).Scan(&item.ID, &item.Name, &item.CreatedAt)
 	if err != nil {
 		if isUniqueViolation(err) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusConflict,
@@ -464,7 +464,7 @@ func (s *apiServer) handleCreateCompany(w http.ResponseWriter, r *http.Request) 
 		}
 
 		log.Printf("create company failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -483,17 +483,17 @@ func (s *apiServer) handleCreateCompany(w http.ResponseWriter, r *http.Request) 
 		auditPayload,
 	); err != nil {
 		log.Printf("create company audit insert failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("create company tx commit failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusCreated, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusCreated, item); err != nil {
 		log.Printf("create company response encode error: %v", err)
 	}
 }
@@ -508,7 +508,7 @@ func (s *apiServer) handleListCompanies(w http.ResponseWriter, r *http.Request) 
 	)
 	if err != nil {
 		log.Printf("list companies failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer rows.Close()
@@ -518,14 +518,14 @@ func (s *apiServer) handleListCompanies(w http.ResponseWriter, r *http.Request) 
 		var item company
 		if err := rows.Scan(&item.ID, &item.Name, &item.CreatedAt); err != nil {
 			log.Printf("list companies scan failed: %v", err)
-			writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+			httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 			return
 		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
 		log.Printf("list companies rows failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -533,7 +533,7 @@ func (s *apiServer) handleListCompanies(w http.ResponseWriter, r *http.Request) 
 		Items:      items,
 		NextCursor: nil,
 	}
-	if err := writeJSON(w, http.StatusOK, response); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, response); err != nil {
 		log.Printf("list companies response encode error: %v", err)
 	}
 }
@@ -550,7 +550,7 @@ func (s *apiServer) handleGetCompany(w http.ResponseWriter, r *http.Request, com
 	).Scan(&item.ID, &item.Name, &item.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -562,19 +562,19 @@ func (s *apiServer) handleGetCompany(w http.ResponseWriter, r *http.Request, com
 		}
 
 		log.Printf("get company failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusOK, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("get company response encode error: %v", err)
 	}
 }
 
 func (s *apiServer) handlePatchCompany(w http.ResponseWriter, r *http.Request, companyID int64) {
 	var request patchCompanyRequest
-	if err := decodeJSONBody(r, &request); err != nil {
-		writeJSONError(
+	if err := httpapi.DecodeJSONBody(r, &request); err != nil {
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -587,7 +587,7 @@ func (s *apiServer) handlePatchCompany(w http.ResponseWriter, r *http.Request, c
 
 	name := strings.TrimSpace(request.Name)
 	if name == "" {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -604,7 +604,7 @@ func (s *apiServer) handlePatchCompany(w http.ResponseWriter, r *http.Request, c
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("patch company tx begin failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer tx.Rollback()
@@ -618,7 +618,7 @@ func (s *apiServer) handlePatchCompany(w http.ResponseWriter, r *http.Request, c
 	).Scan(&item.ID, &item.Name, &item.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -629,7 +629,7 @@ func (s *apiServer) handlePatchCompany(w http.ResponseWriter, r *http.Request, c
 			return
 		}
 		if isUniqueViolation(err) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusConflict,
@@ -641,7 +641,7 @@ func (s *apiServer) handlePatchCompany(w http.ResponseWriter, r *http.Request, c
 		}
 
 		log.Printf("patch company failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -662,17 +662,17 @@ func (s *apiServer) handlePatchCompany(w http.ResponseWriter, r *http.Request, c
 		auditPayload,
 	); err != nil {
 		log.Printf("patch company audit insert failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("patch company tx commit failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusOK, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("patch company response encode error: %v", err)
 	}
 }
@@ -684,7 +684,7 @@ func (s *apiServer) handleDeleteCompany(w http.ResponseWriter, r *http.Request, 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("delete company tx begin failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer tx.Rollback()
@@ -700,7 +700,7 @@ func (s *apiServer) handleDeleteCompany(w http.ResponseWriter, r *http.Request, 
 	).Scan(&existing.ID, &existing.Name, &existing.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -712,7 +712,7 @@ func (s *apiServer) handleDeleteCompany(w http.ResponseWriter, r *http.Request, 
 		}
 
 		log.Printf("delete company lookup failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -731,7 +731,7 @@ func (s *apiServer) handleDeleteCompany(w http.ResponseWriter, r *http.Request, 
 		auditPayload,
 	); err != nil {
 		log.Printf("delete company audit insert failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -742,18 +742,18 @@ func (s *apiServer) handleDeleteCompany(w http.ResponseWriter, r *http.Request, 
 	)
 	if err != nil {
 		log.Printf("delete company failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		log.Printf("delete company rows affected failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	if rowsAffected == 0 {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusNotFound,
@@ -766,7 +766,7 @@ func (s *apiServer) handleDeleteCompany(w http.ResponseWriter, r *http.Request, 
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("delete company tx commit failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -775,8 +775,8 @@ func (s *apiServer) handleDeleteCompany(w http.ResponseWriter, r *http.Request, 
 
 func (s *apiServer) handleCreateProject(w http.ResponseWriter, r *http.Request, companyID int64) {
 	var request createProjectRequest
-	if err := decodeJSONBody(r, &request); err != nil {
-		writeJSONError(
+	if err := httpapi.DecodeJSONBody(r, &request); err != nil {
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -789,7 +789,7 @@ func (s *apiServer) handleCreateProject(w http.ResponseWriter, r *http.Request, 
 
 	name := strings.TrimSpace(request.Name)
 	if name == "" {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -806,7 +806,7 @@ func (s *apiServer) handleCreateProject(w http.ResponseWriter, r *http.Request, 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("create project tx begin failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer tx.Rollback()
@@ -820,7 +820,7 @@ func (s *apiServer) handleCreateProject(w http.ResponseWriter, r *http.Request, 
 	).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if isUniqueViolation(err) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusConflict,
@@ -831,7 +831,7 @@ func (s *apiServer) handleCreateProject(w http.ResponseWriter, r *http.Request, 
 			return
 		}
 		if isForeignKeyViolation(err) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -843,7 +843,7 @@ func (s *apiServer) handleCreateProject(w http.ResponseWriter, r *http.Request, 
 		}
 
 		log.Printf("create project failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -862,17 +862,17 @@ func (s *apiServer) handleCreateProject(w http.ResponseWriter, r *http.Request, 
 		auditPayload,
 	); err != nil {
 		log.Printf("create project audit insert failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("create project tx commit failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusCreated, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusCreated, item); err != nil {
 		log.Printf("create project response encode error: %v", err)
 	}
 }
@@ -888,7 +888,7 @@ func (s *apiServer) handleListProjects(w http.ResponseWriter, r *http.Request, c
 	)
 	if err != nil {
 		log.Printf("list projects failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer rows.Close()
@@ -898,14 +898,14 @@ func (s *apiServer) handleListProjects(w http.ResponseWriter, r *http.Request, c
 		var item project
 		if err := rows.Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			log.Printf("list projects scan failed: %v", err)
-			writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+			httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 			return
 		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
 		log.Printf("list projects rows failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -913,7 +913,7 @@ func (s *apiServer) handleListProjects(w http.ResponseWriter, r *http.Request, c
 		Items:      items,
 		NextCursor: nil,
 	}
-	if err := writeJSON(w, http.StatusOK, response); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, response); err != nil {
 		log.Printf("list projects response encode error: %v", err)
 	}
 }
@@ -931,7 +931,7 @@ func (s *apiServer) handleGetProject(w http.ResponseWriter, r *http.Request, com
 	).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -943,19 +943,19 @@ func (s *apiServer) handleGetProject(w http.ResponseWriter, r *http.Request, com
 		}
 
 		log.Printf("get project failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusOK, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("get project response encode error: %v", err)
 	}
 }
 
 func (s *apiServer) handlePatchProject(w http.ResponseWriter, r *http.Request, companyID int64, projectID int64) {
 	var request patchProjectRequest
-	if err := decodeJSONBody(r, &request); err != nil {
-		writeJSONError(
+	if err := httpapi.DecodeJSONBody(r, &request); err != nil {
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -968,7 +968,7 @@ func (s *apiServer) handlePatchProject(w http.ResponseWriter, r *http.Request, c
 
 	name := strings.TrimSpace(request.Name)
 	if name == "" {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -985,7 +985,7 @@ func (s *apiServer) handlePatchProject(w http.ResponseWriter, r *http.Request, c
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("patch project tx begin failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer tx.Rollback()
@@ -1000,7 +1000,7 @@ func (s *apiServer) handlePatchProject(w http.ResponseWriter, r *http.Request, c
 	).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -1011,7 +1011,7 @@ func (s *apiServer) handlePatchProject(w http.ResponseWriter, r *http.Request, c
 			return
 		}
 		if isUniqueViolation(err) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusConflict,
@@ -1023,7 +1023,7 @@ func (s *apiServer) handlePatchProject(w http.ResponseWriter, r *http.Request, c
 		}
 
 		log.Printf("patch project failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -1044,17 +1044,17 @@ func (s *apiServer) handlePatchProject(w http.ResponseWriter, r *http.Request, c
 		auditPayload,
 	); err != nil {
 		log.Printf("patch project audit insert failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("patch project tx commit failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusOK, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("patch project response encode error: %v", err)
 	}
 }
@@ -1066,7 +1066,7 @@ func (s *apiServer) handleDeleteProject(w http.ResponseWriter, r *http.Request, 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("delete project tx begin failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer tx.Rollback()
@@ -1088,7 +1088,7 @@ func (s *apiServer) handleDeleteProject(w http.ResponseWriter, r *http.Request, 
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -1100,7 +1100,7 @@ func (s *apiServer) handleDeleteProject(w http.ResponseWriter, r *http.Request, 
 		}
 
 		log.Printf("delete project failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -1119,13 +1119,13 @@ func (s *apiServer) handleDeleteProject(w http.ResponseWriter, r *http.Request, 
 		auditPayload,
 	); err != nil {
 		log.Printf("delete project audit insert failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("delete project tx commit failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -1134,8 +1134,8 @@ func (s *apiServer) handleDeleteProject(w http.ResponseWriter, r *http.Request, 
 
 func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, companyID int64, projectID int64) {
 	var request createStreamRequest
-	if err := decodeJSONBody(r, &request); err != nil {
-		writeJSONError(
+	if err := httpapi.DecodeJSONBody(r, &request); err != nil {
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -1148,7 +1148,7 @@ func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, c
 
 	name := strings.TrimSpace(request.Name)
 	if name == "" {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -1160,7 +1160,7 @@ func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, c
 	}
 	url := strings.TrimSpace(request.URL)
 	if url == "" {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -1182,7 +1182,7 @@ func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, c
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("create stream tx begin failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer tx.Rollback()
@@ -1205,7 +1205,7 @@ func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, c
 	).Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) || isForeignKeyViolation(err) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -1216,7 +1216,7 @@ func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, c
 			return
 		}
 		if isUniqueViolation(err) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusConflict,
@@ -1228,7 +1228,7 @@ func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, c
 		}
 
 		log.Printf("create stream failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -1250,17 +1250,17 @@ func (s *apiServer) handleCreateStream(w http.ResponseWriter, r *http.Request, c
 		auditPayload,
 	); err != nil {
 		log.Printf("create stream audit insert failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("create stream tx commit failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusCreated, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusCreated, item); err != nil {
 		log.Printf("create stream response encode error: %v", err)
 	}
 }
@@ -1274,9 +1274,9 @@ func (s *apiServer) handleListStreams(w http.ResponseWriter, r *http.Request, co
 	nextPlaceholder := 2
 
 	if projectIDRaw := strings.TrimSpace(r.URL.Query().Get("project_id")); projectIDRaw != "" {
-		projectID, err := parsePositiveID(projectIDRaw)
+		projectID, err := httpapi.ParsePositiveID(projectIDRaw)
 		if err != nil {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -1295,7 +1295,7 @@ func (s *apiServer) handleListStreams(w http.ResponseWriter, r *http.Request, co
 	if isActiveRaw := strings.TrimSpace(r.URL.Query().Get("is_active")); isActiveRaw != "" {
 		isActive, err := strconv.ParseBool(isActiveRaw)
 		if err != nil {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -1322,7 +1322,7 @@ func (s *apiServer) handleListStreams(w http.ResponseWriter, r *http.Request, co
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		log.Printf("list streams failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer rows.Close()
@@ -1332,14 +1332,14 @@ func (s *apiServer) handleListStreams(w http.ResponseWriter, r *http.Request, co
 		var item stream
 		if err := rows.Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			log.Printf("list streams scan failed: %v", err)
-			writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+			httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 			return
 		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
 		log.Printf("list streams rows failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -1347,7 +1347,7 @@ func (s *apiServer) handleListStreams(w http.ResponseWriter, r *http.Request, co
 		Items:      items,
 		NextCursor: nil,
 	}
-	if err := writeJSON(w, http.StatusOK, response); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, response); err != nil {
 		log.Printf("list streams response encode error: %v", err)
 	}
 }
@@ -1367,7 +1367,7 @@ func (s *apiServer) handleGetStream(w http.ResponseWriter, r *http.Request, comp
 	).Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -1379,19 +1379,19 @@ func (s *apiServer) handleGetStream(w http.ResponseWriter, r *http.Request, comp
 		}
 
 		log.Printf("get stream failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusOK, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("get stream response encode error: %v", err)
 	}
 }
 
 func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {
 	var request patchStreamRequest
-	if err := decodeJSONBody(r, &request); err != nil {
-		writeJSONError(
+	if err := httpapi.DecodeJSONBody(r, &request); err != nil {
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -1410,7 +1410,7 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 	if request.Name != nil {
 		name := strings.TrimSpace(*request.Name)
 		if name == "" {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -1428,7 +1428,7 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 	if request.URL != nil {
 		url := strings.TrimSpace(*request.URL)
 		if url == "" {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -1450,7 +1450,7 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 		nextPlaceholder++
 	}
 	if len(setClauses) == 0 {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -1488,7 +1488,7 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("patch stream tx begin failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer tx.Rollback()
@@ -1506,7 +1506,7 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -1517,7 +1517,7 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 			return
 		}
 		if isUniqueViolation(err) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusConflict,
@@ -1529,7 +1529,7 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 		}
 
 		log.Printf("patch stream failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -1549,17 +1549,17 @@ func (s *apiServer) handlePatchStream(w http.ResponseWriter, r *http.Request, co
 		auditPayload,
 	); err != nil {
 		log.Printf("patch stream audit insert failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("patch stream tx commit failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusOK, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("patch stream response encode error: %v", err)
 	}
 }
@@ -1571,7 +1571,7 @@ func (s *apiServer) handleDeleteStream(w http.ResponseWriter, r *http.Request, c
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("delete stream tx begin failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer tx.Rollback()
@@ -1596,7 +1596,7 @@ func (s *apiServer) handleDeleteStream(w http.ResponseWriter, r *http.Request, c
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -1608,7 +1608,7 @@ func (s *apiServer) handleDeleteStream(w http.ResponseWriter, r *http.Request, c
 		}
 
 		log.Printf("delete stream failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -1630,13 +1630,13 @@ func (s *apiServer) handleDeleteStream(w http.ResponseWriter, r *http.Request, c
 		auditPayload,
 	); err != nil {
 		log.Printf("delete stream audit insert failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("delete stream tx commit failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -1645,8 +1645,8 @@ func (s *apiServer) handleDeleteStream(w http.ResponseWriter, r *http.Request, c
 
 func (s *apiServer) handleEnqueueCheckJob(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {
 	var request enqueueCheckJobRequest
-	if err := decodeJSONBody(r, &request); err != nil {
-		writeJSONError(
+	if err := httpapi.DecodeJSONBody(r, &request); err != nil {
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -1659,7 +1659,7 @@ func (s *apiServer) handleEnqueueCheckJob(w http.ResponseWriter, r *http.Request
 
 	plannedAtRaw := strings.TrimSpace(request.PlannedAt)
 	if plannedAtRaw == "" {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -1672,7 +1672,7 @@ func (s *apiServer) handleEnqueueCheckJob(w http.ResponseWriter, r *http.Request
 
 	plannedAt, err := time.Parse(time.RFC3339, plannedAtRaw)
 	if err != nil {
-		writeJSONError(
+		httpapi.WriteJSONError(
 			w,
 			r,
 			http.StatusBadRequest,
@@ -1712,7 +1712,7 @@ func (s *apiServer) handleEnqueueCheckJob(w http.ResponseWriter, r *http.Request
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) || isForeignKeyViolation(err) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -1723,7 +1723,7 @@ func (s *apiServer) handleEnqueueCheckJob(w http.ResponseWriter, r *http.Request
 			return
 		}
 		if isUniqueViolation(err) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusConflict,
@@ -1735,11 +1735,11 @@ func (s *apiServer) handleEnqueueCheckJob(w http.ResponseWriter, r *http.Request
 		}
 
 		log.Printf("enqueue check job failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusAccepted, enqueueCheckJobResponse{Job: item}); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusAccepted, enqueueCheckJobResponse{Job: item}); err != nil {
 		log.Printf("enqueue check job response encode error: %v", err)
 	}
 }
@@ -1769,7 +1769,7 @@ func (s *apiServer) handleGetCheckJob(w http.ResponseWriter, r *http.Request, co
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -1781,11 +1781,11 @@ func (s *apiServer) handleGetCheckJob(w http.ResponseWriter, r *http.Request, co
 		}
 
 		log.Printf("get check job failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusOK, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("get check job response encode error: %v", err)
 	}
 }
@@ -1803,7 +1803,7 @@ func (s *apiServer) handleListCheckJobs(w http.ResponseWriter, r *http.Request, 
 	).Scan(&streamExists)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -1815,7 +1815,7 @@ func (s *apiServer) handleListCheckJobs(w http.ResponseWriter, r *http.Request, 
 		}
 
 		log.Printf("check stream existence for check jobs failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -1826,7 +1826,7 @@ func (s *apiServer) handleListCheckJobs(w http.ResponseWriter, r *http.Request, 
 	if statusRaw := strings.TrimSpace(r.URL.Query().Get("status")); statusRaw != "" {
 		status, ok := normalizeCheckJobStatus(statusRaw)
 		if !ok {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -1844,7 +1844,7 @@ func (s *apiServer) handleListCheckJobs(w http.ResponseWriter, r *http.Request, 
 	if fromRaw := strings.TrimSpace(r.URL.Query().Get("from")); fromRaw != "" {
 		fromTime, parseErr := time.Parse(time.RFC3339, fromRaw)
 		if parseErr != nil {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -1862,7 +1862,7 @@ func (s *apiServer) handleListCheckJobs(w http.ResponseWriter, r *http.Request, 
 	if toRaw := strings.TrimSpace(r.URL.Query().Get("to")); toRaw != "" {
 		toTime, parseErr := time.Parse(time.RFC3339, toRaw)
 		if parseErr != nil {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -1888,7 +1888,7 @@ func (s *apiServer) handleListCheckJobs(w http.ResponseWriter, r *http.Request, 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		log.Printf("list check jobs failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer rows.Close()
@@ -1908,14 +1908,14 @@ func (s *apiServer) handleListCheckJobs(w http.ResponseWriter, r *http.Request, 
 			&item.ErrorMessage,
 		); err != nil {
 			log.Printf("list check jobs scan failed: %v", err)
-			writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+			httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 			return
 		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
 		log.Printf("list check jobs rows failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -1923,7 +1923,7 @@ func (s *apiServer) handleListCheckJobs(w http.ResponseWriter, r *http.Request, 
 		Items:      items,
 		NextCursor: nil,
 	}
-	if err := writeJSON(w, http.StatusOK, response); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, response); err != nil {
 		log.Printf("list check jobs response encode error: %v", err)
 	}
 }
@@ -1944,7 +1944,7 @@ func (s *apiServer) handleGetCheckResult(w http.ResponseWriter, r *http.Request,
 	item, err := scanCheckResult(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -1956,11 +1956,11 @@ func (s *apiServer) handleGetCheckResult(w http.ResponseWriter, r *http.Request,
 		}
 
 		log.Printf("get check result failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusOK, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("get check result response encode error: %v", err)
 	}
 }
@@ -1978,7 +1978,7 @@ func (s *apiServer) handleListCheckResults(w http.ResponseWriter, r *http.Reques
 	).Scan(&streamExists)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -1990,7 +1990,7 @@ func (s *apiServer) handleListCheckResults(w http.ResponseWriter, r *http.Reques
 		}
 
 		log.Printf("check stream existence for check results failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -2001,7 +2001,7 @@ func (s *apiServer) handleListCheckResults(w http.ResponseWriter, r *http.Reques
 	if statusRaw := strings.TrimSpace(r.URL.Query().Get("status")); statusRaw != "" {
 		status, ok := normalizeCheckResultStatus(statusRaw)
 		if !ok {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -2020,7 +2020,7 @@ func (s *apiServer) handleListCheckResults(w http.ResponseWriter, r *http.Reques
 	if fromRaw := strings.TrimSpace(r.URL.Query().Get("from")); fromRaw != "" {
 		fromTime, parseErr := time.Parse(time.RFC3339, fromRaw)
 		if parseErr != nil {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -2038,7 +2038,7 @@ func (s *apiServer) handleListCheckResults(w http.ResponseWriter, r *http.Reques
 	if toRaw := strings.TrimSpace(r.URL.Query().Get("to")); toRaw != "" {
 		toTime, parseErr := time.Parse(time.RFC3339, toRaw)
 		if parseErr != nil {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusBadRequest,
@@ -2064,7 +2064,7 @@ func (s *apiServer) handleListCheckResults(w http.ResponseWriter, r *http.Reques
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		log.Printf("list check results failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 	defer rows.Close()
@@ -2074,14 +2074,14 @@ func (s *apiServer) handleListCheckResults(w http.ResponseWriter, r *http.Reques
 		item, scanErr := scanCheckResult(rows)
 		if scanErr != nil {
 			log.Printf("list check results scan failed: %v", scanErr)
-			writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+			httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 			return
 		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
 		log.Printf("list check results rows failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
@@ -2089,7 +2089,7 @@ func (s *apiServer) handleListCheckResults(w http.ResponseWriter, r *http.Reques
 		Items:      items,
 		NextCursor: nil,
 	}
-	if err := writeJSON(w, http.StatusOK, response); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, response); err != nil {
 		log.Printf("list check results response encode error: %v", err)
 	}
 }
@@ -2110,7 +2110,7 @@ func (s *apiServer) handleGetCheckResultByJob(w http.ResponseWriter, r *http.Req
 	item, err := scanCheckResult(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSONError(
+			httpapi.WriteJSONError(
 				w,
 				r,
 				http.StatusNotFound,
@@ -2122,11 +2122,11 @@ func (s *apiServer) handleGetCheckResultByJob(w http.ResponseWriter, r *http.Req
 		}
 
 		log.Printf("get check result by job failed: %v", err)
-		writeJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		httpapi.WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
 		return
 	}
 
-	if err := writeJSON(w, http.StatusOK, item); err != nil {
+	if err := httpapi.WriteJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("get check result by job response encode error: %v", err)
 	}
 }
@@ -2193,93 +2193,6 @@ func insertAuditLogTx(
 	return err
 }
 
-func writeJSON(w http.ResponseWriter, statusCode int, payload interface{}) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	return json.NewEncoder(w).Encode(payload)
-}
-
-func writeJSONError(
-	w http.ResponseWriter,
-	r *http.Request,
-	statusCode int,
-	code string,
-	message string,
-	details interface{},
-) {
-	err := writeJSON(w, statusCode, errorEnvelope{
-		Code:      code,
-		Message:   message,
-		Details:   details,
-		RequestID: requestIDFromRequest(r),
-	})
-	if err != nil {
-		log.Printf("error response encode failed: %v", err)
-	}
-}
-
-func writeMethodNotAllowed(w http.ResponseWriter, r *http.Request, allowedMethods ...string) {
-	w.Header().Set("Allow", strings.Join(allowedMethods, ", "))
-	writeJSONError(
-		w,
-		r,
-		http.StatusMethodNotAllowed,
-		"method_not_allowed",
-		"method is not allowed for this endpoint",
-		map[string]interface{}{
-			"method":          r.Method,
-			"allowed_methods": allowedMethods,
-		},
-	)
-}
-
-func parseCompanyPath(path string) (int64, string, string) {
-	const prefix = "/api/v1/companies/"
-	if !strings.HasPrefix(path, prefix) {
-		return 0, "", "not_found"
-	}
-
-	rawPath := strings.TrimPrefix(path, prefix)
-	if rawPath == "" {
-		return 0, "", "not_found"
-	}
-
-	parts := strings.SplitN(rawPath, "/", 2)
-	companyID, err := parsePositiveID(parts[0])
-	if err != nil {
-		return 0, "", "validation_error"
-	}
-
-	if len(parts) == 1 {
-		return companyID, "", ""
-	}
-	if parts[1] == "" {
-		return 0, "", "not_found"
-	}
-
-	return companyID, parts[1], ""
-}
-
-func parsePositiveID(rawID string) (int64, error) {
-	value, err := strconv.ParseInt(rawID, 10, 64)
-	if err != nil || value <= 0 {
-		return 0, errors.New("invalid id")
-	}
-	return value, nil
-}
-
-func decodeJSONBody(r *http.Request, target interface{}) error {
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(target); err != nil {
-		return err
-	}
-	if decoder.More() {
-		return errors.New("request body must contain a single JSON object")
-	}
-	return nil
-}
-
 func isUniqueViolation(err error) bool {
 	var pgErr *pq.Error
 	return errors.As(err, &pgErr) && string(pgErr.Code) == "23505"
@@ -2329,11 +2242,4 @@ func formatCheckResultStatus(raw string) string {
 	default:
 		return strings.ToUpper(strings.TrimSpace(raw))
 	}
-}
-
-func requestIDFromRequest(r *http.Request) string {
-	if requestID := r.Header.Get("X-Request-ID"); requestID != "" {
-		return requestID
-	}
-	return "req_" + time.Now().UTC().Format("20060102150405.000000000")
 }
