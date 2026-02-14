@@ -2,58 +2,24 @@ package api
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"log"
 	"net/http"
-	"strings"
 	"time"
-
-	"github.com/example/hls-monitoring-platform/internal/domain"
 )
 
 func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request, companyID int64) {
-	name, ok := decodeCreateProjectName(w, r)
-	if !ok {
+	var request createProjectRequest
+	if err := DecodeJSONBody(r, &request); err != nil {
+		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid request body", map[string]interface{}{"error": err.Error()})
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	item, err := s.projectService.CreateProject(ctx, companyID, request.Name)
 	if err != nil {
-		log.Printf("create project tx begin failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-		return
-	}
-	defer tx.Rollback()
-
-	item, err := insertProjectTx(ctx, tx, companyID, name)
-	if err != nil {
-		handleCreateProjectInsertError(w, r, companyID, err)
-		return
-	}
-
-	if err := insertAuditLogTx(
-		ctx,
-		tx,
-		companyID,
-		domain.AuditActorTypeAPI,
-		domain.AuditActorIDSystem,
-		domain.AuditEntityTypeProject,
-		item.ID,
-		domain.AuditActionProjectCreate,
-		map[string]interface{}{"name": item.Name},
-	); err != nil {
-		log.Printf("create project audit insert failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		log.Printf("create project tx commit failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		writeServiceError(w, r, "create project", err)
 		return
 	}
 
@@ -66,20 +32,9 @@ func (s *Server) handleListProjects(w http.ResponseWriter, r *http.Request, comp
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	rows, err := s.db.QueryContext(
-		ctx,
-		`SELECT id, company_id, name, created_at, updated_at FROM projects WHERE company_id = $1 ORDER BY id ASC`,
-		companyID,
-	)
+	items, err := s.projectService.ListProjects(ctx, companyID)
 	if err != nil {
-		log.Printf("list projects failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-		return
-	}
-	defer rows.Close()
-
-	items, ok := scanProjectRows(w, r, rows)
-	if !ok {
+		writeServiceError(w, r, "list projects", err)
 		return
 	}
 
@@ -92,14 +47,9 @@ func (s *Server) handleGetProject(w http.ResponseWriter, r *http.Request, compan
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	item, err := getProjectByID(ctx, s.db, companyID, projectID)
+	item, err := s.projectService.GetProject(ctx, companyID, projectID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			writeProjectNotFound(w, r, companyID, projectID)
-			return
-		}
-		log.Printf("get project failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		writeServiceError(w, r, "get project", err)
 		return
 	}
 
@@ -109,48 +59,18 @@ func (s *Server) handleGetProject(w http.ResponseWriter, r *http.Request, compan
 }
 
 func (s *Server) handlePatchProject(w http.ResponseWriter, r *http.Request, companyID int64, projectID int64) {
-	name, ok := decodePatchProjectName(w, r)
-	if !ok {
+	var request patchProjectRequest
+	if err := DecodeJSONBody(r, &request); err != nil {
+		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid request body", map[string]interface{}{"error": err.Error()})
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	item, err := s.projectService.PatchProject(ctx, companyID, projectID, request.Name)
 	if err != nil {
-		log.Printf("patch project tx begin failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-		return
-	}
-	defer tx.Rollback()
-
-	item, err := updateProjectNameTx(ctx, tx, companyID, projectID, name)
-	if err != nil {
-		handlePatchProjectUpdateError(w, r, companyID, projectID, err)
-		return
-	}
-
-	auditPayload := map[string]interface{}{"changes": map[string]interface{}{"name": name}}
-	if err := insertAuditLogTx(
-		ctx,
-		tx,
-		companyID,
-		domain.AuditActorTypeAPI,
-		domain.AuditActorIDSystem,
-		domain.AuditEntityTypeProject,
-		item.ID,
-		domain.AuditActionProjectUpdate,
-		auditPayload,
-	); err != nil {
-		log.Printf("patch project audit insert failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		log.Printf("patch project tx commit failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+		writeServiceError(w, r, "patch project", err)
 		return
 	}
 
@@ -163,153 +83,10 @@ func (s *Server) handleDeleteProject(w http.ResponseWriter, r *http.Request, com
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		log.Printf("delete project tx begin failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-		return
-	}
-	defer tx.Rollback()
-
-	deleted, err := deleteProjectRowTx(ctx, tx, companyID, projectID)
-	if err != nil {
-		handleDeleteProjectError(w, r, companyID, projectID, err)
-		return
-	}
-
-	if err := insertAuditLogTx(
-		ctx,
-		tx,
-		companyID,
-		domain.AuditActorTypeAPI,
-		domain.AuditActorIDSystem,
-		domain.AuditEntityTypeProject,
-		deleted.ID,
-		domain.AuditActionProjectDelete,
-		map[string]interface{}{"name": deleted.Name},
-	); err != nil {
-		log.Printf("delete project audit insert failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		log.Printf("delete project tx commit failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
+	if err := s.projectService.DeleteProject(ctx, companyID, projectID); err != nil {
+		writeServiceError(w, r, "delete project", err)
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func decodeCreateProjectName(w http.ResponseWriter, r *http.Request) (string, bool) {
-	var request createProjectRequest
-	if err := DecodeJSONBody(r, &request); err != nil {
-		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid request body", map[string]interface{}{"error": err.Error()})
-		return "", false
-	}
-	name := strings.TrimSpace(request.Name)
-	if name == "" {
-		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "name is required", map[string]interface{}{"field": "name"})
-		return "", false
-	}
-	return name, true
-}
-
-func decodePatchProjectName(w http.ResponseWriter, r *http.Request) (string, bool) {
-	var request patchProjectRequest
-	if err := DecodeJSONBody(r, &request); err != nil {
-		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid request body", map[string]interface{}{"error": err.Error()})
-		return "", false
-	}
-	name := strings.TrimSpace(request.Name)
-	if name == "" {
-		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "name is required", map[string]interface{}{"field": "name"})
-		return "", false
-	}
-	return name, true
-}
-
-func insertProjectTx(ctx context.Context, tx *sql.Tx, companyID int64, name string) (project, error) {
-	var item project
-	err := tx.QueryRowContext(ctx, `INSERT INTO projects (company_id, name) VALUES ($1, $2) RETURNING id, company_id, name, created_at, updated_at`, companyID, name).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
-	return item, err
-}
-
-func getProjectByID(ctx context.Context, db *sql.DB, companyID int64, projectID int64) (project, error) {
-	var item project
-	err := db.QueryRowContext(ctx, `SELECT id, company_id, name, created_at, updated_at FROM projects WHERE company_id = $1 AND id = $2`, companyID, projectID).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
-	return item, err
-}
-
-func updateProjectNameTx(ctx context.Context, tx *sql.Tx, companyID int64, projectID int64, name string) (project, error) {
-	var item project
-	err := tx.QueryRowContext(ctx, `UPDATE projects SET name = $1, updated_at = NOW() WHERE company_id = $2 AND id = $3 RETURNING id, company_id, name, created_at, updated_at`, name, companyID, projectID).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
-	return item, err
-}
-
-func deleteProjectRowTx(ctx context.Context, tx *sql.Tx, companyID int64, projectID int64) (project, error) {
-	var deleted project
-	err := tx.QueryRowContext(ctx, `DELETE FROM projects
-         WHERE company_id = $1 AND id = $2
-         RETURNING id, company_id, name, created_at, updated_at`, companyID, projectID).Scan(&deleted.ID, &deleted.CompanyID, &deleted.Name, &deleted.CreatedAt, &deleted.UpdatedAt)
-	return deleted, err
-}
-
-func scanProjectRows(w http.ResponseWriter, r *http.Request, rows *sql.Rows) ([]project, bool) {
-	items := make([]project, 0)
-	for rows.Next() {
-		var item project
-		if err := rows.Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt); err != nil {
-			log.Printf("list projects scan failed: %v", err)
-			WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-			return nil, false
-		}
-		items = append(items, item)
-	}
-	if err := rows.Err(); err != nil {
-		log.Printf("list projects rows failed: %v", err)
-		WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-		return nil, false
-	}
-	return items, true
-}
-
-func handleCreateProjectInsertError(w http.ResponseWriter, r *http.Request, companyID int64, err error) {
-	if isUniqueViolation(err) {
-		WriteJSONError(w, r, http.StatusConflict, "conflict", "project with the same name already exists for this company", map[string]interface{}{"field": "name", "company_id": companyID})
-		return
-	}
-	if isForeignKeyViolation(err) {
-		WriteJSONError(w, r, http.StatusNotFound, "not_found", "company not found", map[string]interface{}{"company_id": companyID})
-		return
-	}
-	log.Printf("create project failed: %v", err)
-	WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-}
-
-func handlePatchProjectUpdateError(w http.ResponseWriter, r *http.Request, companyID int64, projectID int64, err error) {
-	if errors.Is(err, sql.ErrNoRows) {
-		writeProjectNotFound(w, r, companyID, projectID)
-		return
-	}
-	if isUniqueViolation(err) {
-		WriteJSONError(w, r, http.StatusConflict, "conflict", "project with the same name already exists for this company", map[string]interface{}{"field": "name", "company_id": companyID})
-		return
-	}
-	log.Printf("patch project failed: %v", err)
-	WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-}
-
-func handleDeleteProjectError(w http.ResponseWriter, r *http.Request, companyID int64, projectID int64, err error) {
-	if errors.Is(err, sql.ErrNoRows) {
-		writeProjectNotFound(w, r, companyID, projectID)
-		return
-	}
-	log.Printf("delete project failed: %v", err)
-	WriteJSONError(w, r, http.StatusInternalServerError, "internal_error", "internal server error", map[string]interface{}{})
-}
-
-func writeProjectNotFound(w http.ResponseWriter, r *http.Request, companyID int64, projectID int64) {
-	WriteJSONError(w, r, http.StatusNotFound, "not_found", "project not found", map[string]interface{}{"company_id": companyID, "project_id": projectID})
 }

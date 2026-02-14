@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
+	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
 )
 
 type healthResponse = domain.HealthResponse
@@ -27,11 +28,19 @@ type checkResult = domain.CheckResult
 type checkResultListResponse = domain.CheckResultListResponse
 
 type Server struct {
-	db *sql.DB
+	db             *sql.DB
+	companyService *serviceapi.CompanyService
+	projectService *serviceapi.ProjectService
+	streamService  *serviceapi.StreamService
 }
 
 func NewServer(db *sql.DB) *Server {
-	return &Server{db: db}
+	return &Server{
+		db:             db,
+		companyService: serviceapi.NewCompanyService(newCompanyStore(db)),
+		projectService: serviceapi.NewProjectService(newProjectStore(db)),
+		streamService:  serviceapi.NewStreamService(newStreamStore(db)),
+	}
 }
 
 func (s *Server) RouterHandlers() RouterHandlers {
