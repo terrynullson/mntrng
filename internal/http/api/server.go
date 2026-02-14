@@ -29,18 +29,22 @@ type checkResult = domain.CheckResult
 type checkResultListResponse = domain.CheckResultListResponse
 
 type Server struct {
-	db             *sql.DB
-	companyService *serviceapi.CompanyService
-	projectService *serviceapi.ProjectService
-	streamService  *serviceapi.StreamService
+	db                 *sql.DB
+	companyService     *serviceapi.CompanyService
+	projectService     *serviceapi.ProjectService
+	streamService      *serviceapi.StreamService
+	checkJobService    *serviceapi.CheckJobService
+	checkResultService *serviceapi.CheckResultService
 }
 
 func NewServer(db *sql.DB) *Server {
 	return &Server{
-		db:             db,
-		companyService: serviceapi.NewCompanyService(postgres.NewAPICompanyRepo(db)),
-		projectService: serviceapi.NewProjectService(postgres.NewAPIProjectRepo(db)),
-		streamService:  serviceapi.NewStreamService(postgres.NewAPIStreamRepo(db)),
+		db:                 db,
+		companyService:     serviceapi.NewCompanyService(postgres.NewAPICompanyRepo(db)),
+		projectService:     serviceapi.NewProjectService(postgres.NewAPIProjectRepo(db)),
+		streamService:      serviceapi.NewStreamService(postgres.NewAPIStreamRepo(db)),
+		checkJobService:    serviceapi.NewCheckJobService(postgres.NewAPICheckJobRepo(db)),
+		checkResultService: serviceapi.NewCheckResultService(postgres.NewAPICheckResultRepo(db)),
 	}
 }
 
