@@ -33,3 +33,72 @@ func GetInt(key string, fallback int) int {
 
 	return parsed
 }
+
+func GetFloat(key string, fallback float64) float64 {
+	value := GetString(key, "")
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
+}
+
+func GetBool(key string, fallback bool) bool {
+	value := strings.TrimSpace(strings.ToLower(GetString(key, "")))
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.ParseBool(value)
+	if err == nil {
+		return parsed
+	}
+
+	switch value {
+	case "yes", "on":
+		return true
+	case "no", "off":
+		return false
+	default:
+		return fallback
+	}
+}
+
+func IntAtLeast(value int, minimum int) int {
+	if value < minimum {
+		return minimum
+	}
+	return value
+}
+
+func IntInRange(value int, minimum int, maximum int) int {
+	if value < minimum {
+		return minimum
+	}
+	if value > maximum {
+		return maximum
+	}
+	return value
+}
+
+func FloatAtLeast(value float64, minimum float64) float64 {
+	if value < minimum {
+		return minimum
+	}
+	return value
+}
+
+func FloatInRange(value float64, minimum float64, maximum float64) float64 {
+	if value < minimum {
+		return minimum
+	}
+	if value > maximum {
+		return maximum
+	}
+	return value
+}

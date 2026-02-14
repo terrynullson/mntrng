@@ -15,29 +15,29 @@ import (
 )
 
 func main() {
-	pollInterval := time.Duration(workerservice.IntAtLeast(config.GetInt("WORKER_HEARTBEAT_SEC", 15), 1)) * time.Second
-	retentionTTLDays := workerservice.IntAtLeast(config.GetInt("RETENTION_TTL_DAYS", 30), 1)
+	pollInterval := time.Duration(config.IntAtLeast(config.GetInt("WORKER_HEARTBEAT_SEC", 15), 1)) * time.Second
+	retentionTTLDays := config.IntAtLeast(config.GetInt("RETENTION_TTL_DAYS", 30), 1)
 	retentionTTL := time.Duration(retentionTTLDays) * 24 * time.Hour
-	retentionCleanupInterval := time.Duration(workerservice.IntAtLeast(config.GetInt("RETENTION_CLEANUP_INTERVAL_MIN", 60), 1)) * time.Minute
-	retentionCleanupBatchSize := workerservice.IntAtLeast(config.GetInt("RETENTION_CLEANUP_BATCH_SIZE", 100), 1)
-	jobTimeout := time.Duration(workerservice.IntAtLeast(config.GetInt("WORKER_JOB_TIMEOUT_SEC", 30), 1)) * time.Second
-	playlistTimeout := time.Duration(workerservice.IntAtLeast(config.GetInt("PLAYLIST_TIMEOUT_MS", 3000), 1)) * time.Millisecond
-	segmentTimeout := time.Duration(workerservice.IntAtLeast(config.GetInt("SEGMENT_TIMEOUT_MS", 5000), 1)) * time.Millisecond
-	segmentsSampleCount := workerservice.IntInRange(config.GetInt("SEGMENTS_SAMPLE_COUNT", 3), 3, 5)
-	freshnessWarn := time.Duration(workerservice.IntAtLeast(config.GetInt("FRESHNESS_WARN_SEC", 10), 1)) * time.Second
-	freshnessFail := time.Duration(workerservice.IntAtLeast(config.GetInt("FRESHNESS_FAIL_SEC", 30), 1)) * time.Second
-	freezeWarn := time.Duration(workerservice.IntAtLeast(config.GetInt("FREEZE_WARN_SEC", 2), 1)) * time.Second
-	freezeFail := time.Duration(workerservice.IntAtLeast(config.GetInt("FREEZE_FAIL_SEC", 5), 1)) * time.Second
-	blackframeWarnRatio := workerservice.FloatInRange(workerservice.EnvFloat("BLACKFRAME_WARN_RATIO", 0.9), 0, 1)
-	blackframeFailRatio := workerservice.FloatInRange(workerservice.EnvFloat("BLACKFRAME_FAIL_RATIO", 0.98), 0, 1)
-	effectiveWarnRatio := workerservice.FloatAtLeast(workerservice.EnvFloat("EFFECTIVE_BITRATE_WARN_RATIO", 0.7), 0)
-	effectiveFailRatio := workerservice.FloatAtLeast(workerservice.EnvFloat("EFFECTIVE_BITRATE_FAIL_RATIO", 0.4), 0)
-	alertFailStreak := workerservice.IntAtLeast(config.GetInt("ALERT_FAIL_STREAK", 2), 1)
-	alertCooldown := time.Duration(workerservice.IntAtLeast(config.GetInt("ALERT_COOLDOWN_MIN", 10), 1)) * time.Minute
-	alertSendRecovered := workerservice.EnvBool("ALERT_SEND_RECOVERED", false)
-	telegramHTTPTimeout := time.Duration(workerservice.IntAtLeast(config.GetInt("TELEGRAM_HTTP_TIMEOUT_MS", 5000), 1)) * time.Millisecond
-	telegramRetryMax := workerservice.IntAtLeast(config.GetInt("TELEGRAM_SEND_RETRY_MAX", 2), 0)
-	telegramRetryBackoff := time.Duration(workerservice.IntAtLeast(config.GetInt("TELEGRAM_SEND_RETRY_BACKOFF_MS", 500), 1)) * time.Millisecond
+	retentionCleanupInterval := time.Duration(config.IntAtLeast(config.GetInt("RETENTION_CLEANUP_INTERVAL_MIN", 60), 1)) * time.Minute
+	retentionCleanupBatchSize := config.IntAtLeast(config.GetInt("RETENTION_CLEANUP_BATCH_SIZE", 100), 1)
+	jobTimeout := time.Duration(config.IntAtLeast(config.GetInt("WORKER_JOB_TIMEOUT_SEC", 30), 1)) * time.Second
+	playlistTimeout := time.Duration(config.IntAtLeast(config.GetInt("PLAYLIST_TIMEOUT_MS", 3000), 1)) * time.Millisecond
+	segmentTimeout := time.Duration(config.IntAtLeast(config.GetInt("SEGMENT_TIMEOUT_MS", 5000), 1)) * time.Millisecond
+	segmentsSampleCount := config.IntInRange(config.GetInt("SEGMENTS_SAMPLE_COUNT", 3), 3, 5)
+	freshnessWarn := time.Duration(config.IntAtLeast(config.GetInt("FRESHNESS_WARN_SEC", 10), 1)) * time.Second
+	freshnessFail := time.Duration(config.IntAtLeast(config.GetInt("FRESHNESS_FAIL_SEC", 30), 1)) * time.Second
+	freezeWarn := time.Duration(config.IntAtLeast(config.GetInt("FREEZE_WARN_SEC", 2), 1)) * time.Second
+	freezeFail := time.Duration(config.IntAtLeast(config.GetInt("FREEZE_FAIL_SEC", 5), 1)) * time.Second
+	blackframeWarnRatio := config.FloatInRange(config.GetFloat("BLACKFRAME_WARN_RATIO", 0.9), 0, 1)
+	blackframeFailRatio := config.FloatInRange(config.GetFloat("BLACKFRAME_FAIL_RATIO", 0.98), 0, 1)
+	effectiveWarnRatio := config.FloatAtLeast(config.GetFloat("EFFECTIVE_BITRATE_WARN_RATIO", 0.7), 0)
+	effectiveFailRatio := config.FloatAtLeast(config.GetFloat("EFFECTIVE_BITRATE_FAIL_RATIO", 0.4), 0)
+	alertFailStreak := config.IntAtLeast(config.GetInt("ALERT_FAIL_STREAK", 2), 1)
+	alertCooldown := time.Duration(config.IntAtLeast(config.GetInt("ALERT_COOLDOWN_MIN", 10), 1)) * time.Minute
+	alertSendRecovered := config.GetBool("ALERT_SEND_RECOVERED", false)
+	telegramHTTPTimeout := time.Duration(config.IntAtLeast(config.GetInt("TELEGRAM_HTTP_TIMEOUT_MS", 5000), 1)) * time.Millisecond
+	telegramRetryMax := config.IntAtLeast(config.GetInt("TELEGRAM_SEND_RETRY_MAX", 2), 0)
+	telegramRetryBackoff := time.Duration(config.IntAtLeast(config.GetInt("TELEGRAM_SEND_RETRY_BACKOFF_MS", 500), 1)) * time.Millisecond
 	telegramBotTokenDefault := config.GetString("TELEGRAM_BOT_TOKEN_DEFAULT", "")
 	if freshnessFail < freshnessWarn {
 		freshnessFail = freshnessWarn
@@ -48,8 +48,8 @@ func main() {
 	if blackframeFailRatio < blackframeWarnRatio {
 		blackframeFailRatio = blackframeWarnRatio
 	}
-	retryMax := workerservice.IntAtLeast(config.GetInt("WORKER_DB_RETRY_MAX", 2), 0)
-	retryBackoff := time.Duration(workerservice.IntAtLeast(config.GetInt("WORKER_DB_RETRY_BACKOFF_MS", 500), 1)) * time.Millisecond
+	retryMax := config.IntAtLeast(config.GetInt("WORKER_DB_RETRY_MAX", 2), 0)
+	retryBackoff := time.Duration(config.IntAtLeast(config.GetInt("WORKER_DB_RETRY_BACKOFF_MS", 500), 1)) * time.Millisecond
 
 	databaseURL := config.GetString("DATABASE_URL", "")
 	if databaseURL == "" {

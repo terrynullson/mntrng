@@ -7,11 +7,9 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/config"
 	"github.com/example/hls-monitoring-platform/internal/domain"
 	"github.com/lib/pq"
 )
@@ -185,91 +183,6 @@ func sleepWithContext(ctx context.Context, duration time.Duration) error {
 	case <-timer.C:
 		return nil
 	}
-}
-
-func intAtLeast(value int, minimum int) int {
-	if value < minimum {
-		return minimum
-	}
-	return value
-}
-
-func IntAtLeast(value int, minimum int) int {
-	return intAtLeast(value, minimum)
-}
-
-func intInRange(value int, minimum int, maximum int) int {
-	if value < minimum {
-		return minimum
-	}
-	if value > maximum {
-		return maximum
-	}
-	return value
-}
-
-func IntInRange(value int, minimum int, maximum int) int {
-	return intInRange(value, minimum, maximum)
-}
-
-func envFloat(key string, fallback float64) float64 {
-	valueRaw := config.GetString(key, "")
-	if valueRaw == "" {
-		return fallback
-	}
-	parsed, err := strconv.ParseFloat(valueRaw, 64)
-	if err != nil {
-		return fallback
-	}
-	return parsed
-}
-
-func EnvFloat(key string, fallback float64) float64 {
-	return envFloat(key, fallback)
-}
-
-func floatAtLeast(value float64, minimum float64) float64 {
-	if value < minimum {
-		return minimum
-	}
-	return value
-}
-
-func FloatAtLeast(value float64, minimum float64) float64 {
-	return floatAtLeast(value, minimum)
-}
-
-func floatInRange(value float64, minimum float64, maximum float64) float64 {
-	if value < minimum {
-		return minimum
-	}
-	if value > maximum {
-		return maximum
-	}
-	return value
-}
-
-func FloatInRange(value float64, minimum float64, maximum float64) float64 {
-	return floatInRange(value, minimum, maximum)
-}
-
-func envBool(key string, fallback bool) bool {
-	valueRaw := strings.TrimSpace(strings.ToLower(config.GetString(key, "")))
-	if valueRaw == "" {
-		return fallback
-	}
-	switch valueRaw {
-	case "1", "true", "yes", "on":
-		return true
-	case "0", "false", "no", "off":
-		return false
-	default:
-		return fallback
-	}
-}
-
-func EnvBool(key string, fallback bool) bool {
-	return envBool(key, fallback)
 }
 
 func checkStatusToDBStatus(status string) string {
