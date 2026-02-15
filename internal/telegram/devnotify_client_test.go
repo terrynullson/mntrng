@@ -39,3 +39,27 @@ func TestDevLogNotifierDisabledIsNoop(t *testing.T) {
 		t.Fatalf("expected nil error for disabled notifier, got %v", err)
 	}
 }
+
+func TestDevLogNotifierRejectsUnsafePayloadBeforeHTTP(t *testing.T) {
+	called := false
+	client := &http.Client{
+		Transport: roundTripperFunc(func(request *http.Request) (*http.Response, error) {
+			called = true
+			return nil, errors.New("must not be called")
+		}),
+	}
+
+	notifier := NewDevLogNotifier(true, "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "12345", client)
+	err := notifier.NotifyCompletion(context.Background(), DevLogPayload{
+		Summary: []string{"Ты идиот"},
+	})
+	if err == nil {
+		t.Fatalf("expected validation error")
+	}
+	if !strings.Contains(err.Error(), "safety guardrails") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if called {
+		t.Fatalf("expected HTTP client not to be called on invalid payload")
+	}
+}

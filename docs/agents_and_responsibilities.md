@@ -240,12 +240,16 @@ I. DevLog + Telegram Dev Notifications Protocol (mandatory)
 - no new task initiation from DevLog
 - architecture decisions are ADR-only
 - max 12 lines per DevLog entry
-- Notes may be emotional/conversational, but must not include insults, hate/discrimination, secrets/tokens, or PII
+- Russian language is default for DevLog (`Summary` and `Notes`)
+- Notes may be emotional/conversational and may include non-addressed expressive vocabulary
+- Notes must not include personal insults toward addressees
+- Notes must not include hate/discrimination, secrets/tokens, or PII
 
 3) Telegram Dev Notifications scope:
 - completion-notify channel only
 - not a channel for technical discussions or architecture decisions
 - no business logic orchestration via dev-bot messages
+- Russian language is default for `Summary`/`Mood`/`Thoughts` in dev-notify messages
 
 4) Secrets and safety:
 - dev-bot tokens/secrets are ENV-only

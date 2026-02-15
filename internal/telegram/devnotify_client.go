@@ -45,6 +45,9 @@ func (n *DevLogNotifier) NotifyCompletion(ctx context.Context, payload DevLogPay
 	if n.chatID == "" {
 		return errors.New("dev log notifier chat_id is not configured")
 	}
+	if err := ValidateDevLogPayload(payload); err != nil {
+		return errors.New("dev log payload violates safety guardrails")
+	}
 
 	text := BuildDevLogMessage(payload)
 	return n.sendMessage(ctx, text)

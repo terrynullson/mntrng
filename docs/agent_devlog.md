@@ -10,7 +10,7 @@ Summary:
 - ...
 - ...
 Notes:
-1-3 lines short comment (emotional/conversational tone allowed within guardrails).
+1-3 lines short comment (разговорный/эмоциональный тон допускается в рамках guardrails).
 
 ## Constraints (mandatory)
 
@@ -19,6 +19,8 @@ Notes:
 - DevLog must not initiate new tasks.
 - Architecture decisions are recorded only in ADR (`docs/decisions.md`).
 - Notes may use emotional or conversational tone.
+- Russian language is default for `Summary` and `Notes`.
+- Non-addressed expressive vocabulary is allowed.
 - Notes must not contain insults toward addressees.
 - Notes must not contain hate speech or discrimination.
 - Notes must not contain secrets, tokens, or PII.
@@ -29,18 +31,18 @@ Notes:
 Agent: BackendAgent
 Commit: 1ef5ae9
 Summary:
-- Added auth middleware.
-- Added controlled registration workflow.
-- Added RBAC tenant guard.
+- Добавлен auth middleware.
+- Добавлен workflow controlled registration.
+- Добавлен RBAC tenant guard.
 Notes:
-Smoke tests passed, no runtime regressions found.
+Смоук-тесты прошли, регрессий в runtime не найдено.
 
 [2026-02-15] [api-auth-baseline]
 Agent: BackendAgent
 Commit: 268cbc7eea7ddb6df73bc02d20b4cea46472a4f8
 Summary:
-- Added baseline security-gate tests for login and RBAC edge cases.
-- Synced schema docs for auth/session tenant-scope constraints.
-- Re-confirmed full test suite pass for the accepted step.
+- Добавлены baseline security-gate тесты для login и RBAC edge-cases.
+- Синхронизированы schema docs по auth/session tenant-scope ограничениям.
+- Подтверждён pass полного test suite для принятого шага.
 Notes:
-Backfill after step acceptance: completion-notify sent via `cmd/devnotify`.
+Backfill после принятия шага: completion-notify отправлен через `cmd/devnotify`.

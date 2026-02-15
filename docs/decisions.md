@@ -207,13 +207,16 @@ A dedicated DevLog protocol is mandatory in `docs/agent_devlog.md` with a compac
 - maximum 12 lines per entry,
 - execution summary only (non-normative for architecture),
 - no architecture decisions and no new task initiation.
+- Russian language is default for DevLog content (`Summary`/`Notes`).
 
-Notes in DevLog entries may use emotional/conversational tone, but must not include insults toward addressees, hate/discrimination, secrets/tokens, or PII.
+Notes in DevLog entries may use emotional/conversational tone and non-addressed expressive vocabulary, but must not include personal insults toward addressees, hate/discrimination, secrets/tokens, or PII.
 
 Telegram Dev Notifications are restricted to completion-notify usage only:
 - notify stage/task completion,
 - do not discuss/approve architecture,
 - do not trigger business logic or workflow control.
+- keep a short structured message format with `Summary`, `Mood`, and optional `Thoughts` (1-2 short lines),
+- use Russian language by default for `Summary`/`Mood`/`Thoughts`.
 
 All architecture decisions remain ADR-only. Dev-notification secrets/tokens are stored only in ENV and must never be logged.
 

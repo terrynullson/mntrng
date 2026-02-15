@@ -347,22 +347,31 @@ go run ./cmd/devnotify \
   -module "phase-c-step" \
   -agent "BackendAgent" \
   -commit "<commit_hash>" \
-  -summary "Completed refactor step" \
-  -summary "All tests passed" \
-  -mood "OK"
+  -summary "Закрыт шаг рефакторинга" \
+  -summary "Тесты прошли" \
+  -thought "Было жарко, но дожали" \
+  -thought "Дальше можно идти спокойно" \
+  -mood "Огонь"
 ```
 
 Message format:
 
 ```text
-[MODULE COMPLETED]
-Agent: <AgentName>
-Commit: <hash>
-Status: SUCCESS
-Summary:
+[MODULE ЗАВЕРШЕНО]
+Агент: <AgentName>
+Коммит: <hash>
+Статус: УСПЕХ
+Сводка:
 - ...
 - ...
-Mood: <value>
+Настроение: <value>
+Мысли:
+- ...
+- ...
 ```
 
-Send errors are logged without secrets and do not affect API/Worker runtime flows.
+Notes:
+- `Summary` / `Mood` / `Thoughts` are Russian by default.
+- `-thought` is optional and can be repeated up to 2 lines.
+- Payload is validated by safety guardrails (no personal insults, hate/discrimination, secrets/tokens, PII, architecture decisions).
+- Send errors are logged without secrets and do not affect API/Worker runtime flows.
