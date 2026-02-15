@@ -43,4 +43,4 @@ Summary:
 - Synced schema docs for auth/session tenant-scope constraints.
 - Re-confirmed full test suite pass for the accepted step.
 Notes:
-Backfill after step acceptance: protocol entry and completion-notify are now closed.
+Backfill after step acceptance: completion-notify sent via `cmd/devnotify`.
