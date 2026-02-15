@@ -330,3 +330,39 @@ docker compose down
 ```bash
 docker compose down -v
 ```
+
+## Dev log Telegram completion notifier
+
+`cmd/devnotify` is an isolated completion notifier and does not reuse the worker stream-alert path.
+
+Required env vars:
+- `DEV_LOG_TELEGRAM_ENABLED` (`false` by default)
+- `DEV_LOG_TELEGRAM_TOKEN`
+- `DEV_LOG_TELEGRAM_CHAT_ID`
+
+Usage example:
+
+```bash
+go run ./cmd/devnotify \
+  -module "phase-c-step" \
+  -agent "BackendAgent" \
+  -commit "<commit_hash>" \
+  -summary "Completed refactor step" \
+  -summary "All tests passed" \
+  -mood "OK"
+```
+
+Message format:
+
+```text
+[MODULE COMPLETED]
+Agent: <AgentName>
+Commit: <hash>
+Status: SUCCESS
+Summary:
+- ...
+- ...
+Mood: <value>
+```
+
+Send errors are logged without secrets and do not affect API/Worker runtime flows.
