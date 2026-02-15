@@ -105,3 +105,9 @@ Current status:
 - API authentication is mandatory by default:
   - Public-only exceptions: health + controlled auth/registration public endpoints.
   - Tenant scope for protected tenant routes is derived from auth context, not trusted directly from query input.
+
+## Operational docs and notify boundary
+
+- `docs/agent_devlog.md` is an execution journal only; it is not an architecture source.
+- Telegram Dev Notifications are completion-only operational signals and are not used for design discussions or runtime business control.
+- ADR remains the single source for architecture decisions.

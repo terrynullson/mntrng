@@ -196,3 +196,29 @@ Telegram integration policy:
 - Auto-approve registration: rejected as incompatible with controlled onboarding.
 - Telegram auth without signature verification: rejected due impersonation risk.
 - Allow pending/rejected/disabled users to login: rejected by security policy.
+
+## ADR-0011: Agent DevLog protocol and Telegram Dev Notifications boundary
+
+### Context
+The delivery workflow requires a lightweight execution journal for completed steps and a simple notification signal for completion events. Without explicit boundaries, DevLog or dev-notification channels can drift into architecture decision-making, task planning, or runtime control.
+
+### Decision
+A dedicated DevLog protocol is mandatory in `docs/agent_devlog.md` with a strict compact entry format and constraints. DevLog entries are execution summaries only and are explicitly non-normative for architecture.
+
+Telegram Dev Notifications are restricted to completion-notify usage only:
+- notify stage/task completion,
+- do not discuss/approve architecture,
+- do not trigger business logic or workflow control.
+
+All architecture decisions remain ADR-only. Dev-notification secrets/tokens are stored only in ENV and must never be logged.
+
+### Consequences
+- Completion history is standardized and easy to audit.
+- Architectural governance remains centralized in ADR, avoiding split sources of truth.
+- Dev Telegram channel stays operationally simple and low-risk.
+- Secret handling remains consistent with security baseline (no token leakage in logs).
+
+### Alternatives considered
+- Use DevLog as an architecture decision source: rejected due governance ambiguity and decision drift.
+- Use Telegram dev-bot as interactive planning/control channel: rejected due boundary violations and security risk.
+- Skip DevLog and rely only on commit history: rejected because commit logs do not enforce a uniform, compact task journal protocol.
