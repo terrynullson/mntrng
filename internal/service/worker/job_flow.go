@@ -8,7 +8,7 @@ import (
 	"github.com/example/hls-monitoring-platform/internal/domain"
 )
 
-func (w *worker) processSingleJobCycle(ctx context.Context) error {
+func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {
 	job, ok, err := w.claimNextQueuedJob(ctx)
 	if err != nil {
 		return err

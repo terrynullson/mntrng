@@ -2,12 +2,9 @@ package worker
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"log"
 	"time"
-
-	"github.com/example/hls-monitoring-platform/internal/domain"
 )
 
 func (w *worker) persistCheckResultWithRetry(ctx context.Context, job claimedJob, evaluation checkJobEvaluation) error {
@@ -16,7 +13,7 @@ func (w *worker) persistCheckResultWithRetry(ctx context.Context, job claimedJob
 		if err == nil {
 			return nil
 		}
-		if !isRetryableWorkerError(err) || attempt >= w.retryMax {
+		if !IsRetryableWorkerError(err) || attempt >= w.retryMax {
 			return err
 		}
 
@@ -55,7 +52,7 @@ func (w *worker) applyAlertStateWithRetry(ctx context.Context, job claimedJob, r
 		if err == nil {
 			return decision, nil
 		}
-		if !isRetryableWorkerError(err) || attempt >= w.retryMax {
+		if !IsRetryableWorkerError(err) || attempt >= w.retryMax {
 			return alertDecision{}, err
 		}
 
@@ -80,30 +77,6 @@ func (w *worker) applyAlertState(ctx context.Context, job claimedJob, resultStat
 		w.alertFailStreak,
 		w.alertCooldown,
 		w.alertSendRecovered,
-	)
-}
-
-func computeAlertTransition(
-	now time.Time,
-	currentStatus string,
-	previousStatus string,
-	previousFailStreak int,
-	previousCooldownUntil sql.NullTime,
-	previousLastAlertAt sql.NullTime,
-	failStreakThreshold int,
-	alertCooldown time.Duration,
-	alertSendRecovered bool,
-) alertTransitionResult {
-	return domain.ComputeWorkerAlertTransition(
-		now,
-		currentStatus,
-		previousStatus,
-		previousFailStreak,
-		previousCooldownUntil,
-		previousLastAlertAt,
-		failStreakThreshold,
-		alertCooldown,
-		alertSendRecovered,
 	)
 }
 

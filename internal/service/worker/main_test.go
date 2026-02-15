@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"testing"
 	"time"
+
+	"github.com/example/hls-monitoring-platform/internal/domain"
 )
 
 func TestAggregateStatuses(t *testing.T) {
@@ -51,7 +53,7 @@ func TestComputeAlertTransition(t *testing.T) {
 	previousAlertTime := sql.NullTime{Time: now.Add(-2 * time.Hour), Valid: true}
 
 	t.Run("fail streak below threshold", func(t *testing.T) {
-		result := computeAlertTransition(
+		result := domain.ComputeWorkerAlertTransition(
 			now,
 			"fail",
 			"ok",
@@ -75,7 +77,7 @@ func TestComputeAlertTransition(t *testing.T) {
 	})
 
 	t.Run("fail threshold met sends alert", func(t *testing.T) {
-		result := computeAlertTransition(
+		result := domain.ComputeWorkerAlertTransition(
 			now,
 			"fail",
 			"fail",
@@ -109,7 +111,7 @@ func TestComputeAlertTransition(t *testing.T) {
 
 	t.Run("fail in cooldown does not send", func(t *testing.T) {
 		cooldownUntil := sql.NullTime{Time: now.Add(2 * time.Minute), Valid: true}
-		result := computeAlertTransition(
+		result := domain.ComputeWorkerAlertTransition(
 			now,
 			"fail",
 			"fail",
@@ -136,7 +138,7 @@ func TestComputeAlertTransition(t *testing.T) {
 	})
 
 	t.Run("recovered suppressed by config", func(t *testing.T) {
-		result := computeAlertTransition(
+		result := domain.ComputeWorkerAlertTransition(
 			now,
 			"ok",
 			"fail",
@@ -160,7 +162,7 @@ func TestComputeAlertTransition(t *testing.T) {
 	})
 
 	t.Run("recovered sends when enabled", func(t *testing.T) {
-		result := computeAlertTransition(
+		result := domain.ComputeWorkerAlertTransition(
 			now,
 			"ok",
 			"fail",
@@ -188,7 +190,7 @@ func TestComputeAlertTransition(t *testing.T) {
 
 	t.Run("recovered blocked by cooldown", func(t *testing.T) {
 		cooldownUntil := sql.NullTime{Time: now.Add(3 * time.Minute), Valid: true}
-		result := computeAlertTransition(
+		result := domain.ComputeWorkerAlertTransition(
 			now,
 			"ok",
 			"fail",

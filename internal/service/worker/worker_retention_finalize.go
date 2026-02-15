@@ -14,7 +14,7 @@ import (
 	"github.com/lib/pq"
 )
 
-func (w *worker) runRetentionCleanup(ctx context.Context) error {
+func (w *worker) RunRetentionCleanup(ctx context.Context) error {
 	cutoff := time.Now().UTC().Add(-w.retentionTTL)
 	companyIDs, err := w.loadCompanyIDsForRetention(ctx)
 	if err != nil {
@@ -125,7 +125,7 @@ func (w *worker) finalizeWithRetry(ctx context.Context, job claimedJob, status s
 		if err == nil {
 			return nil
 		}
-		if !isRetryableWorkerError(err) || attempt >= w.retryMax {
+		if !IsRetryableWorkerError(err) || attempt >= w.retryMax {
 			return err
 		}
 
@@ -148,7 +148,7 @@ func (w *worker) finalizeJob(ctx context.Context, job claimedJob, status string,
 	return nil
 }
 
-func isRetryableWorkerError(err error) bool {
+func IsRetryableWorkerError(err error) bool {
 	if err == nil {
 		return false
 	}

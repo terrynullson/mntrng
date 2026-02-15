@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"context"
 	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
@@ -44,9 +43,7 @@ type worker struct {
 	alertStateRepo            AlertStateRepository
 	telegramSettingsRepo      TelegramSettingsRepository
 	retentionRepo             RetentionRepository
-	pollInterval              time.Duration
 	retentionTTL              time.Duration
-	retentionCleanupInterval  time.Duration
 	retentionCleanupBatchSize int
 	jobTimeout                time.Duration
 	playlistTimeout           time.Duration
@@ -77,7 +74,6 @@ type segmentSample = domain.WorkerSegmentSample
 type declaredBitrateResult = domain.WorkerDeclaredBitrateResult
 
 type alertDecision = domain.WorkerAlertDecision
-type alertTransitionResult = domain.WorkerAlertTransitionResult
 type telegramDeliverySettings = domain.WorkerTelegramDeliverySettings
 type retentionCandidate = domain.WorkerRetentionCandidate
 
@@ -89,9 +85,7 @@ func NewWorker(cfg Config, repos Repositories) *worker {
 		alertStateRepo:            repos.AlertStateRepo,
 		telegramSettingsRepo:      repos.TelegramSettingsRepo,
 		retentionRepo:             repos.RetentionRepo,
-		pollInterval:              cfg.PollInterval,
 		retentionTTL:              cfg.RetentionTTL,
-		retentionCleanupInterval:  cfg.RetentionCleanupInterval,
 		retentionCleanupBatchSize: cfg.RetentionCleanupBatchSize,
 		jobTimeout:                cfg.JobTimeout,
 		playlistTimeout:           cfg.PlaylistTimeout,
@@ -115,16 +109,4 @@ func NewWorker(cfg Config, repos Repositories) *worker {
 		retryMax:                  cfg.RetryMax,
 		retryBackoff:              cfg.RetryBackoff,
 	}
-}
-
-func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {
-	return w.processSingleJobCycle(ctx)
-}
-
-func (w *worker) RunRetentionCleanup(ctx context.Context) error {
-	return w.runRetentionCleanup(ctx)
-}
-
-func IsRetryableWorkerError(err error) bool {
-	return isRetryableWorkerError(err)
 }
