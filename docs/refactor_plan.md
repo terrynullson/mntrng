@@ -6,6 +6,15 @@
 - Strict rule: **no feature changes**. Only structural refactor (move/extract/rename, DI wiring, tests adaptation).
 - Out of scope: behavior changes, new endpoints, schema changes, new external integrations.
 
+## Completion note (finalization)
+
+- Phase C Step 17 completed: `cb314ef` (`worker: refactor finalize cmd worker bootstrap wiring only`).
+- Phase D Step 18 completed: `d439e2c` (`worker: refactor stabilize interfaces and remove dead glue`).
+- Phase D Step 19 completed and reconciled:
+  - `9b151c3` (`docs: update architecture references after layered split`)
+  - `e771353` (`docs: align architecture overview with current transitional repo dependencies`)
+  - `18a93ef` (`api: refactor remove repo dependency on service layer error contracts`) closed final API transitional debt `repo -> service`.
+
 ## 1) Monolith sources (current)
 
 - `cmd/api/main.go`
@@ -156,19 +165,19 @@
     - Move all SQL in worker to `internal/repo/postgres/worker_*.go`.
     - Check: `go test ./...`.
 
-17. **refactor(worker): minimize cmd/worker to bootstrap-only**
+17. **[DONE] refactor(worker): minimize cmd/worker to bootstrap-only**
     - Keep only config wiring + app start in `cmd/worker/main.go`.
     - Check: `go test ./...`.
 
 ### Phase D: finish and hardening
 
-18. **refactor: stabilize interfaces and remove dead glue**
+18. **[DONE] refactor: stabilize interfaces and remove dead glue**
     - Remove transitional wrappers, keep clear dependency graph:
       - `http -> service -> repo`
       - `worker app -> service -> repo/telegram`
     - Check: `go test ./...`.
 
-19. **docs: update architecture references after split**
+19. **[DONE] docs: update architecture references after split**
     - Update docs pointers to new package map.
     - Check: N/A.
 
@@ -200,4 +209,3 @@
 - Any step that changes behavior is rejected and must be split into a separate feature task.
 - If a step exceeds scope, stop and emit follow-up plan instead of bundling.
 - Keep each commit reviewable and reversible.
-

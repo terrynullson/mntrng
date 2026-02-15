@@ -15,30 +15,16 @@ This document reflects the current layered structure after the API + Worker spli
 - API chain: `http -> service -> repo -> domain`.
 - Worker chain: `app -> service -> repo/telegram -> domain`.
 - `cmd/*` is wiring-only: env/config, DB init, DI construction, server/app start.
-- Target rule: repository layer must not depend on service layer.
+- Repository layer must not depend on service layer.
 
-Target disallowed dependencies:
+Disallowed dependencies:
 - `repo -> service`
 - `domain -> repo|service|http`
 - `cmd/*` containing business logic or SQL
 
-## Current known exception / transitional debt
-- API repository files currently importing `internal/service/api`:
-  - `internal/repo/postgres/api_company_repo.go`
-  - `internal/repo/postgres/api_project_repo.go`
-  - `internal/repo/postgres/api_stream_repo.go`
-  - `internal/repo/postgres/api_check_job_repo.go`
-  - `internal/repo/postgres/api_check_result_repo.go`
-- This is a transitional dependency debt in API repo error mapping/contracts and does not change runtime behavior.
-- Worker repositories already comply with the `repo -> service` rule:
-  - `internal/repo/postgres/worker_repo.go`
-  - `internal/repo/postgres/worker_job_repo.go`
-  - `internal/repo/postgres/worker_stream_repo.go`
-  - `internal/repo/postgres/worker_check_result_repo.go`
-  - `internal/repo/postgres/worker_alert_state_repo.go`
-  - `internal/repo/postgres/worker_telegram_repo.go`
-  - `internal/repo/postgres/worker_retention_repo.go`
-- Planned next code-step: remove the listed API repo imports from `internal/service/api` and align API repos with the same layering boundary.
+Current status:
+- API and Worker repositories comply with the `repo -> service` rule.
+- Final API transitional debt (`repo -> service` for error contracts) was closed in commit `18a93ef`.
 
 ## Current package map
 
