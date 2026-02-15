@@ -1,44 +1,19 @@
-"use client";
+﻿"use client";
 
-import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
 import type Hls from "hls.js";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-type Stream = {
-  id: number;
-  company_id: number;
-  project_id: number;
-  name: string;
-  url: string;
-  is_active: boolean;
-  updated_at: string;
-};
+import { useAuth } from "@/components/auth/auth-provider";
+import { SkeletonBlock } from "@/components/ui/skeleton";
+import { StatePanel } from "@/components/ui/state-panel";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { apiRequest, toErrorMessage } from "@/lib/api/client";
+import { resolveCompanyScope } from "@/lib/auth/tenant-scope";
+import type { CheckResult, CheckStatus, Stream } from "@/lib/api/types";
 
-type AtomicCheckStatus = "OK" | "WARN" | "FAIL";
-
-type AtomicChecks = {
-  playlist?: AtomicCheckStatus;
-  freshness?: AtomicCheckStatus;
-  segments?: AtomicCheckStatus;
-  declared_bitrate?: AtomicCheckStatus;
-  effective_bitrate?: AtomicCheckStatus;
-  freeze?: AtomicCheckStatus;
-  blackframe?: AtomicCheckStatus;
-};
-
-type CheckResult = {
-  id: number;
-  company_id: number;
-  stream_id: number;
-  status: AtomicCheckStatus;
-  checks?: AtomicChecks;
-  created_at: string;
-};
-
-const API_BASE_PATH = "/api/v1";
-
-const ATOMIC_CHECK_ORDER: Array<keyof AtomicChecks> = [
+const ATOMIC_CHECK_ORDER: Array<keyof CheckResult["checks"]> = [
   "playlist",
   "freshness",
   "segments",
@@ -48,188 +23,85 @@ const ATOMIC_CHECK_ORDER: Array<keyof AtomicChecks> = [
   "blackframe"
 ];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+function formatTimestamp(timestamp: string | null): string {
+  if (!timestamp) {
+    return "-";
+  }
+  const parsed = new Date(timestamp);
+  return Number.isNaN(parsed.getTime()) ? timestamp : parsed.toLocaleString();
 }
 
-function extractItems<T>(payload: unknown): T[] {
-  if (Array.isArray(payload)) {
-    return payload as T[];
-  }
-
-  if (isRecord(payload) && Array.isArray(payload.items)) {
-    return payload.items as T[];
-  }
-
-  return [];
-}
-
-function buildApiErrorMessage(status: number, payload: unknown): string {
-  if (isRecord(payload)) {
-    const message = payload.message;
-    const code = payload.code;
-    if (typeof message === "string" && message.length > 0) {
-      if (typeof code === "string" && code.length > 0) {
-        return `${message} (${code})`;
-      }
-      return message;
-    }
-  }
-
-  return `Request failed with status ${status}`;
-}
-
-async function fetchJson<T>(path: string, signal: AbortSignal): Promise<T> {
-  const response = await fetch(`${API_BASE_PATH}${path}`, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-    signal
-  });
-
-  let payload: unknown = null;
-  try {
-    payload = (await response.json()) as T;
-  } catch {
-    payload = null;
-  }
-
-  if (!response.ok) {
-    throw new Error(buildApiErrorMessage(response.status, payload));
-  }
-
-  return payload as T;
-}
-
-function formatTimestamp(timestamp: string): string {
-  const parsedDate = new Date(timestamp);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return timestamp;
-  }
-
-  return parsedDate.toLocaleString();
-}
-
-function normalizeStatus(status: string): AtomicCheckStatus | null {
+function normalizeStatus(status: string): CheckStatus | null {
   if (status === "OK" || status === "WARN" || status === "FAIL") {
     return status;
   }
   return null;
 }
 
-function statusBadgeClass(status: AtomicCheckStatus): string {
-  if (status === "OK") {
-    return "status-badge status-ok";
-  }
-  if (status === "WARN") {
-    return "status-badge status-warn";
-  }
-  return "status-badge status-fail";
-}
-
-export default function StreamDetailsPage() {
+export default function StreamDetailsPageV2() {
   const params = useParams<{ streamId: string }>();
-  const searchParams = useSearchParams();
-  const streamId = Array.isArray(params.streamId)
+  const streamID = Array.isArray(params.streamId)
     ? params.streamId[0]
     : params.streamId;
-  const companyId = searchParams.get("companyId") ?? "";
+
+  const { user, accessToken, activeCompanyId } = useAuth();
+  const scopeCompanyId = resolveCompanyScope(user, activeCompanyId);
 
   const [stream, setStream] = useState<Stream | null>(null);
-  const [streamLoading, setStreamLoading] = useState<boolean>(true);
-  const [streamError, setStreamError] = useState<string | null>(null);
-
   const [latestResult, setLatestResult] = useState<CheckResult | null>(null);
-  const [resultsLoading, setResultsLoading] = useState<boolean>(true);
-  const [resultsError, setResultsError] = useState<string | null>(null);
-  const [resultsLoaded, setResultsLoaded] = useState<boolean>(false);
+
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [playerError, setPlayerError] = useState<string | null>(null);
-  const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
+  const [fallbackURL, setFallbackURL] = useState<string | null>(null);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    setStream(null);
-    setStreamError(null);
-
-    if (!companyId || !streamId) {
-      setStreamLoading(false);
+    if (!accessToken || !scopeCompanyId || !streamID) {
+      setStream(null);
+      setLatestResult(null);
+      setIsLoading(false);
       return;
     }
 
     const abortController = new AbortController();
-    setStreamLoading(true);
 
-    fetchJson<Stream>(
-      `/companies/${companyId}/streams/${streamId}`,
-      abortController.signal
-    )
-      .then((payload) => {
-        setStream(payload);
+    setIsLoading(true);
+    setError(null);
+
+    Promise.all([
+      apiRequest<Stream>(`/companies/${scopeCompanyId}/streams/${streamID}`, {
+        accessToken,
+        signal: abortController.signal
+      }),
+      apiRequest<{ items: CheckResult[] }>(
+        `/companies/${scopeCompanyId}/streams/${streamID}/check-results?limit=1`,
+        {
+          accessToken,
+          signal: abortController.signal
+        }
+      )
+    ])
+      .then(([streamPayload, resultPayload]) => {
+        setStream(streamPayload);
+        setLatestResult(resultPayload.items?.[0] ?? null);
       })
-      .catch((error: unknown) => {
+      .catch((loadError) => {
         if (abortController.signal.aborted) {
           return;
         }
-        const message =
-          error instanceof Error ? error.message : "Failed to load stream";
-        setStreamError(message);
+        setError(toErrorMessage(loadError));
       })
       .finally(() => {
         if (!abortController.signal.aborted) {
-          setStreamLoading(false);
+          setIsLoading(false);
         }
       });
 
     return () => abortController.abort();
-  }, [companyId, streamId]);
-
-  useEffect(() => {
-    setLatestResult(null);
-    setResultsError(null);
-    setResultsLoaded(false);
-
-    if (!companyId || !streamId) {
-      setResultsLoading(false);
-      return;
-    }
-
-    const abortController = new AbortController();
-    setResultsLoading(true);
-
-    fetchJson<unknown>(
-      `/companies/${companyId}/streams/${streamId}/check-results?limit=10`,
-      abortController.signal
-    )
-      .then((payload) => {
-        const items = extractItems<CheckResult>(payload);
-        const sortedByDate = [...items].sort((left, right) => {
-          return (
-            new Date(right.created_at).getTime() -
-            new Date(left.created_at).getTime()
-          );
-        });
-        setLatestResult(sortedByDate[0] ?? null);
-      })
-      .catch((error: unknown) => {
-        if (abortController.signal.aborted) {
-          return;
-        }
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to load check results";
-        setResultsError(message);
-      })
-      .finally(() => {
-        if (!abortController.signal.aborted) {
-          setResultsLoading(false);
-          setResultsLoaded(true);
-        }
-      });
-
-    return () => abortController.abort();
-  }, [companyId, streamId]);
+  }, [accessToken, scopeCompanyId, streamID]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -238,12 +110,10 @@ export default function StreamDetailsPage() {
     }
 
     setPlayerError(null);
-    setFallbackUrl(null);
+    setFallbackURL(null);
 
-    const canPlayNativeHls =
-      video.canPlayType("application/vnd.apple.mpegurl") !== "";
-
-    if (canPlayNativeHls) {
+    const canPlayNative = video.canPlayType("application/vnd.apple.mpegurl") !== "";
+    if (canPlayNative) {
       video.src = stream.url;
       return () => {
         video.removeAttribute("src");
@@ -252,22 +122,20 @@ export default function StreamDetailsPage() {
     }
 
     let hlsInstance: Hls | null = null;
-    let isDisposed = false;
+    let disposed = false;
 
-    const setupHlsFallback = async () => {
+    const setupFallback = async () => {
       try {
         const hlsModule = await import("hls.js");
         const HlsCtor = hlsModule.default;
 
-        if (isDisposed || !videoRef.current) {
+        if (disposed || !videoRef.current) {
           return;
         }
 
         if (!HlsCtor.isSupported()) {
-          setFallbackUrl(stream.url);
-          setPlayerError(
-            "This browser does not support HLS playback. Open stream URL directly."
-          );
+          setFallbackURL(stream.url);
+          setPlayerError("Native HLS is unavailable in this browser.");
           return;
         }
 
@@ -275,17 +143,17 @@ export default function StreamDetailsPage() {
         hlsInstance.loadSource(stream.url);
         hlsInstance.attachMedia(videoRef.current);
       } catch {
-        if (!isDisposed) {
-          setFallbackUrl(stream.url);
-          setPlayerError("Failed to initialize HLS fallback player.");
+        if (!disposed) {
+          setFallbackURL(stream.url);
+          setPlayerError("Failed to initialize hls.js fallback.");
         }
       }
     };
 
-    void setupHlsFallback();
+    void setupFallback();
 
     return () => {
-      isDisposed = true;
+      disposed = true;
       if (hlsInstance) {
         hlsInstance.destroy();
       }
@@ -297,56 +165,53 @@ export default function StreamDetailsPage() {
   }, [stream?.url]);
 
   const atomicRows = useMemo(() => {
-    if (!latestResult?.checks) {
-      return [];
+    if (!latestResult) {
+      return [] as Array<{ key: string; status: CheckStatus }>;
     }
 
-    return ATOMIC_CHECK_ORDER.reduce<
-      Array<{ key: keyof AtomicChecks; status: AtomicCheckStatus }>
-    >((accumulator, key) => {
-      const value = latestResult.checks?.[key];
-      if (!value) {
-        return accumulator;
-      }
+    return ATOMIC_CHECK_ORDER.reduce<Array<{ key: string; status: CheckStatus }>>(
+      (accumulator, key) => {
+        const value = latestResult.checks?.[key];
+        if (!value) {
+          return accumulator;
+        }
 
-      const normalized = normalizeStatus(value);
-      if (!normalized) {
-        return accumulator;
-      }
+        const normalized = normalizeStatus(value);
+        if (!normalized) {
+          return accumulator;
+        }
 
-      accumulator.push({ key, status: normalized });
-      return accumulator;
-    }, []);
+        accumulator.push({ key, status: normalized });
+        return accumulator;
+      },
+      []
+    );
   }, [latestResult]);
 
   return (
     <section className="panel">
-      <div className="page-header">
+      <header className="page-header compact">
         <h2 className="page-title">Stream Player</h2>
         <p className="page-note">
-          <Link href="/streams" className="stream-link">
-            Back to streams list
+          <Link className="stream-link" href="/streams">
+            Back to streams
           </Link>
         </p>
-      </div>
+      </header>
 
-      {!companyId ? (
-        <p className="state state-error">
-          Missing companyId in URL. Open this page from the Streams table.
-        </p>
+      {!scopeCompanyId ? (
+        <StatePanel>Select company scope in topbar to open stream details.</StatePanel>
       ) : null}
 
-      {streamLoading ? <p className="state state-info">Loading stream...</p> : null}
-      {streamError ? (
-        <p className="state state-error">Failed to load stream: {streamError}</p>
-      ) : null}
+      {error ? <StatePanel kind="error">{error}</StatePanel> : null}
+      {isLoading ? <SkeletonBlock lines={7} /> : null}
 
-      {stream && !streamLoading && !streamError ? (
+      {!isLoading && !error && stream ? (
         <div className="stream-details-grid">
-          <div className="player-card">
+          <article className="player-card">
             <h3 className="section-title">{stream.name}</h3>
             <p className="section-meta">
-              Stream ID: {stream.id} | Project ID: {stream.project_id} | Active:{" "}
+              Stream #{stream.id} | Project #{stream.project_id} | Active: {" "}
               {stream.is_active ? "true" : "false"}
             </p>
 
@@ -359,42 +224,26 @@ export default function StreamDetailsPage() {
             />
 
             {playerError ? (
-              <p className="state state-info">
+              <StatePanel>
                 {playerError}{" "}
-                {fallbackUrl ? (
-                  <a href={fallbackUrl} target="_blank" rel="noreferrer">
+                {fallbackURL ? (
+                  <a href={fallbackURL} target="_blank" rel="noreferrer">
                     Open stream URL
                   </a>
                 ) : null}
-              </p>
+              </StatePanel>
             ) : null}
-          </div>
+          </article>
 
-          <div className="status-card">
+          <article className="status-card">
             <h3 className="section-title">Latest Status</h3>
 
-            {resultsLoading ? (
-              <p className="state state-info">Loading latest check result...</p>
-            ) : null}
-            {resultsError ? (
-              <p className="state state-error">
-                Failed to load latest check result: {resultsError}
-              </p>
-            ) : null}
-            {!resultsLoading &&
-            !resultsError &&
-            resultsLoaded &&
-            !latestResult ? (
-              <p className="state state-info">No check results available yet.</p>
-            ) : null}
-
-            {!resultsLoading && !resultsError && latestResult ? (
+            {!latestResult ? (
+              <StatePanel>No check results available yet.</StatePanel>
+            ) : (
               <>
                 <p className="status-row">
-                  Status:{" "}
-                  <span className={statusBadgeClass(latestResult.status)}>
-                    {latestResult.status}
-                  </span>
+                  Status: <StatusBadge status={latestResult.status} />
                 </p>
                 <p className="status-row">
                   Last check at: {formatTimestamp(latestResult.created_at)}
@@ -402,9 +251,7 @@ export default function StreamDetailsPage() {
 
                 {atomicRows.length > 0 ? (
                   <div className="atomic-checks">
-                    <h4 className="section-title section-title-small">
-                      Atomic Checks
-                    </h4>
+                    <h4 className="section-title section-title-small">Atomic checks</h4>
                     <table>
                       <thead>
                         <tr>
@@ -417,9 +264,7 @@ export default function StreamDetailsPage() {
                           <tr key={row.key}>
                             <td>{row.key}</td>
                             <td>
-                              <span className={statusBadgeClass(row.status)}>
-                                {row.status}
-                              </span>
+                              <StatusBadge status={row.status} />
                             </td>
                           </tr>
                         ))}
@@ -428,8 +273,8 @@ export default function StreamDetailsPage() {
                   </div>
                 ) : null}
               </>
-            ) : null}
-          </div>
+            )}
+          </article>
         </div>
       ) : null}
     </section>

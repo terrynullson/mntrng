@@ -1,0 +1,141 @@
+﻿export type Role = "super_admin" | "company_admin" | "viewer";
+
+export type UserStatus = "active" | "disabled";
+
+export type ApiErrorEnvelope = {
+  code?: string;
+  message?: string;
+  details?: Record<string, unknown>;
+  request_id?: string;
+};
+
+export type ApiListResponse<T> = {
+  items: T[];
+  next_cursor: string | null;
+};
+
+export type AuthUser = {
+  id: number;
+  company_id: number | null;
+  email: string;
+  login: string;
+  role: Role;
+  status: UserStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AuthTokensResponse = {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user: AuthUser;
+};
+
+export type LoginRequest = {
+  login_or_email: string;
+  password: string;
+};
+
+export type RegisterRequest = {
+  company_id: number;
+  email: string;
+  login: string;
+  password: string;
+  requested_role: Extract<Role, "company_admin" | "viewer">;
+};
+
+export type RegistrationRequest = {
+  id: number;
+  company_id: number;
+  email: string;
+  login: string;
+  requested_role: Extract<Role, "company_admin" | "viewer">;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+  updated_at: string;
+  processed_at?: string | null;
+  processed_by_user_id?: number | null;
+  decision_reason?: string | null;
+};
+
+export type ApproveRegistrationRequest = {
+  company_id: number;
+  role: Extract<Role, "company_admin" | "viewer">;
+};
+
+export type RejectRegistrationRequest = {
+  reason: string;
+};
+
+export type ChangeUserRoleRequest = {
+  role: Extract<Role, "company_admin" | "viewer">;
+  company_id: number;
+};
+
+export type Company = {
+  id: number;
+  name: string;
+  created_at: string;
+};
+
+export type Project = {
+  id: number;
+  company_id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Stream = {
+  id: number;
+  company_id: number;
+  project_id: number;
+  name: string;
+  url: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CheckJob = {
+  id: number;
+  company_id: number;
+  stream_id: number;
+  planned_at: string;
+  status: "queued" | "running" | "done" | "failed";
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  error_message: string | null;
+};
+
+export type EnqueueCheckJobResponse = {
+  job: CheckJob;
+};
+
+export type CheckStatus = "OK" | "WARN" | "FAIL";
+
+export type CheckResultChecks = {
+  playlist?: CheckStatus;
+  segments?: CheckStatus;
+  freshness?: CheckStatus;
+  declared_bitrate?: CheckStatus;
+  effective_bitrate?: CheckStatus;
+  freeze?: CheckStatus;
+  blackframe?: CheckStatus;
+};
+
+export type CheckResult = {
+  id: number;
+  company_id: number;
+  job_id: number;
+  stream_id: number;
+  status: CheckStatus;
+  checks: CheckResultChecks;
+  screenshot_path: string | null;
+  created_at: string;
+};
+
+export type TelegramLinkPayload = Record<string, string>;

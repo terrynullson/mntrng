@@ -1,267 +1,239 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-type Company = {
-  id: number;
-  name: string;
-};
+import { useAuth } from "@/components/auth/auth-provider";
+import { AppButton } from "@/components/ui/app-button";
+import { SkeletonBlock } from "@/components/ui/skeleton";
+import { StatePanel } from "@/components/ui/state-panel";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { apiRequest, toErrorMessage } from "@/lib/api/client";
+import { resolveCompanyScope } from "@/lib/auth/tenant-scope";
+import type {
+  CheckResult,
+  CheckStatus,
+  EnqueueCheckJobResponse,
+  Project,
+  Stream
+} from "@/lib/api/types";
 
-type Project = {
-  id: number;
-  company_id: number;
-  name: string;
-};
+type IsActiveFilter = "all" | "true" | "false";
+type StatusFilter = "all" | CheckStatus;
 
-type Stream = {
-  id: number;
-  company_id: number;
-  project_id: number;
-  name: string;
-  is_active: boolean;
-  updated_at: string;
-};
+type LatestStatusMap = Record<
+  number,
+  {
+    status: CheckStatus | null;
+    createdAt: string | null;
+  }
+>;
 
-type IsActiveFilterValue = "all" | "true" | "false";
+function formatTimestamp(timestamp: string | null): string {
+  if (!timestamp) {
+    return "-";
+  }
 
-const API_BASE_PATH = "/api/v1";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  const parsed = new Date(timestamp);
+  return Number.isNaN(parsed.getTime()) ? timestamp : parsed.toLocaleString();
 }
 
-function extractItems<T>(payload: unknown): T[] {
-  if (Array.isArray(payload)) {
-    return payload as T[];
+function normalizeStatus(value: string): CheckStatus | null {
+  if (value === "OK" || value === "WARN" || value === "FAIL") {
+    return value;
   }
-
-  if (isRecord(payload) && Array.isArray(payload.items)) {
-    return payload.items as T[];
-  }
-
-  return [];
+  return null;
 }
 
-function buildApiErrorMessage(status: number, payload: unknown): string {
-  if (isRecord(payload)) {
-    const message = payload.message;
-    const code = payload.code;
-    if (typeof message === "string" && message.length > 0) {
-      if (typeof code === "string" && code.length > 0) {
-        return `${message} (${code})`;
-      }
-      return message;
-    }
-  }
+export default function StreamsPageV2() {
+  const { user, accessToken, activeCompanyId } = useAuth();
 
-  return `Request failed with status ${status}`;
-}
-
-async function fetchJson<T>(path: string, signal: AbortSignal): Promise<T> {
-  const response = await fetch(`${API_BASE_PATH}${path}`, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-    signal
-  });
-
-  let payload: unknown = null;
-  try {
-    payload = (await response.json()) as T;
-  } catch {
-    payload = null;
-  }
-
-  if (!response.ok) {
-    throw new Error(buildApiErrorMessage(response.status, payload));
-  }
-
-  return payload as T;
-}
-
-function formatTimestamp(timestamp: string): string {
-  const parsedDate = new Date(timestamp);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return timestamp;
-  }
-
-  return parsedDate.toLocaleString();
-}
-
-export default function StreamsPage() {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [companiesLoading, setCompaniesLoading] = useState<boolean>(true);
-  const [companiesError, setCompaniesError] = useState<string | null>(null);
-
-  const [companyId, setCompanyId] = useState<string>("");
+  const scopeCompanyId = resolveCompanyScope(user, activeCompanyId);
+  const isViewer = user?.role === "viewer";
 
   const [projects, setProjects] = useState<Project[]>([]);
-  const [projectsLoading, setProjectsLoading] = useState<boolean>(false);
-  const [projectsError, setProjectsError] = useState<string | null>(null);
-  const [projectId, setProjectId] = useState<string>("");
-
-  const [isActiveFilter, setIsActiveFilter] =
-    useState<IsActiveFilterValue>("all");
-
   const [streams, setStreams] = useState<Stream[]>([]);
-  const [streamsLoading, setStreamsLoading] = useState<boolean>(false);
-  const [streamsError, setStreamsError] = useState<string | null>(null);
+  const [latestStatusMap, setLatestStatusMap] = useState<LatestStatusMap>({});
 
-  useEffect(() => {
-    const abortController = new AbortController();
+  const [projectId, setProjectId] = useState<string>("");
+  const [isActiveFilter, setIsActiveFilter] = useState<IsActiveFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [search, setSearch] = useState<string>("");
 
-    setCompaniesLoading(true);
-    setCompaniesError(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [runCheckError, setRunCheckError] = useState<string | null>(null);
+  const [runCheckSuccess, setRunCheckSuccess] = useState<string | null>(null);
+  const [busyStreamID, setBusyStreamID] = useState<number | null>(null);
 
-    fetchJson<unknown>("/companies", abortController.signal)
-      .then((payload) => {
-        setCompanies(extractItems<Company>(payload));
-      })
-      .catch((error: unknown) => {
-        if (abortController.signal.aborted) {
-          return;
-        }
-
-        const message =
-          error instanceof Error ? error.message : "Failed to load companies";
-        setCompaniesError(message);
-      })
-      .finally(() => {
-        if (!abortController.signal.aborted) {
-          setCompaniesLoading(false);
-        }
-      });
-
-    return () => abortController.abort();
-  }, []);
-
-  useEffect(() => {
-    setProjectId("");
-    setProjects([]);
-    setProjectsError(null);
-
-    if (!companyId) {
-      setProjectsLoading(false);
+  const loadStreams = async () => {
+    if (!accessToken || !scopeCompanyId) {
+      setProjects([]);
+      setStreams([]);
+      setLatestStatusMap({});
+      setIsLoading(false);
       return;
     }
 
-    const abortController = new AbortController();
+    setIsLoading(true);
+    setError(null);
+    setRunCheckError(null);
 
-    setProjectsLoading(true);
+    try {
+      const projectResponse = await apiRequest<{ items: Project[] }>(
+        `/companies/${scopeCompanyId}/projects?limit=200`,
+        { accessToken }
+      );
+      setProjects(Array.isArray(projectResponse.items) ? projectResponse.items : []);
 
-    fetchJson<unknown>(
-      `/companies/${companyId}/projects`,
-      abortController.signal
-    )
-      .then((payload) => {
-        setProjects(extractItems<Project>(payload));
-      })
-      .catch((error: unknown) => {
-        if (abortController.signal.aborted) {
-          return;
-        }
+      const streamParams = new URLSearchParams();
+      streamParams.set("limit", "200");
+      if (projectId) {
+        streamParams.set("project_id", projectId);
+      }
+      if (isActiveFilter !== "all") {
+        streamParams.set("is_active", isActiveFilter);
+      }
 
-        const message =
-          error instanceof Error ? error.message : "Failed to load projects";
-        setProjectsError(message);
-      })
-      .finally(() => {
-        if (!abortController.signal.aborted) {
-          setProjectsLoading(false);
-        }
+      const streamResponse = await apiRequest<{ items: Stream[] }>(
+        `/companies/${scopeCompanyId}/streams?${streamParams.toString()}`,
+        { accessToken }
+      );
+
+      const loadedStreams = Array.isArray(streamResponse.items)
+        ? streamResponse.items
+        : [];
+      setStreams(loadedStreams);
+
+      const checks = await Promise.all(
+        loadedStreams.map(async (stream) => {
+          try {
+            const resultResponse = await apiRequest<{ items: CheckResult[] }>(
+              `/companies/${scopeCompanyId}/streams/${stream.id}/check-results?limit=1`,
+              { accessToken }
+            );
+            const latest = resultResponse.items?.[0];
+            return {
+              streamID: stream.id,
+              status: latest ? normalizeStatus(latest.status) : null,
+              createdAt: latest?.created_at ?? null
+            };
+          } catch {
+            return {
+              streamID: stream.id,
+              status: null,
+              createdAt: null
+            };
+          }
+        })
+      );
+
+      const nextStatusMap: LatestStatusMap = {};
+      checks.forEach((entry) => {
+        nextStatusMap[entry.streamID] = {
+          status: entry.status,
+          createdAt: entry.createdAt
+        };
       });
-
-    return () => abortController.abort();
-  }, [companyId]);
-
-  const streamQuery = useMemo(() => {
-    const params = new URLSearchParams();
-
-    if (projectId) {
-      params.set("project_id", projectId);
+      setLatestStatusMap(nextStatusMap);
+    } catch (loadError) {
+      setError(toErrorMessage(loadError));
+    } finally {
+      setIsLoading(false);
     }
-
-    if (isActiveFilter !== "all") {
-      params.set("is_active", isActiveFilter);
-    }
-
-    return params.toString();
-  }, [projectId, isActiveFilter]);
+  };
 
   useEffect(() => {
-    setStreams([]);
-    setStreamsError(null);
+    void loadStreams();
+    // filters/scope should trigger reload
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken, scopeCompanyId, projectId, isActiveFilter]);
 
-    if (!companyId) {
-      setStreamsLoading(false);
+  const filteredStreams = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+
+    return streams.filter((stream) => {
+      const streamStatus = latestStatusMap[stream.id]?.status;
+
+      if (statusFilter !== "all" && streamStatus !== statusFilter) {
+        return false;
+      }
+
+      if (!needle) {
+        return true;
+      }
+
+      return (
+        stream.name.toLowerCase().includes(needle) ||
+        String(stream.id).includes(needle) ||
+        String(stream.project_id).includes(needle)
+      );
+    });
+  }, [latestStatusMap, search, statusFilter, streams]);
+
+  const handleRunCheck = async (stream: Stream) => {
+    if (!accessToken || !scopeCompanyId || isViewer) {
       return;
     }
 
-    const abortController = new AbortController();
-    const querySuffix = streamQuery ? `?${streamQuery}` : "";
+    setBusyStreamID(stream.id);
+    setRunCheckError(null);
+    setRunCheckSuccess(null);
 
-    setStreamsLoading(true);
-
-    fetchJson<unknown>(
-      `/companies/${companyId}/streams${querySuffix}`,
-      abortController.signal
-    )
-      .then((payload) => {
-        setStreams(extractItems<Stream>(payload));
-      })
-      .catch((error: unknown) => {
-        if (abortController.signal.aborted) {
-          return;
+    try {
+      const response = await apiRequest<EnqueueCheckJobResponse>(
+        `/companies/${scopeCompanyId}/streams/${stream.id}/check-jobs`,
+        {
+          method: "POST",
+          accessToken,
+          body: {
+            planned_at: new Date().toISOString()
+          }
         }
+      );
 
-        const message =
-          error instanceof Error ? error.message : "Failed to load streams";
-        setStreamsError(message);
-      })
-      .finally(() => {
-        if (!abortController.signal.aborted) {
-          setStreamsLoading(false);
-        }
-      });
-
-    return () => abortController.abort();
-  }, [companyId, streamQuery]);
+      setRunCheckSuccess(`Check job #${response.job.id} queued for stream #${stream.id}.`);
+    } catch (runError) {
+      setRunCheckError(toErrorMessage(runError));
+    } finally {
+      setBusyStreamID(null);
+    }
+  };
 
   return (
     <section className="panel">
-      <div className="page-header">
-        <h2 className="page-title">Streams</h2>
+      <header className="page-header compact">
+        <h2 className="page-title">Streams v2</h2>
         <p className="page-note">
-          Streams are loaded only after selecting a company.
+          Tenant-scoped stream list with status badges and manual check trigger.
         </p>
-      </div>
+      </header>
 
-      <div className="filters-grid">
-        <label className="form-field" htmlFor="company-filter">
-          <span>Company</span>
-          <select
-            id="company-filter"
-            value={companyId}
-            onChange={(event) => setCompanyId(event.target.value)}
-            disabled={companiesLoading}
-          >
-            <option value="">Select company</option>
-            {companies.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.name} ({company.id})
-              </option>
-            ))}
-          </select>
+      {!scopeCompanyId ? (
+        <StatePanel>
+          Select company scope in topbar to load streams.
+        </StatePanel>
+      ) : null}
+
+      <div className="filters-grid streams-v2-filters">
+        <label className="form-field" htmlFor="streams-search">
+          <span>Search</span>
+          <input
+            id="streams-search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Name, stream id, project id"
+            disabled={!scopeCompanyId || isLoading}
+          />
         </label>
 
-        <label className="form-field" htmlFor="project-filter">
+        <label className="form-field" htmlFor="streams-project-filter">
           <span>Project</span>
           <select
-            id="project-filter"
+            id="streams-project-filter"
             value={projectId}
             onChange={(event) => setProjectId(event.target.value)}
-            disabled={!companyId || projectsLoading}
+            disabled={!scopeCompanyId || isLoading}
           >
             <option value="">All projects</option>
             {projects.map((project) => (
@@ -272,92 +244,105 @@ export default function StreamsPage() {
           </select>
         </label>
 
-        <label className="form-field" htmlFor="is-active-filter">
-          <span>Active status</span>
+        <label className="form-field" htmlFor="streams-active-filter">
+          <span>Is active</span>
           <select
-            id="is-active-filter"
+            id="streams-active-filter"
             value={isActiveFilter}
             onChange={(event) =>
-              setIsActiveFilter(event.target.value as IsActiveFilterValue)
+              setIsActiveFilter(event.target.value as IsActiveFilter)
             }
-            disabled={!companyId}
+            disabled={!scopeCompanyId || isLoading}
           >
             <option value="all">All</option>
-            <option value="true">Active only</option>
-            <option value="false">Inactive only</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </select>
+        </label>
+
+        <label className="form-field" htmlFor="streams-status-filter">
+          <span>Latest status</span>
+          <select
+            id="streams-status-filter"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+            disabled={!scopeCompanyId || isLoading}
+          >
+            <option value="all">All</option>
+            <option value="OK">OK</option>
+            <option value="WARN">WARN</option>
+            <option value="FAIL">FAIL</option>
           </select>
         </label>
       </div>
 
-      {companiesLoading ? (
-        <p className="state state-info">Loading companies...</p>
-      ) : null}
-      {companiesError ? (
-        <p className="state state-error">Failed to load companies: {companiesError}</p>
-      ) : null}
-      {!companiesLoading && !companiesError && companies.length === 0 ? (
-        <p className="state state-info">No companies available.</p>
-      ) : null}
-      {projectsError ? (
-        <p className="state state-error">Failed to load projects: {projectsError}</p>
-      ) : null}
-      {companyId && projectsLoading ? (
-        <p className="state state-info">Loading projects...</p>
-      ) : null}
-      {companyId &&
-      !projectsLoading &&
-      !projectsError &&
-      projects.length === 0 ? (
-        <p className="state state-info">No projects found for selected company.</p>
+      {isViewer ? (
+        <StatePanel>Viewer role is read-only. Run check actions are disabled.</StatePanel>
       ) : null}
 
-      {!companyId ? (
-        <p className="state state-info">
-          Select a company to request stream data.
-        </p>
+      {runCheckSuccess ? <StatePanel>{runCheckSuccess}</StatePanel> : null}
+      {runCheckError ? <StatePanel kind="error">{runCheckError}</StatePanel> : null}
+      {error ? <StatePanel kind="error">{error}</StatePanel> : null}
+      {isLoading ? <SkeletonBlock lines={7} /> : null}
+
+      {!isLoading && !error && scopeCompanyId && filteredStreams.length === 0 ? (
+        <StatePanel>No streams found for selected filters.</StatePanel>
       ) : null}
 
-      {companyId && streamsLoading ? (
-        <p className="state state-info">Loading streams...</p>
-      ) : null}
-
-      {companyId && streamsError ? (
-        <p className="state state-error">Failed to load streams: {streamsError}</p>
-      ) : null}
-
-      {companyId && !streamsLoading && !streamsError && streams.length === 0 ? (
-        <p className="state state-info">No streams found for selected filters.</p>
-      ) : null}
-
-      {companyId && !streamsLoading && !streamsError && streams.length > 0 ? (
+      {!isLoading && !error && scopeCompanyId && filteredStreams.length > 0 ? (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>ID</th>
                 <th>Name</th>
-                <th>Project ID</th>
+                <th>Project</th>
+                <th>Status</th>
+                <th>Last check</th>
                 <th>Is active</th>
                 <th>Updated at</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {streams.map((stream) => (
-                <tr key={stream.id}>
-                  <td>{stream.id}</td>
-                  <td>
-                    <Link
-                      className="stream-link"
-                      href={`/streams/${stream.id}?companyId=${encodeURIComponent(companyId)}`}
-                    >
-                      {stream.name}
-                    </Link>
-                  </td>
-                  <td>{stream.project_id}</td>
-                  <td>{stream.is_active ? "true" : "false"}</td>
-                  <td>{formatTimestamp(stream.updated_at)}</td>
-                </tr>
-              ))}
+              {filteredStreams.map((stream) => {
+                const latestStatus = latestStatusMap[stream.id]?.status ?? null;
+                const lastCheckAt = latestStatusMap[stream.id]?.createdAt ?? null;
+
+                return (
+                  <tr key={stream.id}>
+                    <td>{stream.id}</td>
+                    <td>
+                      <Link className="stream-link" href={`/streams/${stream.id}`}>
+                        {stream.name}
+                      </Link>
+                    </td>
+                    <td>{stream.project_id}</td>
+                    <td>
+                      {latestStatus ? (
+                        <StatusBadge status={latestStatus} />
+                      ) : (
+                        <span className="status-muted">No data</span>
+                      )}
+                    </td>
+                    <td>{formatTimestamp(lastCheckAt)}</td>
+                    <td>{stream.is_active ? "true" : "false"}</td>
+                    <td>{formatTimestamp(stream.updated_at)}</td>
+                    <td>
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        disabled={isViewer || busyStreamID === stream.id}
+                        onClick={() => {
+                          void handleRunCheck(stream);
+                        }}
+                      >
+                        {busyStreamID === stream.id ? "Queueing..." : "Run check"}
+                      </AppButton>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
