@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type authServiceStoreStub struct {
@@ -85,6 +86,68 @@ func TestLoginPendingRegistrationDenied(t *testing.T) {
 
 	service := NewAuthService(store, AuthConfig{})
 	_, err := service.Login(context.Background(), domain.LoginRequest{LoginOrEmail: "pending@example.com", Password: "secret123"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	serviceErr, ok := AsServiceError(err)
+	if !ok {
+		t.Fatalf("expected service error, got %T", err)
+	}
+	if serviceErr.Code != "unauthorized" {
+		t.Fatalf("expected unauthorized code, got %s", serviceErr.Code)
+	}
+}
+
+func TestLoginDisabledUserDenied(t *testing.T) {
+	password := "secret123"
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("hash password: %v", err)
+	}
+
+	store := &authServiceStoreStub{
+		getUserByLoginOrEmailFn: func(ctx context.Context, identity string) (domain.UserRecord, error) {
+			return domain.UserRecord{
+				AuthUser: domain.AuthUser{
+					ID:     10,
+					Login:  "disabled-user",
+					Email:  "disabled@example.com",
+					Role:   domain.RoleViewer,
+					Status: domain.UserStatusDisabled,
+				},
+				PasswordHash: string(passwordHash),
+			}, nil
+		},
+	}
+
+	service := NewAuthService(store, AuthConfig{})
+	_, err = service.Login(context.Background(), domain.LoginRequest{LoginOrEmail: "disabled-user", Password: password})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	serviceErr, ok := AsServiceError(err)
+	if !ok {
+		t.Fatalf("expected service error, got %T", err)
+	}
+	if serviceErr.Code != "unauthorized" {
+		t.Fatalf("expected unauthorized code, got %s", serviceErr.Code)
+	}
+}
+
+func TestLoginRejectedOrUnknownIdentityDenied(t *testing.T) {
+	store := &authServiceStoreStub{
+		getUserByLoginOrEmailFn: func(ctx context.Context, identity string) (domain.UserRecord, error) {
+			return domain.UserRecord{}, domain.ErrUserNotFound
+		},
+		hasPendingRegistrationFn: func(ctx context.Context, identity string) (bool, error) {
+			return false, nil
+		},
+	}
+
+	service := NewAuthService(store, AuthConfig{})
+	_, err := service.Login(context.Background(), domain.LoginRequest{LoginOrEmail: "rejected@example.com", Password: "secret123"})
 	if err == nil {
 		t.Fatal("expected error")
 	}

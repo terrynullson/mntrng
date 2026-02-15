@@ -229,6 +229,28 @@ func TestEvaluateAccessPolicyRBACMatrix(t *testing.T) {
 			expectDeny: false,
 		},
 		{
+			name:   "company admin denied on unscoped companies collection",
+			path:   "/api/v1/companies",
+			method: http.MethodGet,
+			auth: domain.AuthContext{
+				Role:      domain.RoleCompanyAdmin,
+				CompanyID: &companyID,
+			},
+			expectDeny: true,
+			expectCode: "forbidden",
+		},
+		{
+			name:   "viewer denied on unscoped companies collection",
+			path:   "/api/v1/companies",
+			method: http.MethodGet,
+			auth: domain.AuthContext{
+				Role:      domain.RoleViewer,
+				CompanyID: &companyID,
+			},
+			expectDeny: true,
+			expectCode: "forbidden",
+		},
+		{
 			name:   "company admin tenant escape denied",
 			path:   "/api/v1/companies/5/projects",
 			method: http.MethodGet,

@@ -75,7 +75,7 @@ Migration `0004_auth_and_registration` adds authentication, controlled registrat
 
 ## Key constraints
 
-- Multi-tenant isolation: every table except `companies` has `company_id NOT NULL`.
+- Multi-tenant isolation for business entities: `projects`, `streams`, `check_jobs`, `check_results`, `alert_state`, and `audit_log` are company-scoped. Auth/session tables use explicit RBAC/scope constraints (`users_role_company_scope_ck`, `auth_sessions.company_id`) instead of universal `company_id NOT NULL`.
 - Cross-tenant protection: child tables use composite foreign keys with `(id, company_id)`.
 - Job idempotency: `check_jobs` has `UNIQUE(stream_id, planned_at)`.
 - `check_results` immutability: `BEFORE UPDATE` trigger raises an exception.
