@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
-	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
 )
 
 type APIStreamRepo struct {
@@ -51,10 +50,10 @@ func (r *APIStreamRepo) CreateStream(
 	).Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) || isForeignKeyViolation(err) {
-			return domain.Stream{}, serviceapi.ErrStreamProjectMiss
+			return domain.Stream{}, domain.ErrStreamProjectMiss
 		}
 		if isUniqueViolation(err) {
-			return domain.Stream{}, serviceapi.ErrStreamAlreadyExists
+			return domain.Stream{}, domain.ErrStreamAlreadyExists
 		}
 		return domain.Stream{}, err
 	}
@@ -85,7 +84,7 @@ func (r *APIStreamRepo) CreateStream(
 	return item, nil
 }
 
-func (r *APIStreamRepo) ListStreams(ctx context.Context, companyID int64, filter serviceapi.StreamListFilter) ([]domain.Stream, error) {
+func (r *APIStreamRepo) ListStreams(ctx context.Context, companyID int64, filter domain.StreamListFilter) ([]domain.Stream, error) {
 	args := []interface{}{companyID}
 	conditions := []string{"company_id = $1"}
 	nextPlaceholder := 2
@@ -143,7 +142,7 @@ func (r *APIStreamRepo) GetStream(ctx context.Context, companyID int64, streamID
 	).Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.Stream{}, serviceapi.ErrStreamNotFound
+			return domain.Stream{}, domain.ErrStreamNotFound
 		}
 		return domain.Stream{}, err
 	}
@@ -154,7 +153,7 @@ func (r *APIStreamRepo) PatchStream(
 	ctx context.Context,
 	companyID int64,
 	streamID int64,
-	patch serviceapi.StreamPatchInput,
+	patch domain.StreamPatchInput,
 ) (domain.Stream, error) {
 	query, args, changePayload := buildStreamPatchQuery(patch, companyID, streamID)
 
@@ -167,10 +166,10 @@ func (r *APIStreamRepo) PatchStream(
 	item, err := runStreamPatchQueryTx(ctx, tx, query, args)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.Stream{}, serviceapi.ErrStreamNotFound
+			return domain.Stream{}, domain.ErrStreamNotFound
 		}
 		if isUniqueViolation(err) {
-			return domain.Stream{}, serviceapi.ErrStreamAlreadyExists
+			return domain.Stream{}, domain.ErrStreamAlreadyExists
 		}
 		return domain.Stream{}, err
 	}
@@ -225,7 +224,7 @@ func (r *APIStreamRepo) DeleteStream(ctx context.Context, companyID int64, strea
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return serviceapi.ErrStreamNotFound
+			return domain.ErrStreamNotFound
 		}
 		return err
 	}
@@ -255,7 +254,7 @@ func (r *APIStreamRepo) DeleteStream(ctx context.Context, companyID int64, strea
 	return nil
 }
 
-func buildStreamPatchQuery(patch serviceapi.StreamPatchInput, companyID int64, streamID int64) (string, []interface{}, map[string]interface{}) {
+func buildStreamPatchQuery(patch domain.StreamPatchInput, companyID int64, streamID int64) (string, []interface{}, map[string]interface{}) {
 	setClauses := make([]string, 0, 3)
 	args := make([]interface{}, 0, 5)
 	changePayload := make(map[string]interface{})

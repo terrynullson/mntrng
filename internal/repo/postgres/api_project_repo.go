@@ -6,7 +6,6 @@ import (
 	"errors"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
-	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
 )
 
 type APIProjectRepo struct {
@@ -33,10 +32,10 @@ func (r *APIProjectRepo) CreateProject(ctx context.Context, companyID int64, nam
 	).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if isUniqueViolation(err) {
-			return domain.Project{}, serviceapi.ErrProjectAlreadyExists
+			return domain.Project{}, domain.ErrProjectAlreadyExists
 		}
 		if isForeignKeyViolation(err) {
-			return domain.Project{}, serviceapi.ErrProjectCompanyMissing
+			return domain.Project{}, domain.ErrProjectCompanyMissing
 		}
 		return domain.Project{}, err
 	}
@@ -98,7 +97,7 @@ func (r *APIProjectRepo) GetProject(ctx context.Context, companyID int64, projec
 	).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.Project{}, serviceapi.ErrProjectNotFound
+			return domain.Project{}, domain.ErrProjectNotFound
 		}
 		return domain.Project{}, err
 	}
@@ -122,10 +121,10 @@ func (r *APIProjectRepo) UpdateProject(ctx context.Context, companyID int64, pro
 	).Scan(&item.ID, &item.CompanyID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.Project{}, serviceapi.ErrProjectNotFound
+			return domain.Project{}, domain.ErrProjectNotFound
 		}
 		if isUniqueViolation(err) {
-			return domain.Project{}, serviceapi.ErrProjectAlreadyExists
+			return domain.Project{}, domain.ErrProjectAlreadyExists
 		}
 		return domain.Project{}, err
 	}
@@ -174,7 +173,7 @@ func (r *APIProjectRepo) DeleteProject(ctx context.Context, companyID int64, pro
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return serviceapi.ErrProjectNotFound
+			return domain.ErrProjectNotFound
 		}
 		return err
 	}

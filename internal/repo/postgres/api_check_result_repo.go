@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
-	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
 )
 
 type APICheckResultRepo struct {
@@ -32,7 +31,7 @@ func (r *APICheckResultRepo) GetCheckResultByID(ctx context.Context, companyID i
 	item, err := scanCheckResult(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.CheckResult{}, serviceapi.ErrCheckResultNotFound
+			return domain.CheckResult{}, domain.ErrCheckResultNotFound
 		}
 		return domain.CheckResult{}, err
 	}
@@ -51,7 +50,7 @@ func (r *APICheckResultRepo) GetCheckResultByJobID(ctx context.Context, companyI
 	item, err := scanCheckResult(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.CheckResult{}, serviceapi.ErrCheckResultByJobNotFound
+			return domain.CheckResult{}, domain.ErrCheckResultByJobNotFound
 		}
 		return domain.CheckResult{}, err
 	}
@@ -79,7 +78,7 @@ func (r *APICheckResultRepo) ListCheckResults(
 	ctx context.Context,
 	companyID int64,
 	streamID int64,
-	filter serviceapi.CheckResultListFilter,
+	filter domain.CheckResultListFilter,
 ) ([]domain.CheckResult, error) {
 	args := []interface{}{companyID, streamID}
 	conditions := []string{"company_id = $1", "stream_id = $2"}

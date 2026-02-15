@@ -9,17 +9,7 @@ import (
 	"github.com/example/hls-monitoring-platform/internal/domain"
 )
 
-var (
-	ErrCheckJobNotFound      = errors.New("check_job_not_found")
-	ErrCheckJobStreamMissing = errors.New("check_job_stream_missing")
-	ErrCheckJobConflict      = errors.New("check_job_conflict")
-)
-
-type CheckJobListFilter struct {
-	Status *string
-	From   *time.Time
-	To     *time.Time
-}
+type CheckJobListFilter = domain.CheckJobListFilter
 
 type CheckJobStore interface {
 	EnqueueCheckJob(ctx context.Context, companyID int64, streamID int64, plannedAt time.Time) (domain.CheckJob, error)
@@ -68,13 +58,13 @@ func (s *CheckJobService) EnqueueCheckJob(ctx context.Context, input EnqueueChec
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrCheckJobStreamMissing) {
+	if errors.Is(err, domain.ErrCheckJobStreamMissing) {
 		return domain.CheckJob{}, NewNotFoundError(
 			"stream not found for company",
 			map[string]interface{}{"company_id": input.CompanyID, "stream_id": input.StreamID},
 		)
 	}
-	if errors.Is(err, ErrCheckJobConflict) {
+	if errors.Is(err, domain.ErrCheckJobConflict) {
 		return domain.CheckJob{}, NewConflictError(
 			"check job already exists for stream and planned_at",
 			map[string]interface{}{
@@ -92,7 +82,7 @@ func (s *CheckJobService) GetCheckJob(ctx context.Context, companyID int64, jobI
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrCheckJobNotFound) {
+	if errors.Is(err, domain.ErrCheckJobNotFound) {
 		return domain.CheckJob{}, NewNotFoundError(
 			"check job not found",
 			map[string]interface{}{"company_id": companyID, "job_id": jobID},

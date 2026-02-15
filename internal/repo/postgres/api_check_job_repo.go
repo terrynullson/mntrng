@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
-	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
 )
 
 type APICheckJobRepo struct {
@@ -52,10 +51,10 @@ func (r *APICheckJobRepo) EnqueueCheckJob(
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) || isForeignKeyViolation(err) {
-			return domain.CheckJob{}, serviceapi.ErrCheckJobStreamMissing
+			return domain.CheckJob{}, domain.ErrCheckJobStreamMissing
 		}
 		if isUniqueViolation(err) {
-			return domain.CheckJob{}, serviceapi.ErrCheckJobConflict
+			return domain.CheckJob{}, domain.ErrCheckJobConflict
 		}
 		return domain.CheckJob{}, err
 	}
@@ -84,7 +83,7 @@ func (r *APICheckJobRepo) GetCheckJob(ctx context.Context, companyID int64, jobI
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.CheckJob{}, serviceapi.ErrCheckJobNotFound
+			return domain.CheckJob{}, domain.ErrCheckJobNotFound
 		}
 		return domain.CheckJob{}, err
 	}
@@ -112,7 +111,7 @@ func (r *APICheckJobRepo) ListCheckJobs(
 	ctx context.Context,
 	companyID int64,
 	streamID int64,
-	filter serviceapi.CheckJobListFilter,
+	filter domain.CheckJobListFilter,
 ) ([]domain.CheckJob, error) {
 	args := []interface{}{companyID, streamID}
 	conditions := []string{"company_id = $1", "stream_id = $2"}

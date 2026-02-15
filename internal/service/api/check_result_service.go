@@ -9,17 +9,7 @@ import (
 	"github.com/example/hls-monitoring-platform/internal/domain"
 )
 
-var (
-	ErrCheckResultNotFound      = errors.New("check_result_not_found")
-	ErrCheckResultByJobNotFound = errors.New("check_result_by_job_not_found")
-	ErrCheckResultStreamMissing = errors.New("check_result_stream_missing")
-)
-
-type CheckResultListFilter struct {
-	Status *string
-	From   *time.Time
-	To     *time.Time
-}
+type CheckResultListFilter = domain.CheckResultListFilter
 
 type CheckResultStore interface {
 	GetCheckResultByID(ctx context.Context, companyID int64, resultID int64) (domain.CheckResult, error)
@@ -49,7 +39,7 @@ func (s *CheckResultService) GetCheckResult(ctx context.Context, companyID int64
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrCheckResultNotFound) {
+	if errors.Is(err, domain.ErrCheckResultNotFound) {
 		return domain.CheckResult{}, NewNotFoundError(
 			"check result not found",
 			map[string]interface{}{"company_id": companyID, "result_id": resultID},
@@ -63,7 +53,7 @@ func (s *CheckResultService) GetCheckResultByJob(ctx context.Context, companyID 
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrCheckResultByJobNotFound) {
+	if errors.Is(err, domain.ErrCheckResultByJobNotFound) {
 		return domain.CheckResult{}, NewNotFoundError(
 			"check result not found for job",
 			map[string]interface{}{"company_id": companyID, "job_id": jobID},

@@ -9,22 +9,8 @@ import (
 	"github.com/example/hls-monitoring-platform/internal/domain"
 )
 
-var (
-	ErrStreamAlreadyExists = errors.New("stream_already_exists")
-	ErrStreamNotFound      = errors.New("stream_not_found")
-	ErrStreamProjectMiss   = errors.New("stream_project_missing")
-)
-
-type StreamListFilter struct {
-	ProjectID *int64
-	IsActive  *bool
-}
-
-type StreamPatchInput struct {
-	Name     *string
-	URL      *string
-	IsActive *bool
-}
+type StreamListFilter = domain.StreamListFilter
+type StreamPatchInput = domain.StreamPatchInput
 
 type StreamStore interface {
 	CreateStream(ctx context.Context, companyID int64, projectID int64, name string, url string, isActive bool) (domain.Stream, error)
@@ -82,13 +68,13 @@ func (s *StreamService) CreateStream(ctx context.Context, input CreateStreamInpu
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrStreamProjectMiss) {
+	if errors.Is(err, domain.ErrStreamProjectMiss) {
 		return domain.Stream{}, NewNotFoundError(
 			"project not found for company",
 			map[string]interface{}{"company_id": input.CompanyID, "project_id": input.ProjectID},
 		)
 	}
-	if errors.Is(err, ErrStreamAlreadyExists) {
+	if errors.Is(err, domain.ErrStreamAlreadyExists) {
 		return domain.Stream{}, NewConflictError(
 			"stream with the same name already exists in this project",
 			map[string]interface{}{"company_id": input.CompanyID, "project_id": input.ProjectID, "field": "name"},
@@ -114,7 +100,7 @@ func (s *StreamService) GetStream(ctx context.Context, companyID int64, streamID
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrStreamNotFound) {
+	if errors.Is(err, domain.ErrStreamNotFound) {
 		return domain.Stream{}, NewNotFoundError(
 			"stream not found",
 			map[string]interface{}{"company_id": companyID, "stream_id": streamID},
@@ -133,13 +119,13 @@ func (s *StreamService) PatchStream(ctx context.Context, request PatchStreamRequ
 	if patchErr == nil {
 		return item, nil
 	}
-	if errors.Is(patchErr, ErrStreamNotFound) {
+	if errors.Is(patchErr, domain.ErrStreamNotFound) {
 		return domain.Stream{}, NewNotFoundError(
 			"stream not found",
 			map[string]interface{}{"company_id": request.CompanyID, "stream_id": request.StreamID},
 		)
 	}
-	if errors.Is(patchErr, ErrStreamAlreadyExists) {
+	if errors.Is(patchErr, domain.ErrStreamAlreadyExists) {
 		return domain.Stream{}, NewConflictError(
 			"stream with the same name already exists in this project",
 			map[string]interface{}{"company_id": request.CompanyID, "stream_id": request.StreamID, "field": "name"},
@@ -153,7 +139,7 @@ func (s *StreamService) DeleteStream(ctx context.Context, companyID int64, strea
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, ErrStreamNotFound) {
+	if errors.Is(err, domain.ErrStreamNotFound) {
 		return NewNotFoundError(
 			"stream not found",
 			map[string]interface{}{"company_id": companyID, "stream_id": streamID},

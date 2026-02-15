@@ -8,11 +8,6 @@ import (
 	"github.com/example/hls-monitoring-platform/internal/domain"
 )
 
-var (
-	ErrCompanyAlreadyExists = errors.New("company_already_exists")
-	ErrCompanyNotFound      = errors.New("company_not_found")
-)
-
 type CompanyStore interface {
 	CreateCompany(ctx context.Context, name string) (domain.Company, error)
 	ListCompanies(ctx context.Context) ([]domain.Company, error)
@@ -39,7 +34,7 @@ func (s *CompanyService) CreateCompany(ctx context.Context, nameRaw string) (dom
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrCompanyAlreadyExists) {
+	if errors.Is(err, domain.ErrCompanyAlreadyExists) {
 		return domain.Company{}, NewConflictError("company with the same name already exists", map[string]interface{}{"field": "name"})
 	}
 	return domain.Company{}, NewInternalError()
@@ -58,7 +53,7 @@ func (s *CompanyService) GetCompany(ctx context.Context, companyID int64) (domai
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrCompanyNotFound) {
+	if errors.Is(err, domain.ErrCompanyNotFound) {
 		return domain.Company{}, NewNotFoundError("company not found", map[string]interface{}{"company_id": companyID})
 	}
 	return domain.Company{}, NewInternalError()
@@ -74,10 +69,10 @@ func (s *CompanyService) PatchCompany(ctx context.Context, companyID int64, name
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrCompanyNotFound) {
+	if errors.Is(err, domain.ErrCompanyNotFound) {
 		return domain.Company{}, NewNotFoundError("company not found", map[string]interface{}{"company_id": companyID})
 	}
-	if errors.Is(err, ErrCompanyAlreadyExists) {
+	if errors.Is(err, domain.ErrCompanyAlreadyExists) {
 		return domain.Company{}, NewConflictError("company with the same name already exists", map[string]interface{}{"field": "name"})
 	}
 	return domain.Company{}, NewInternalError()
@@ -88,7 +83,7 @@ func (s *CompanyService) DeleteCompany(ctx context.Context, companyID int64) err
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, ErrCompanyNotFound) {
+	if errors.Is(err, domain.ErrCompanyNotFound) {
 		return NewNotFoundError("company not found", map[string]interface{}{"company_id": companyID})
 	}
 	return NewInternalError()

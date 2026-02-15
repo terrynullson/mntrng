@@ -7,7 +7,6 @@ import (
 	"errors"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
-	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
 	"github.com/lib/pq"
 )
 
@@ -34,7 +33,7 @@ func (r *APICompanyRepo) CreateCompany(ctx context.Context, name string) (domain
 	).Scan(&item.ID, &item.Name, &item.CreatedAt)
 	if err != nil {
 		if isUniqueViolation(err) {
-			return domain.Company{}, serviceapi.ErrCompanyAlreadyExists
+			return domain.Company{}, domain.ErrCompanyAlreadyExists
 		}
 		return domain.Company{}, err
 	}
@@ -91,7 +90,7 @@ func (r *APICompanyRepo) GetCompany(ctx context.Context, companyID int64) (domai
 	).Scan(&item.ID, &item.Name, &item.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.Company{}, serviceapi.ErrCompanyNotFound
+			return domain.Company{}, domain.ErrCompanyNotFound
 		}
 		return domain.Company{}, err
 	}
@@ -114,10 +113,10 @@ func (r *APICompanyRepo) UpdateCompany(ctx context.Context, companyID int64, nam
 	).Scan(&item.ID, &item.Name, &item.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.Company{}, serviceapi.ErrCompanyNotFound
+			return domain.Company{}, domain.ErrCompanyNotFound
 		}
 		if isUniqueViolation(err) {
-			return domain.Company{}, serviceapi.ErrCompanyAlreadyExists
+			return domain.Company{}, domain.ErrCompanyAlreadyExists
 		}
 		return domain.Company{}, err
 	}
@@ -160,7 +159,7 @@ func (r *APICompanyRepo) DeleteCompany(ctx context.Context, companyID int64) err
 	).Scan(&existing.ID, &existing.Name, &existing.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return serviceapi.ErrCompanyNotFound
+			return domain.ErrCompanyNotFound
 		}
 		return err
 	}
@@ -189,7 +188,7 @@ func (r *APICompanyRepo) DeleteCompany(ctx context.Context, companyID int64) err
 		return err
 	}
 	if rowsAffected == 0 {
-		return serviceapi.ErrCompanyNotFound
+		return domain.ErrCompanyNotFound
 	}
 
 	if err := tx.Commit(); err != nil {

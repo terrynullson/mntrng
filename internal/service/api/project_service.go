@@ -8,12 +8,6 @@ import (
 	"github.com/example/hls-monitoring-platform/internal/domain"
 )
 
-var (
-	ErrProjectAlreadyExists  = errors.New("project_already_exists")
-	ErrProjectNotFound       = errors.New("project_not_found")
-	ErrProjectCompanyMissing = errors.New("project_company_missing")
-)
-
 type ProjectStore interface {
 	CreateProject(ctx context.Context, companyID int64, name string) (domain.Project, error)
 	ListProjects(ctx context.Context, companyID int64) ([]domain.Project, error)
@@ -40,13 +34,13 @@ func (s *ProjectService) CreateProject(ctx context.Context, companyID int64, nam
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrProjectAlreadyExists) {
+	if errors.Is(err, domain.ErrProjectAlreadyExists) {
 		return domain.Project{}, NewConflictError(
 			"project with the same name already exists for this company",
 			map[string]interface{}{"field": "name", "company_id": companyID},
 		)
 	}
-	if errors.Is(err, ErrProjectCompanyMissing) {
+	if errors.Is(err, domain.ErrProjectCompanyMissing) {
 		return domain.Project{}, NewNotFoundError("company not found", map[string]interface{}{"company_id": companyID})
 	}
 	return domain.Project{}, NewInternalError()
@@ -65,7 +59,7 @@ func (s *ProjectService) GetProject(ctx context.Context, companyID int64, projec
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrProjectNotFound) {
+	if errors.Is(err, domain.ErrProjectNotFound) {
 		return domain.Project{}, NewNotFoundError(
 			"project not found",
 			map[string]interface{}{"company_id": companyID, "project_id": projectID},
@@ -84,13 +78,13 @@ func (s *ProjectService) PatchProject(ctx context.Context, companyID int64, proj
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, ErrProjectNotFound) {
+	if errors.Is(err, domain.ErrProjectNotFound) {
 		return domain.Project{}, NewNotFoundError(
 			"project not found",
 			map[string]interface{}{"company_id": companyID, "project_id": projectID},
 		)
 	}
-	if errors.Is(err, ErrProjectAlreadyExists) {
+	if errors.Is(err, domain.ErrProjectAlreadyExists) {
 		return domain.Project{}, NewConflictError(
 			"project with the same name already exists for this company",
 			map[string]interface{}{"field": "name", "company_id": companyID},
@@ -104,7 +98,7 @@ func (s *ProjectService) DeleteProject(ctx context.Context, companyID int64, pro
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, ErrProjectNotFound) {
+	if errors.Is(err, domain.ErrProjectNotFound) {
 		return NewNotFoundError(
 			"project not found",
 			map[string]interface{}{"company_id": companyID, "project_id": projectID},
