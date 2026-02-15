@@ -34,3 +34,13 @@ Summary:
 - Added RBAC tenant guard.
 Notes:
 Smoke tests passed, no runtime regressions found.
+
+[2026-02-15] [api-auth-baseline]
+Agent: BackendAgent
+Commit: 268cbc7eea7ddb6df73bc02d20b4cea46472a4f8
+Summary:
+- Added baseline security-gate tests for login and RBAC edge cases.
+- Synced schema docs for auth/session tenant-scope constraints.
+- Re-confirmed full test suite pass for the accepted step.
+Notes:
+Backfill after step acceptance: protocol entry and completion-notify are now closed.
