@@ -24,6 +24,20 @@ var (
 	ErrCheckResultNotFound      = errors.New("check_result_not_found")
 	ErrCheckResultByJobNotFound = errors.New("check_result_by_job_not_found")
 	ErrCheckResultStreamMissing = errors.New("check_result_stream_missing")
+
+	ErrUserNotFound            = errors.New("user_not_found")
+	ErrUserAlreadyExists       = errors.New("user_already_exists")
+	ErrUserDisabled            = errors.New("user_disabled")
+	ErrInvalidCredentials      = errors.New("invalid_credentials")
+	ErrSessionNotFound         = errors.New("session_not_found")
+	ErrSessionExpired          = errors.New("session_expired")
+	ErrSessionRevoked          = errors.New("session_revoked")
+	ErrRegistrationConflict    = errors.New("registration_conflict")
+	ErrRegistrationNotFound    = errors.New("registration_not_found")
+	ErrRegistrationNotPending  = errors.New("registration_not_pending")
+	ErrPendingRegistrationOnly = errors.New("pending_registration_only")
+	ErrTelegramLinkNotFound    = errors.New("telegram_link_not_found")
+	ErrTelegramLinkConflict    = errors.New("telegram_link_conflict")
 )
 
 type StreamListFilter struct {

@@ -21,7 +21,7 @@ cp .env.example .env
 2. При необходимости изменить значения в `.env`:
 
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
-- `API_PORT`, `REDIS_ADDR`, `WORKER_HEARTBEAT_SEC`
+- `API_PORT`, `REDIS_ADDR`, `AUTH_ACCESS_TTL_MIN`, `AUTH_REFRESH_TTL_DAYS`, `AUTH_TELEGRAM_MAX_AGE_SEC`, `SUPER_ADMIN_TELEGRAM_CHAT_ID`, `WORKER_HEARTBEAT_SEC`
 - `WORKER_JOB_TIMEOUT_SEC`, `WORKER_DB_RETRY_MAX`, `WORKER_DB_RETRY_BACKOFF_MS`
 - `PLAYLIST_TIMEOUT_MS`, `SEGMENT_TIMEOUT_MS`, `SEGMENTS_SAMPLE_COUNT`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`, `FREEZE_WARN_SEC`, `FREEZE_FAIL_SEC`, `BLACKFRAME_WARN_RATIO`, `BLACKFRAME_FAIL_RATIO`, `EFFECTIVE_BITRATE_WARN_RATIO`, `EFFECTIVE_BITRATE_FAIL_RATIO`, `ALERT_FAIL_STREAK`, `ALERT_COOLDOWN_MIN`, `ALERT_SEND_RECOVERED`, `TELEGRAM_HTTP_TIMEOUT_MS`, `TELEGRAM_SEND_RETRY_MAX`, `TELEGRAM_SEND_RETRY_BACKOFF_MS`, `TELEGRAM_BOT_TOKEN_DEFAULT`, `RETENTION_TTL_DAYS`, `RETENTION_CLEANUP_INTERVAL_MIN`, `RETENTION_CLEANUP_BATCH_SIZE`
 - `FRONTEND_PORT`, `NEXT_PUBLIC_API_BASE_URL`
@@ -40,7 +40,58 @@ docker compose up --build -d
 curl http://localhost:8080/api/v1/health
 ```
 
+## Authentication + controlled registration smoke-check
+
+All API endpoints except health and public auth endpoints are protected by bearer auth.
+
+1. Apply migrations:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0001_baseline_schema.up.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0002_telegram_delivery_settings.up.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_preserve_company_audit_history.up.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_auth_and_registration.up.sql
+```
+
+2. Create bootstrap super-admin user (local smoke):
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "INSERT INTO users (company_id, email, login, password_hash, role, status) VALUES (NULL, 'root@example.com', 'root', '\$2a\$10\$N5qmS5BHUDsoD3/9rXHpPequqyXHEWq2w.gAldS7zKKy10zG/T4qC', 'super_admin', 'active');"
+```
+
+Password for this hash: `Admin12345`.
+
+3. Login and export access token:
+
+```bash
+ACCESS_TOKEN=$(curl -sS -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"login_or_email":"root","password":"Admin12345"}' | jq -r '.access_token')
+```
+
+4. Public controlled registration request:
+
+```bash
+curl -sS -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"company_id":1,"email":"viewer@example.com","login":"viewer01","password":"Viewer12345","requested_role":"viewer"}'
+```
+
+5. Super-admin moderation:
+
+```bash
+curl -sS http://localhost:8080/api/v1/admin/registration-requests \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+
+curl -sS -X POST http://localhost:8080/api/v1/admin/registration-requests/1/approve \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"company_id":1,"role":"viewer"}'
+```
+
 ## Companies CRUD smoke-check
+
+All requests below require header `Authorization: Bearer $ACCESS_TOKEN`.
 
 1. Применить baseline-миграцию в PostgreSQL:
 
@@ -73,6 +124,8 @@ curl -sS -X DELETE http://localhost:8080/api/v1/companies/1 -i
 
 ## Projects CRUD smoke-check
 
+Use `-H "Authorization: Bearer $ACCESS_TOKEN"` for all calls.
+
 Требуется существующий `company_id` (например, `1`).
 
 ```bash
@@ -98,6 +151,8 @@ curl -sS -X DELETE http://localhost:8080/api/v1/companies/1/projects/1 -i
 
 ## Streams CRUD smoke-check
 
+Use `-H "Authorization: Bearer $ACCESS_TOKEN"` for all calls.
+
 Требуются существующие `company_id` и `project_id` (например, `1` и `1`).
 
 ```bash
@@ -122,6 +177,8 @@ curl -sS -X DELETE http://localhost:8080/api/v1/companies/1/streams/1 -i
 ```
 
 ## Check jobs API smoke-check
+
+Use `-H "Authorization: Bearer $ACCESS_TOKEN"` for all calls.
 
 Требуется существующий `company_id` и `stream_id` (например, `1` и `1`).
 
@@ -246,6 +303,8 @@ Alert anti-spam decision engine (`alert_state`):
 - `RETENTION_CLEANUP_BATCH_SIZE` (по умолчанию `100`)
 
 ## Check results API smoke-check
+
+Use `-H "Authorization: Bearer $ACCESS_TOKEN"` for all calls.
 
 Требуется существующий `company_id`, `stream_id`, `result_id` и `job_id`.
 

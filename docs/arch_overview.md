@@ -5,7 +5,7 @@ This document reflects the current layered structure after the API + Worker spli
 
 ## Runtime components
 - Frontend (`web/*`) calls HTTP API.
-- API (`cmd/api/main.go`) handles HTTP contracts and persistence through service/repo layers.
+- API (`cmd/api/main.go`) handles HTTP contracts, auth/RBAC/tenant guards, and persistence through service/repo layers.
 - Worker (`cmd/worker/main.go`) executes asynchronous checks, alert decisions, Telegram delivery, and retention cleanup.
 - PostgreSQL is the source of truth for entities, jobs, results, alert state, and audit.
 - Redis is used for queue-related integration in the overall architecture baseline.
@@ -25,6 +25,10 @@ Disallowed dependencies:
 Current status:
 - API and Worker repositories comply with the `repo -> service` rule.
 - Final API transitional debt (`repo -> service` for error contracts) was closed in commit `18a93ef`.
+- API security boundary is enforced by middleware:
+  - auth (mandatory except explicit public endpoints),
+  - RBAC (`super_admin`, `company_admin`, `viewer`),
+  - tenant guard (`company_id` from auth context must match tenant route scope).
 
 ## Current package map
 
@@ -41,16 +45,22 @@ Current status:
 ### API side
 - HTTP adapters/router:
   - `internal/http/api/router.go`
+  - `internal/http/api/router_auth_admin.go`
   - `internal/http/api/bootstrap.go`
   - `internal/http/api/server.go`
   - `internal/http/api/handlers_*.go`
+  - `internal/http/api/middleware_auth.go`
 - Use-cases:
+  - `internal/service/api/auth_service.go`
+  - `internal/service/api/registration_service.go`
   - `internal/service/api/company_service.go`
   - `internal/service/api/project_service.go`
   - `internal/service/api/stream_service.go`
   - `internal/service/api/check_job_service.go`
   - `internal/service/api/check_result_service.go`
 - Persistence:
+  - `internal/repo/postgres/api_auth_repo.go`
+  - `internal/repo/postgres/api_registration_repo.go`
   - `internal/repo/postgres/api_company_repo.go`
   - `internal/repo/postgres/api_project_repo.go`
   - `internal/repo/postgres/api_stream_repo.go`
@@ -92,3 +102,6 @@ Current status:
 - API does not run heavy media checks (`ffmpeg/ffprobe`), only CRUD/query/enqueue contracts.
 - Worker performs check lifecycle (`claim -> process -> persist -> alert/telegram -> finalize`) and retention cleanup.
 - Tenant scoping (`company_id`) is mandatory in API and Worker data access paths.
+- API authentication is mandatory by default:
+  - Public-only exceptions: health + controlled auth/registration public endpoints.
+  - Tenant scope for protected tenant routes is derived from auth context, not trusted directly from query input.

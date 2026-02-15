@@ -14,6 +14,21 @@
 - Every DB read/write for tenant data must include tenant filter by `company_id`.
 - Unscoped tenant endpoints are not allowed in baseline contract.
 
+### Authentication and authorization
+
+- Every non-public endpoint requires `Authorization: Bearer <access_token>`.
+- Public endpoints:
+  - `GET /api/v1/health`
+  - `POST /api/v1/auth/register`
+  - `POST /api/v1/auth/login`
+  - `POST /api/v1/auth/refresh`
+  - `POST /api/v1/auth/telegram/login`
+- RBAC roles:
+  - `super_admin` — cross-company operations by policy.
+  - `company_admin` — read/write only in own company scope.
+  - `viewer` — read-only in own company scope.
+- Tenant guard: for tenant routes, `company_id` from route must match authenticated tenant context (except allowed `super_admin` cross-company flows).
+
 ## 2. Error envelope
 
 All non-2xx responses use one JSON envelope:
@@ -37,6 +52,7 @@ All non-2xx responses use one JSON envelope:
 - `conflict` -> `409`
 - `rate_limited` -> `429`
 - `internal_error` -> `500`
+- `method_not_allowed` -> `405`
 
 Unless stated otherwise, every endpoint in this contract can return the standard error envelope with the codes above.
 
@@ -163,7 +179,7 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 
 ## 5.1 Health
 
-### `GET /health`
+### `GET /api/v1/health`
 
 - Purpose: liveness/readiness probe of API process.
 - `200` response example:
@@ -176,7 +192,166 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 }
 ```
 
-## 5.2 Companies (CRUD)
+## 5.2 Auth and controlled registration
+
+### `POST /api/v1/auth/register`
+
+- Public controlled-registration endpoint.
+- Body:
+
+```json
+{
+  "company_id": 10,
+  "email": "operator@example.com",
+  "login": "operator",
+  "password": "StrongPass123",
+  "requested_role": "viewer"
+}
+```
+
+- `202` -> registration request payload (`status=pending`).
+- Errors: `400`, `404`, `409`, `500`.
+
+### `POST /api/v1/auth/login`
+
+- Public password login for active approved users.
+- Body:
+
+```json
+{
+  "login_or_email": "operator",
+  "password": "StrongPass123"
+}
+```
+
+- `200`:
+
+```json
+{
+  "access_token": "string",
+  "refresh_token": "string",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "user": {
+    "id": 1,
+    "company_id": 10,
+    "email": "operator@example.com",
+    "login": "operator",
+    "role": "viewer",
+    "status": "active",
+    "created_at": "2026-02-13T10:00:00Z",
+    "updated_at": "2026-02-13T10:00:00Z"
+  }
+}
+```
+
+- Errors: `400`, `401`, `403`, `500`.
+- Pending/rejected/disabled identities cannot login.
+
+### `POST /api/v1/auth/refresh`
+
+- Public token refresh by refresh token.
+- Body:
+
+```json
+{
+  "refresh_token": "string"
+}
+```
+
+- `200` -> token response (same schema as login).
+- Errors: `400`, `401`, `500`.
+
+### `POST /api/v1/auth/logout`
+
+- Protected endpoint.
+- Body (optional):
+
+```json
+{
+  "refresh_token": "string"
+}
+```
+
+- `204` no body.
+- Errors: `400`, `401`, `500`.
+
+### `GET /api/v1/auth/me`
+
+- Protected endpoint.
+- `200` -> authenticated user profile.
+- Errors: `401`, `500`.
+
+### `POST /api/v1/auth/telegram/link`
+
+- Protected endpoint.
+- Request body: Telegram login payload fields + `hash`.
+- Backend verifies Telegram signature and links `telegram_user_id` to current user.
+- `204` no body.
+- Errors: `400`, `401`, `403`, `409`, `500`.
+
+### `POST /api/v1/auth/telegram/login`
+
+- Public endpoint with Telegram login payload.
+- Allowed only for approved+active linked users.
+- `200` -> token response (same schema as password login).
+- Errors: `400`, `401`, `403`, `500`.
+
+### `GET /api/v1/admin/registration-requests`
+
+- Protected, `super_admin` only.
+- Returns pending registration requests list.
+- `200` -> `{items, next_cursor}`.
+- Errors: `401`, `403`, `500`.
+
+### `POST /api/v1/admin/registration-requests/{request_id}/approve`
+
+- Protected, `super_admin` only.
+- Body:
+
+```json
+{
+  "company_id": 10,
+  "role": "viewer"
+}
+```
+
+- Approves request, creates active user, writes audit log.
+- `200` -> created user profile.
+- Errors: `400`, `401`, `403`, `404`, `409`, `500`.
+
+### `POST /api/v1/admin/registration-requests/{request_id}/reject`
+
+- Protected, `super_admin` only.
+- Body:
+
+```json
+{
+  "reason": "string"
+}
+```
+
+- Rejects request and writes audit log.
+- `204` no body.
+- Errors: `400`, `401`, `403`, `404`, `409`, `500`.
+
+### `PATCH /api/v1/admin/users/{user_id}/role`
+
+- Protected, `super_admin` only.
+- Body:
+
+```json
+{
+  "role": "company_admin",
+  "company_id": 10
+}
+```
+
+- Updates role/company scope (`company_admin` or `viewer`) and writes audit log.
+- `200` -> updated user profile.
+- Errors: `400`, `401`, `403`, `404`, `500`.
+
+## 5.3 Companies (CRUD)
 
 ### `POST /companies`
 
@@ -236,7 +411,7 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 - `204` no body.
 - Errors: `401`, `403`, `404`, `500`.
 
-## 5.3 Projects (tenant-scoped CRUD)
+## 5.4 Projects (tenant-scoped CRUD)
 
 All endpoints in this section are tenant-scoped by route `company_id`.
 
@@ -294,7 +469,7 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 
 - `204` no body.
 
-## 5.4 Streams (tenant-scoped CRUD)
+## 5.5 Streams (tenant-scoped CRUD)
 
 All endpoints in this section are tenant-scoped by route `company_id`.
 
@@ -341,7 +516,7 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 
 - `204` no body.
 
-## 5.5 Check jobs (enqueue, status, history)
+## 5.6 Check jobs (enqueue, status, history)
 
 All endpoints in this section are tenant-scoped by route `company_id`.
 
@@ -408,7 +583,7 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 }
 ```
 
-## 5.6 Check results (read-only)
+## 5.7 Check results (read-only)
 
 All endpoints in this section are tenant-scoped by route `company_id`.
 

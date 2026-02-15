@@ -25,6 +25,24 @@ func NewValidationError(message string, details map[string]interface{}) *Service
 	}
 }
 
+func NewUnauthorizedError(message string, details map[string]interface{}) *ServiceError {
+	return &ServiceError{
+		StatusCode: http.StatusUnauthorized,
+		Code:       "unauthorized",
+		Message:    message,
+		Details:    details,
+	}
+}
+
+func NewForbiddenError(message string, details map[string]interface{}) *ServiceError {
+	return &ServiceError{
+		StatusCode: http.StatusForbidden,
+		Code:       "forbidden",
+		Message:    message,
+		Details:    details,
+	}
+}
+
 func NewNotFoundError(message string, details map[string]interface{}) *ServiceError {
 	return &ServiceError{
 		StatusCode: http.StatusNotFound,

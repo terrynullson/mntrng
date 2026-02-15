@@ -144,3 +144,55 @@ Telegram конфигурация и секреты (bot token и т.п.) хра
 - Keep `ON DELETE CASCADE`: rejected because it deletes audit history and breaks forensic traceability.
 - Keep FK with `RESTRICT/NO ACTION`: rejected because company deletion would be blocked.
 - `ON DELETE SET NULL`: rejected because `company_id` must stay `NOT NULL`.
+
+## ADR-0009: Mandatory authentication and RBAC with tenant scope from auth context
+
+### Context
+Platform endpoints now expose tenant CRUD, check lifecycle operations, and privileged administration actions. P0 security requires deterministic protection against unauthenticated access, role abuse, and tenant escapes.
+
+### Decision
+All API endpoints are authenticated by default except explicitly public endpoints (`/api/v1/health`, public auth endpoints). Access control is enforced by RBAC roles:
+- `super_admin`: cross-company access by policy.
+- `company_admin`: write/read only inside own company scope.
+- `viewer`: read-only inside own company scope.
+
+Tenant scope is derived from authenticated user context (`company_id` in auth context) and validated against route tenant (`/companies/{company_id}/...`). Route/query input is never trusted as the source of tenant identity.
+
+### Consequences
+- Unauthorized requests are consistently rejected with typed JSON envelope (`unauthorized`/`forbidden`/`tenant_scope_required`).
+- Tenant escape attempts are blocked before handler execution.
+- Existing APIs remain tenant-scoped while gaining explicit auth+role guard.
+
+### Alternatives considered
+- Optional auth per endpoint: rejected due high risk of accidental unprotected routes.
+- Tenant scope only from route/query without auth context binding: rejected as unsafe for strict multi-tenant.
+- Role checks only inside business handlers: rejected in favor of centralized middleware guard.
+
+## ADR-0010: Controlled registration and Telegram auth policy (approved + active only)
+
+### Context
+Direct self-service account creation is incompatible with baseline tenant governance. Registration must be moderated by super-admins, while Telegram-based login/linking must be allowed only for approved and active users.
+
+### Decision
+Public registration creates `registration_requests` with `pending` status. User accounts are created/activated only via super-admin approval workflow:
+- list pending requests,
+- approve (assign `company_id` + role, create active user),
+- reject.
+
+Audit log entries are mandatory for approve/reject and role-change actions.
+
+Telegram integration policy:
+- super-admin notification is sent when a new registration request is created (best-effort, no secret leakage),
+- Telegram login payload is signature-verified server-side,
+- Telegram login is allowed only for approved flow users with `active` status and existing `user_telegram_links`,
+- pending/rejected/disabled users cannot authenticate via password or Telegram.
+
+### Consequences
+- Access onboarding is moderated and traceable.
+- Registration decisions and role escalations are auditable.
+- Telegram auth remains bound to controlled account lifecycle and active status.
+
+### Alternatives considered
+- Auto-approve registration: rejected as incompatible with controlled onboarding.
+- Telegram auth without signature verification: rejected due impersonation risk.
+- Allow pending/rejected/disabled users to login: rejected by security policy.

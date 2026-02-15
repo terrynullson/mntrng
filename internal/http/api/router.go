@@ -20,8 +20,11 @@ const (
 
 type companyHandler func(http.ResponseWriter, *http.Request, int64)
 type companyResourceHandler func(http.ResponseWriter, *http.Request, int64, int64)
+type adminResourceHandler func(http.ResponseWriter, *http.Request, int64)
 
 type RouterHandlers struct {
+	WrapWithAuth func(http.Handler) http.Handler
+
 	HandleHealth http.HandlerFunc
 
 	HandleCreateCompany http.HandlerFunc
@@ -48,17 +51,62 @@ type RouterHandlers struct {
 	HandleGetCheckResult      companyResourceHandler
 	HandleListCheckResults    companyResourceHandler
 	HandleGetCheckResultByJob companyResourceHandler
+
+	HandleRegisterRequest            http.HandlerFunc
+	HandleLogin                      http.HandlerFunc
+	HandleRefresh                    http.HandlerFunc
+	HandleLogout                     http.HandlerFunc
+	HandleMe                         http.HandlerFunc
+	HandleTelegramLogin              http.HandlerFunc
+	HandleTelegramLink               http.HandlerFunc
+	HandleListPendingRegistration    http.HandlerFunc
+	HandleApproveRegistrationRequest adminResourceHandler
+	HandleRejectRegistrationRequest  adminResourceHandler
+	HandleChangeUserRole             adminResourceHandler
 }
 
-func NewRouter(handlers RouterHandlers) *http.ServeMux {
+func NewRouter(handlers RouterHandlers) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/health", handlers.HandleHealth)
+	mux.HandleFunc("/api/v1/auth/register", func(w http.ResponseWriter, r *http.Request) {
+		routeAuthRegister(w, r, handlers)
+	})
+	mux.HandleFunc("/api/v1/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		routeAuthLogin(w, r, handlers)
+	})
+	mux.HandleFunc("/api/v1/auth/refresh", func(w http.ResponseWriter, r *http.Request) {
+		routeAuthRefresh(w, r, handlers)
+	})
+	mux.HandleFunc("/api/v1/auth/logout", func(w http.ResponseWriter, r *http.Request) {
+		routeAuthLogout(w, r, handlers)
+	})
+	mux.HandleFunc("/api/v1/auth/me", func(w http.ResponseWriter, r *http.Request) {
+		routeAuthMe(w, r, handlers)
+	})
+	mux.HandleFunc("/api/v1/auth/telegram/login", func(w http.ResponseWriter, r *http.Request) {
+		routeAuthTelegramLogin(w, r, handlers)
+	})
+	mux.HandleFunc("/api/v1/auth/telegram/link", func(w http.ResponseWriter, r *http.Request) {
+		routeAuthTelegramLink(w, r, handlers)
+	})
+	mux.HandleFunc("/api/v1/admin/registration-requests", func(w http.ResponseWriter, r *http.Request) {
+		routeAdminRegistrationRequestsCollection(w, r, handlers)
+	})
+	mux.HandleFunc("/api/v1/admin/registration-requests/", func(w http.ResponseWriter, r *http.Request) {
+		routeAdminRegistrationRequests(w, r, handlers)
+	})
+	mux.HandleFunc("/api/v1/admin/users/", func(w http.ResponseWriter, r *http.Request) {
+		routeAdminUsers(w, r, handlers)
+	})
 	mux.HandleFunc("/api/v1/companies", func(w http.ResponseWriter, r *http.Request) {
 		routeCompanies(w, r, handlers)
 	})
 	mux.HandleFunc("/api/v1/companies/", func(w http.ResponseWriter, r *http.Request) {
 		routeCompanyByID(w, r, handlers)
 	})
+	if handlers.WrapWithAuth != nil {
+		return handlers.WrapWithAuth(mux)
+	}
 	return mux
 }
 
