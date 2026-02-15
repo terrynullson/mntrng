@@ -239,6 +239,8 @@ I. DevLog + Telegram Dev Notifications Protocol (mandatory)
 - no architecture decisions
 - no new task initiation from DevLog
 - architecture decisions are ADR-only
+- max 12 lines per DevLog entry
+- Notes may be emotional/conversational, but must not include insults, hate/discrimination, secrets/tokens, or PII
 
 3) Telegram Dev Notifications scope:
 - completion-notify channel only

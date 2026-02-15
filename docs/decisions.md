@@ -203,7 +203,12 @@ Telegram integration policy:
 The delivery workflow requires a lightweight execution journal for completed steps and a simple notification signal for completion events. Without explicit boundaries, DevLog or dev-notification channels can drift into architecture decision-making, task planning, or runtime control.
 
 ### Decision
-A dedicated DevLog protocol is mandatory in `docs/agent_devlog.md` with a strict compact entry format and constraints. DevLog entries are execution summaries only and are explicitly non-normative for architecture.
+A dedicated DevLog protocol is mandatory in `docs/agent_devlog.md` with a compact entry format and explicit constraints:
+- maximum 12 lines per entry,
+- execution summary only (non-normative for architecture),
+- no architecture decisions and no new task initiation.
+
+Notes in DevLog entries may use emotional/conversational tone, but must not include insults toward addressees, hate/discrimination, secrets/tokens, or PII.
 
 Telegram Dev Notifications are restricted to completion-notify usage only:
 - notify stage/task completion,
@@ -217,6 +222,7 @@ All architecture decisions remain ADR-only. Dev-notification secrets/tokens are 
 - Architectural governance remains centralized in ADR, avoiding split sources of truth.
 - Dev Telegram channel stays operationally simple and low-risk.
 - Secret handling remains consistent with security baseline (no token leakage in logs).
+- Team communication in DevLog Notes can stay expressive without weakening safety and governance boundaries.
 
 ### Alternatives considered
 - Use DevLog as an architecture decision source: rejected due governance ambiguity and decision drift.
