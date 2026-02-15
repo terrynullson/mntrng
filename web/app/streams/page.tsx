@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { AppButton } from "@/components/ui/app-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -13,7 +12,6 @@ import { resolveCompanyScope } from "@/lib/auth/tenant-scope";
 import type {
   CheckResult,
   CheckStatus,
-  EnqueueCheckJobResponse,
   Project,
   Stream
 } from "@/lib/api/types";
@@ -45,7 +43,7 @@ function normalizeStatus(value: string): CheckStatus | null {
   return null;
 }
 
-export default function StreamsPageV2() {
+export default function StreamsPage() {
   const { user, accessToken, activeCompanyId } = useAuth();
 
   const scopeCompanyId = resolveCompanyScope(user, activeCompanyId);
@@ -62,9 +60,6 @@ export default function StreamsPageV2() {
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [runCheckError, setRunCheckError] = useState<string | null>(null);
-  const [runCheckSuccess, setRunCheckSuccess] = useState<string | null>(null);
-  const [busyStreamID, setBusyStreamID] = useState<number | null>(null);
 
   const loadStreams = async () => {
     if (!accessToken || !scopeCompanyId) {
@@ -77,7 +72,6 @@ export default function StreamsPageV2() {
 
     setIsLoading(true);
     setError(null);
-    setRunCheckError(null);
 
     try {
       const projectResponse = await apiRequest<{ items: Project[] }>(
@@ -171,41 +165,12 @@ export default function StreamsPageV2() {
     });
   }, [latestStatusMap, search, statusFilter, streams]);
 
-  const handleRunCheck = async (stream: Stream) => {
-    if (!accessToken || !scopeCompanyId || isViewer) {
-      return;
-    }
-
-    setBusyStreamID(stream.id);
-    setRunCheckError(null);
-    setRunCheckSuccess(null);
-
-    try {
-      const response = await apiRequest<EnqueueCheckJobResponse>(
-        `/companies/${scopeCompanyId}/streams/${stream.id}/check-jobs`,
-        {
-          method: "POST",
-          accessToken,
-          body: {
-            planned_at: new Date().toISOString()
-          }
-        }
-      );
-
-      setRunCheckSuccess(`Check job #${response.job.id} queued for stream #${stream.id}.`);
-    } catch (runError) {
-      setRunCheckError(toErrorMessage(runError));
-    } finally {
-      setBusyStreamID(null);
-    }
-  };
-
   return (
     <section className="panel">
       <header className="page-header compact">
-        <h2 className="page-title">Streams v2</h2>
+        <h2 className="page-title">Streams</h2>
         <p className="page-note">
-          Tenant-scoped stream list with status badges and manual check trigger.
+          Tenant-scoped stream list with status badges (read-only baseline).
         </p>
       </header>
 
@@ -277,11 +242,8 @@ export default function StreamsPageV2() {
       </div>
 
       {isViewer ? (
-        <StatePanel>Viewer role is read-only. Run check actions are disabled.</StatePanel>
+        <StatePanel>Viewer role is read-only.</StatePanel>
       ) : null}
-
-      {runCheckSuccess ? <StatePanel>{runCheckSuccess}</StatePanel> : null}
-      {runCheckError ? <StatePanel kind="error">{runCheckError}</StatePanel> : null}
       {error ? <StatePanel kind="error">{error}</StatePanel> : null}
       {isLoading ? <SkeletonBlock lines={7} /> : null}
 
@@ -301,7 +263,6 @@ export default function StreamsPageV2() {
                 <th>Last check</th>
                 <th>Is active</th>
                 <th>Updated at</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -328,18 +289,6 @@ export default function StreamsPageV2() {
                     <td>{formatTimestamp(lastCheckAt)}</td>
                     <td>{stream.is_active ? "true" : "false"}</td>
                     <td>{formatTimestamp(stream.updated_at)}</td>
-                    <td>
-                      <AppButton
-                        type="button"
-                        variant="secondary"
-                        disabled={isViewer || busyStreamID === stream.id}
-                        onClick={() => {
-                          void handleRunCheck(stream);
-                        }}
-                      >
-                        {busyStreamID === stream.id ? "Queueing..." : "Run check"}
-                      </AppButton>
-                    </td>
                   </tr>
                 );
               })}

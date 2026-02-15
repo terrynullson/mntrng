@@ -46,3 +46,12 @@ Summary:
 - Подтверждён pass полного test suite для принятого шага.
 Notes:
 Backfill после принятия шага: completion-notify отправлен через `cmd/devnotify`.
+[2026-02-15] [ui-auth-shell-baseline]
+Agent: FrontendAgent
+Commit: pending_single_commit
+Summary:
+- Added baseline security gate for admin UI with public /login and /register.
+- Confirmed protected shell with /me bootstrap, role-aware nav, and logout in topbar.
+- Reduced Requests/Users/Streams/Settings mutation actions to read-only baseline.
+Notes:
+Web build passed; phase-1 closed without backend API changes.

@@ -3,15 +3,10 @@
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { AppButton } from "@/components/ui/app-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { apiRequest, toErrorMessage } from "@/lib/api/client";
-import type {
-  ApproveRegistrationRequest,
-  AuthUser,
-  RegistrationRequest
-} from "@/lib/api/types";
+import type { RegistrationRequest } from "@/lib/api/types";
 
 function formatTimestamp(timestamp: string): string {
   const parsed = new Date(timestamp);
@@ -24,7 +19,6 @@ export default function AdminRequestsPage() {
   const [items, setItems] = useState<RegistrationRequest[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [busyRequestID, setBusyRequestID] = useState<number | null>(null);
 
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -57,63 +51,13 @@ export default function AdminRequestsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, isSuperAdmin]);
 
-  const handleApprove = async (requestItem: RegistrationRequest) => {
-    if (!accessToken || !isSuperAdmin) {
-      return;
-    }
-
-    const payload: ApproveRegistrationRequest = {
-      company_id: requestItem.company_id,
-      role: requestItem.requested_role
-    };
-
-    setBusyRequestID(requestItem.id);
-    try {
-      await apiRequest<AuthUser>(
-        `/admin/registration-requests/${requestItem.id}/approve`,
-        {
-          method: "POST",
-          accessToken,
-          body: payload
-        }
-      );
-      await loadRequests();
-    } catch (approveError) {
-      setError(toErrorMessage(approveError));
-    } finally {
-      setBusyRequestID(null);
-    }
-  };
-
-  const handleReject = async (requestItem: RegistrationRequest) => {
-    if (!accessToken || !isSuperAdmin) {
-      return;
-    }
-
-    const reason = window.prompt("Reject reason (optional):", "");
-
-    setBusyRequestID(requestItem.id);
-    try {
-      await apiRequest<void>(`/admin/registration-requests/${requestItem.id}/reject`, {
-        method: "POST",
-        accessToken,
-        body: {
-          reason: reason ?? ""
-        }
-      });
-      await loadRequests();
-    } catch (rejectError) {
-      setError(toErrorMessage(rejectError));
-    } finally {
-      setBusyRequestID(null);
-    }
-  };
-
   return (
     <section className="panel">
       <header className="page-header compact">
         <h2 className="page-title">Pending Registration Requests</h2>
-        <p className="page-note">Approve or reject controlled sign-up requests.</p>
+        <p className="page-note">
+          Baseline read-only queue for controlled sign-up requests.
+        </p>
       </header>
 
       {!isSuperAdmin ? (
@@ -140,7 +84,6 @@ export default function AdminRequestsPage() {
                 <th>Login</th>
                 <th>Requested role</th>
                 <th>Created at</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -152,28 +95,6 @@ export default function AdminRequestsPage() {
                   <td>{item.login}</td>
                   <td>{item.requested_role}</td>
                   <td>{formatTimestamp(item.created_at)}</td>
-                  <td className="table-actions">
-                    <AppButton
-                      type="button"
-                      variant="secondary"
-                      disabled={busyRequestID === item.id}
-                      onClick={() => {
-                        void handleApprove(item);
-                      }}
-                    >
-                      Approve
-                    </AppButton>
-                    <AppButton
-                      type="button"
-                      variant="danger"
-                      disabled={busyRequestID === item.id}
-                      onClick={() => {
-                        void handleReject(item);
-                      }}
-                    >
-                      Reject
-                    </AppButton>
-                  </td>
                 </tr>
               ))}
             </tbody>
