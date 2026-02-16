@@ -69,7 +69,7 @@ Protected shell и auth guard не трогались; сборка web прош
 
 [2026-02-16] [api-admin-users-phase3]
 Agent: BackendAgent
-Commit: a3cf4cc06b03c2cc2bc5a5bb0eade16ef0348f9b
+Commit: 69c013b9a7df98f52b5173e62160edaad05d60d8
 Summary:
 - Добавлены `GET /api/v1/admin/users` с фильтрами `company_id/role/status/limit` и safe cap.
 - Добавлен `PATCH /api/v1/admin/users/{user_id}/status` с валидацией `active|disabled`.
