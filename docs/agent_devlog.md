@@ -79,7 +79,7 @@ Notes:
 
 [2026-02-16] [ui-admin-users-phase-next]
 Agent: FrontendAgent
-Commit: см. git commit этого шага
+Commit: 497b277a3538a55e2b0089ed46be31b599577ff9
 Summary:
 - Переведена страница `/admin/users` на `GET /api/v1/admin/users` с фильтрами `company_id`, `role`, `status`, `limit`.
 - Добавлена мутация статуса через `PATCH /api/v1/admin/users/{user_id}/status` и обновление строки таблицы без перезагрузки.
