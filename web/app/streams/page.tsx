@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { AppButton } from "@/components/ui/app-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -12,6 +13,7 @@ import { resolveCompanyScope } from "@/lib/auth/tenant-scope";
 import type {
   CheckResult,
   CheckStatus,
+  EnqueueCheckJobResponse,
   Project,
   Stream
 } from "@/lib/api/types";
@@ -60,6 +62,9 @@ export default function StreamsPage() {
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [runCheckError, setRunCheckError] = useState<string | null>(null);
+  const [runCheckSuccess, setRunCheckSuccess] = useState<string | null>(null);
+  const [busyStreamID, setBusyStreamID] = useState<number | null>(null);
 
   const loadStreams = async () => {
     if (!accessToken || !scopeCompanyId) {
@@ -72,6 +77,7 @@ export default function StreamsPage() {
 
     setIsLoading(true);
     setError(null);
+    setRunCheckError(null);
 
     try {
       const projectResponse = await apiRequest<{ items: Project[] }>(
@@ -165,12 +171,41 @@ export default function StreamsPage() {
     });
   }, [latestStatusMap, search, statusFilter, streams]);
 
+  const handleRunCheck = async (stream: Stream) => {
+    if (!accessToken || !scopeCompanyId || isViewer) {
+      return;
+    }
+
+    setBusyStreamID(stream.id);
+    setRunCheckError(null);
+    setRunCheckSuccess(null);
+
+    try {
+      const response = await apiRequest<EnqueueCheckJobResponse>(
+        `/companies/${scopeCompanyId}/streams/${stream.id}/check-jobs`,
+        {
+          method: "POST",
+          accessToken,
+          body: {
+            planned_at: new Date().toISOString()
+          }
+        }
+      );
+
+      setRunCheckSuccess(`Check job #${response.job.id} queued for stream #${stream.id}.`);
+    } catch (runError) {
+      setRunCheckError(toErrorMessage(runError));
+    } finally {
+      setBusyStreamID(null);
+    }
+  };
+
   return (
     <section className="panel">
       <header className="page-header compact">
         <h2 className="page-title">Streams</h2>
         <p className="page-note">
-          Tenant-scoped stream list with status badges (read-only baseline).
+          Tenant-scoped stream list with status badges and manual check trigger.
         </p>
       </header>
 
@@ -242,8 +277,10 @@ export default function StreamsPage() {
       </div>
 
       {isViewer ? (
-        <StatePanel>Viewer role is read-only.</StatePanel>
+        <StatePanel>Viewer role is read-only. Run check actions are disabled.</StatePanel>
       ) : null}
+      {runCheckSuccess ? <StatePanel>{runCheckSuccess}</StatePanel> : null}
+      {runCheckError ? <StatePanel kind="error">{runCheckError}</StatePanel> : null}
       {error ? <StatePanel kind="error">{error}</StatePanel> : null}
       {isLoading ? <SkeletonBlock lines={7} /> : null}
 
@@ -263,6 +300,7 @@ export default function StreamsPage() {
                 <th>Last check</th>
                 <th>Is active</th>
                 <th>Updated at</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -289,6 +327,18 @@ export default function StreamsPage() {
                     <td>{formatTimestamp(lastCheckAt)}</td>
                     <td>{stream.is_active ? "true" : "false"}</td>
                     <td>{formatTimestamp(stream.updated_at)}</td>
+                    <td>
+                      <AppButton
+                        type="button"
+                        variant="secondary"
+                        disabled={isViewer || busyStreamID === stream.id}
+                        onClick={() => {
+                          void handleRunCheck(stream);
+                        }}
+                      >
+                        {busyStreamID === stream.id ? "Queueing..." : "Run check"}
+                      </AppButton>
+                    </td>
                   </tr>
                 );
               })}

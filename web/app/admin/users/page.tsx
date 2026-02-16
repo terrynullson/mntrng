@@ -1,13 +1,23 @@
 "use client";
 
-import { useMemo } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { AppButton } from "@/components/ui/app-button";
 import { StatePanel } from "@/components/ui/state-panel";
-import type { AuthUser } from "@/lib/api/types";
+import { apiRequest, toErrorMessage } from "@/lib/api/client";
+import type { AuthUser, ChangeUserRoleRequest } from "@/lib/api/types";
 
 export default function AdminUsersPage() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
+
+  const [targetUserID, setTargetUserID] = useState<string>("");
+  const [targetCompanyID, setTargetCompanyID] = useState<string>("");
+  const [targetRole, setTargetRole] = useState<"company_admin" | "viewer">("viewer");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [managedUsers, setManagedUsers] = useState<AuthUser[]>([]);
 
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -18,26 +28,124 @@ export default function AdminUsersPage() {
       users.push(user);
     }
 
+    managedUsers.forEach((managedUser) => {
+      if (!users.some((item) => item.id === managedUser.id)) {
+        users.push(managedUser);
+      }
+    });
+
     return users;
-  }, [user]);
+  }, [managedUsers, user]);
+
+  const handleRoleChange = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!accessToken || !isSuperAdmin) {
+      setError("Only super_admin can change user roles.");
+      return;
+    }
+
+    const userID = Number.parseInt(targetUserID, 10);
+    const companyID = Number.parseInt(targetCompanyID, 10);
+    if (!Number.isFinite(userID) || userID <= 0) {
+      setError("user_id must be a positive number.");
+      return;
+    }
+    if (!Number.isFinite(companyID) || companyID <= 0) {
+      setError("company_id must be a positive number.");
+      return;
+    }
+
+    const payload: ChangeUserRoleRequest = {
+      role: targetRole,
+      company_id: companyID
+    };
+
+    setError(null);
+    setSuccess(null);
+    setIsSubmitting(true);
+
+    try {
+      const updated = await apiRequest<AuthUser>(`/admin/users/${userID}/role`, {
+        method: "PATCH",
+        accessToken,
+        body: payload
+      });
+
+      setManagedUsers((previous) => {
+        const withoutCurrent = previous.filter((item) => item.id !== updated.id);
+        return [updated, ...withoutCurrent];
+      });
+      setSuccess(`Updated user #${updated.id} role to ${updated.role}.`);
+    } catch (submitError) {
+      setError(toErrorMessage(submitError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <section className="panel">
       <header className="page-header compact">
         <h2 className="page-title">Users</h2>
         <p className="page-note">
-          Baseline role-aware user view from authenticated context.
+          Super admin can manage roles; statuses are visible in read-only mode.
         </p>
       </header>
 
-      {isSuperAdmin ? (
+      {!isSuperAdmin ? (
         <StatePanel>
-          Super admin authenticated. User management actions are deferred to the
-          next phase.
+          Read-only mode. Your role does not permit user management actions.
         </StatePanel>
       ) : (
-        <StatePanel>Read-only mode for current role.</StatePanel>
+        <form className="role-form" onSubmit={handleRoleChange}>
+          <label className="form-field" htmlFor="role-user-id">
+            <span>User ID</span>
+            <input
+              id="role-user-id"
+              type="number"
+              value={targetUserID}
+              onChange={(event) => setTargetUserID(event.target.value)}
+              disabled={isSubmitting}
+            />
+          </label>
+
+          <label className="form-field" htmlFor="role-company-id">
+            <span>Company ID</span>
+            <input
+              id="role-company-id"
+              type="number"
+              value={targetCompanyID}
+              onChange={(event) => setTargetCompanyID(event.target.value)}
+              disabled={isSubmitting}
+            />
+          </label>
+
+          <label className="form-field" htmlFor="role-value">
+            <span>Role</span>
+            <select
+              id="role-value"
+              value={targetRole}
+              onChange={(event) =>
+                setTargetRole(event.target.value as "company_admin" | "viewer")
+              }
+              disabled={isSubmitting}
+            >
+              <option value="viewer">viewer</option>
+              <option value="company_admin">company_admin</option>
+            </select>
+          </label>
+
+          <div className="role-form-action">
+            <AppButton type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Updating..." : "Apply role"}
+            </AppButton>
+          </div>
+        </form>
       )}
+
+      {error ? <StatePanel kind="error">{error}</StatePanel> : null}
+      {success ? <StatePanel>{success}</StatePanel> : null}
 
       <div className="table-wrap">
         <table>
