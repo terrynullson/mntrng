@@ -76,3 +76,13 @@ Summary:
 - Добавлен audit `status_change` с payload (`user_id`, `old_status`, `new_status`, `actor_user_id`).
 Notes:
 Закрыли админский user-management шаг для Secure Admin UI v2, без дрейфа по RBAC/tenant инвариантам.
+
+[2026-02-16] [ui-admin-users-phase-next]
+Agent: FrontendAgent
+Commit: см. git commit этого шага
+Summary:
+- Переведена страница `/admin/users` на `GET /api/v1/admin/users` с фильтрами `company_id`, `role`, `status`, `limit`.
+- Добавлена мутация статуса через `PATCH /api/v1/admin/users/{user_id}/status` и обновление строки таблицы без перезагрузки.
+- Усилен RBAC в UI: `super_admin` управляет role/status, `company_admin` и `viewer` работают только в read-only режиме.
+Notes:
+Protected-shell и auth flow сохранены; сборка web проходит, визуальный канон admin-first удержан.

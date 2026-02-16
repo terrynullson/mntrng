@@ -74,6 +74,17 @@ export type ChangeUserRoleRequest = {
   company_id: number;
 };
 
+export type ChangeUserStatusRequest = {
+  status: UserStatus;
+};
+
+export type AdminUsersListFilters = {
+  company_id?: number;
+  role?: Role;
+  status?: UserStatus;
+  limit?: number;
+};
+
 export type Company = {
   id: number;
   name: string;

@@ -1,86 +1,278 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppButton } from "@/components/ui/app-button";
+import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { apiRequest, toErrorMessage } from "@/lib/api/client";
-import type { AuthUser, ChangeUserRoleRequest } from "@/lib/api/types";
+import type {
+  AdminUsersListFilters,
+  ApiListResponse,
+  AuthUser,
+  ChangeUserRoleRequest,
+  ChangeUserStatusRequest,
+  Role,
+  UserStatus
+} from "@/lib/api/types";
+
+type RoleFilter = "all" | Role;
+type StatusFilter = "all" | UserStatus;
+type EditableRole = Extract<Role, "company_admin" | "viewer">;
+
+type AppliedFilters = {
+  companyID: number | null;
+  role: RoleFilter;
+  status: StatusFilter;
+  limit: number;
+};
+
+const DEFAULT_LIMIT = 50;
+
+function formatTimestamp(timestamp: string): string {
+  const parsed = new Date(timestamp);
+  return Number.isNaN(parsed.getTime()) ? timestamp : parsed.toLocaleString();
+}
+
+function asEditableRole(value: string): EditableRole {
+  return value === "company_admin" ? "company_admin" : "viewer";
+}
+
+function buildUsersQuery(filters: AppliedFilters): string {
+  const params = new URLSearchParams();
+  const requestFilters: AdminUsersListFilters = { limit: filters.limit };
+
+  if (filters.companyID !== null) {
+    requestFilters.company_id = filters.companyID;
+  }
+  if (filters.role !== "all") {
+    requestFilters.role = filters.role;
+  }
+  if (filters.status !== "all") {
+    requestFilters.status = filters.status;
+  }
+
+  if (requestFilters.company_id !== undefined) {
+    params.set("company_id", String(requestFilters.company_id));
+  }
+  if (requestFilters.role) {
+    params.set("role", requestFilters.role);
+  }
+  if (requestFilters.status) {
+    params.set("status", requestFilters.status);
+  }
+  if (requestFilters.limit !== undefined) {
+    params.set("limit", String(requestFilters.limit));
+  }
+
+  const query = params.toString();
+  return query ? `/admin/users?${query}` : "/admin/users";
+}
 
 export default function AdminUsersPage() {
-  const { user, accessToken } = useAuth();
-
-  const [targetUserID, setTargetUserID] = useState<string>("");
-  const [targetCompanyID, setTargetCompanyID] = useState<string>("");
-  const [targetRole, setTargetRole] = useState<"company_admin" | "viewer">("viewer");
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [managedUsers, setManagedUsers] = useState<AuthUser[]>([]);
-
+  const { user, accessToken, companies } = useAuth();
   const isSuperAdmin = user?.role === "super_admin";
 
-  const tableUsers = useMemo(() => {
-    const users: AuthUser[] = [];
+  const [items, setItems] = useState<AuthUser[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
-    if (user) {
-      users.push(user);
-    }
+  const [companyFilterDraft, setCompanyFilterDraft] = useState<string>("");
+  const [roleFilterDraft, setRoleFilterDraft] = useState<RoleFilter>("all");
+  const [statusFilterDraft, setStatusFilterDraft] = useState<StatusFilter>("all");
+  const [limitDraft, setLimitDraft] = useState<string>(String(DEFAULT_LIMIT));
 
-    managedUsers.forEach((managedUser) => {
-      if (!users.some((item) => item.id === managedUser.id)) {
-        users.push(managedUser);
+  const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
+    companyID: null,
+    role: "all",
+    status: "all",
+    limit: DEFAULT_LIMIT
+  });
+
+  const [roleDrafts, setRoleDrafts] = useState<Record<number, EditableRole>>({});
+  const [companyDrafts, setCompanyDrafts] = useState<Record<number, string>>({});
+  const [statusDrafts, setStatusDrafts] = useState<Record<number, UserStatus>>({});
+  const [busyRoleUserID, setBusyRoleUserID] = useState<number | null>(null);
+  const [busyStatusUserID, setBusyStatusUserID] = useState<number | null>(null);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (!isSuperAdmin) {
+        setItems(user ? [user] : []);
+        setError(null);
+        setIsLoading(false);
+        return;
       }
+
+      if (!accessToken) {
+        setItems([]);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      setActionError(null);
+
+      try {
+        const response = await apiRequest<ApiListResponse<AuthUser>>(
+          buildUsersQuery(appliedFilters),
+          { accessToken }
+        );
+        setItems(Array.isArray(response.items) ? response.items : []);
+      } catch (loadError) {
+        setError(toErrorMessage(loadError));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadUsers();
+  }, [accessToken, appliedFilters, isSuperAdmin, user]);
+
+  useEffect(() => {
+    const nextRoleDrafts: Record<number, EditableRole> = {};
+    const nextCompanyDrafts: Record<number, string> = {};
+    const nextStatusDrafts: Record<number, UserStatus> = {};
+
+    items.forEach((item) => {
+      if (item.role === "company_admin" || item.role === "viewer") {
+        nextRoleDrafts[item.id] = item.role;
+        nextCompanyDrafts[item.id] = item.company_id ? String(item.company_id) : "";
+      }
+      nextStatusDrafts[item.id] = item.status;
     });
 
-    return users;
-  }, [managedUsers, user]);
+    setRoleDrafts(nextRoleDrafts);
+    setCompanyDrafts(nextCompanyDrafts);
+    setStatusDrafts(nextStatusDrafts);
+  }, [items]);
 
-  const handleRoleChange = async (event: FormEvent<HTMLFormElement>) => {
+  const applyFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!accessToken || !isSuperAdmin) {
-      setError("Only super_admin can change user roles.");
+    const parsedLimit = Number.parseInt(limitDraft, 10);
+    if (!Number.isFinite(parsedLimit) || parsedLimit <= 0) {
+      setError("limit must be a positive number.");
       return;
     }
 
-    const userID = Number.parseInt(targetUserID, 10);
-    const companyID = Number.parseInt(targetCompanyID, 10);
-    if (!Number.isFinite(userID) || userID <= 0) {
-      setError("user_id must be a positive number.");
+    let parsedCompanyID: number | null = null;
+    const companyValue = companyFilterDraft.trim();
+    if (companyValue) {
+      const candidate = Number.parseInt(companyValue, 10);
+      if (!Number.isFinite(candidate) || candidate <= 0) {
+        setError("company_id must be a positive number.");
+        return;
+      }
+      parsedCompanyID = candidate;
+    }
+
+    setError(null);
+    setActionSuccess(null);
+    setAppliedFilters({
+      companyID: parsedCompanyID,
+      role: roleFilterDraft,
+      status: statusFilterDraft,
+      limit: parsedLimit
+    });
+  };
+
+  const resetFilters = () => {
+    setCompanyFilterDraft("");
+    setRoleFilterDraft("all");
+    setStatusFilterDraft("all");
+    setLimitDraft(String(DEFAULT_LIMIT));
+    setError(null);
+    setAppliedFilters({
+      companyID: null,
+      role: "all",
+      status: "all",
+      limit: DEFAULT_LIMIT
+    });
+  };
+
+  const applyUserUpdate = (updated: AuthUser) => {
+    setItems((previous) =>
+      previous.map((item) => (item.id === updated.id ? updated : item))
+    );
+  };
+
+  const handleRoleChange = async (targetUser: AuthUser) => {
+    if (!accessToken || !isSuperAdmin) {
       return;
     }
+    if (targetUser.role === "super_admin") {
+      setActionError("super_admin role cannot be edited from this panel.");
+      return;
+    }
+
+    const roleDraft = roleDrafts[targetUser.id] ?? asEditableRole(targetUser.role);
+    const companyRaw = (companyDrafts[targetUser.id] ?? "").trim();
+    const companyID = Number.parseInt(companyRaw, 10);
     if (!Number.isFinite(companyID) || companyID <= 0) {
-      setError("company_id must be a positive number.");
+      setActionError("company_id must be a positive number for role update.");
       return;
     }
 
     const payload: ChangeUserRoleRequest = {
-      role: targetRole,
+      role: roleDraft,
       company_id: companyID
     };
 
-    setError(null);
-    setSuccess(null);
-    setIsSubmitting(true);
+    setBusyRoleUserID(targetUser.id);
+    setActionError(null);
+    setActionSuccess(null);
 
     try {
-      const updated = await apiRequest<AuthUser>(`/admin/users/${userID}/role`, {
+      const updated = await apiRequest<AuthUser>(`/admin/users/${targetUser.id}/role`, {
         method: "PATCH",
         accessToken,
         body: payload
       });
-
-      setManagedUsers((previous) => {
-        const withoutCurrent = previous.filter((item) => item.id !== updated.id);
-        return [updated, ...withoutCurrent];
-      });
-      setSuccess(`Updated user #${updated.id} role to ${updated.role}.`);
-    } catch (submitError) {
-      setError(toErrorMessage(submitError));
+      applyUserUpdate(updated);
+      setActionSuccess(`Role updated for user #${updated.id}.`);
+    } catch (requestError) {
+      setActionError(toErrorMessage(requestError));
     } finally {
-      setIsSubmitting(false);
+      setBusyRoleUserID(null);
+    }
+  };
+
+  const handleStatusChange = async (targetUser: AuthUser) => {
+    if (!accessToken || !isSuperAdmin) {
+      return;
+    }
+    if (targetUser.role === "super_admin") {
+      setActionError("super_admin status is not managed in tenant scope.");
+      return;
+    }
+
+    const status = statusDrafts[targetUser.id] ?? targetUser.status;
+    const payload: ChangeUserStatusRequest = { status };
+
+    setBusyStatusUserID(targetUser.id);
+    setActionError(null);
+    setActionSuccess(null);
+
+    try {
+      const updated = await apiRequest<AuthUser>(
+        `/admin/users/${targetUser.id}/status`,
+        {
+          method: "PATCH",
+          accessToken,
+          body: payload
+        }
+      );
+      applyUserUpdate(updated);
+      setActionSuccess(`Status updated for user #${updated.id}.`);
+    } catch (requestError) {
+      setActionError(toErrorMessage(requestError));
+    } finally {
+      setBusyStatusUserID(null);
     }
   };
 
@@ -89,96 +281,235 @@ export default function AdminUsersPage() {
       <header className="page-header compact">
         <h2 className="page-title">Users</h2>
         <p className="page-note">
-          Super admin can manage roles; statuses are visible in read-only mode.
+          Admin users list with filters and RBAC-limited management actions.
         </p>
       </header>
 
       {!isSuperAdmin ? (
         <StatePanel>
-          Read-only mode. Your role does not permit user management actions.
+          Read-only mode. Role and status mutations are available only for super_admin.
         </StatePanel>
       ) : (
-        <form className="role-form" onSubmit={handleRoleChange}>
-          <label className="form-field" htmlFor="role-user-id">
-            <span>User ID</span>
-            <input
-              id="role-user-id"
-              type="number"
-              value={targetUserID}
-              onChange={(event) => setTargetUserID(event.target.value)}
-              disabled={isSubmitting}
-            />
-          </label>
-
-          <label className="form-field" htmlFor="role-company-id">
-            <span>Company ID</span>
-            <input
-              id="role-company-id"
-              type="number"
-              value={targetCompanyID}
-              onChange={(event) => setTargetCompanyID(event.target.value)}
-              disabled={isSubmitting}
-            />
-          </label>
-
-          <label className="form-field" htmlFor="role-value">
-            <span>Role</span>
+        <form className="filters-grid users-filters" onSubmit={applyFilters}>
+          <label className="form-field" htmlFor="users-company-filter">
+            <span>Company</span>
             <select
-              id="role-value"
-              value={targetRole}
-              onChange={(event) =>
-                setTargetRole(event.target.value as "company_admin" | "viewer")
-              }
-              disabled={isSubmitting}
+              id="users-company-filter"
+              value={companyFilterDraft}
+              onChange={(event) => setCompanyFilterDraft(event.target.value)}
+              disabled={isLoading}
             >
-              <option value="viewer">viewer</option>
-              <option value="company_admin">company_admin</option>
+              <option value="">All companies</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name} ({company.id})
+                </option>
+              ))}
             </select>
           </label>
 
-          <div className="role-form-action">
-            <AppButton type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Updating..." : "Apply role"}
+          <label className="form-field" htmlFor="users-role-filter">
+            <span>Role</span>
+            <select
+              id="users-role-filter"
+              value={roleFilterDraft}
+              onChange={(event) => setRoleFilterDraft(event.target.value as RoleFilter)}
+              disabled={isLoading}
+            >
+              <option value="all">All roles</option>
+              <option value="super_admin">super_admin</option>
+              <option value="company_admin">company_admin</option>
+              <option value="viewer">viewer</option>
+            </select>
+          </label>
+
+          <label className="form-field" htmlFor="users-status-filter">
+            <span>Status</span>
+            <select
+              id="users-status-filter"
+              value={statusFilterDraft}
+              onChange={(event) =>
+                setStatusFilterDraft(event.target.value as StatusFilter)
+              }
+              disabled={isLoading}
+            >
+              <option value="all">All statuses</option>
+              <option value="active">active</option>
+              <option value="disabled">disabled</option>
+            </select>
+          </label>
+
+          <label className="form-field" htmlFor="users-limit-filter">
+            <span>Limit</span>
+            <input
+              id="users-limit-filter"
+              type="number"
+              min={1}
+              max={200}
+              value={limitDraft}
+              onChange={(event) => setLimitDraft(event.target.value)}
+              disabled={isLoading}
+            />
+          </label>
+
+          <div className="users-filter-actions">
+            <AppButton type="submit" variant="secondary" disabled={isLoading}>
+              Apply filters
+            </AppButton>
+            <AppButton
+              type="button"
+              variant="ghost"
+              disabled={isLoading}
+              onClick={resetFilters}
+            >
+              Reset
             </AppButton>
           </div>
         </form>
       )}
 
       {error ? <StatePanel kind="error">{error}</StatePanel> : null}
-      {success ? <StatePanel>{success}</StatePanel> : null}
+      {actionError ? <StatePanel kind="error">{actionError}</StatePanel> : null}
+      {actionSuccess ? <StatePanel>{actionSuccess}</StatePanel> : null}
+      {isLoading ? <SkeletonBlock lines={7} /> : null}
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>User ID</th>
-              <th>Login</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Company ID</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tableUsers.length === 0 ? (
+      {!isLoading && !error && isSuperAdmin && items.length === 0 ? (
+        <StatePanel>No users found for selected filters.</StatePanel>
+      ) : null}
+
+      {!isLoading && !error && items.length > 0 ? (
+        <div className="table-wrap">
+          <table>
+            <thead>
               <tr>
-                <td colSpan={6}>No user data available.</td>
+                <th>ID</th>
+                <th>Login</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Company</th>
+                <th>Updated at</th>
+                <th>Actions</th>
               </tr>
-            ) : (
-              tableUsers.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.id}</td>
-                  <td>{item.login}</td>
-                  <td>{item.email}</td>
-                  <td>{item.role}</td>
-                  <td>{item.status}</td>
-                  <td>{item.company_id ?? "-"}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {items.map((item) => {
+                const canMutateRow = isSuperAdmin && item.role !== "super_admin";
+                const roleValue =
+                  roleDrafts[item.id] ?? asEditableRole(item.role);
+                const companyValue =
+                  companyDrafts[item.id] ??
+                  (item.company_id ? String(item.company_id) : "");
+                const statusValue = statusDrafts[item.id] ?? item.status;
+
+                return (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+                    <td>{item.login}</td>
+                    <td>{item.email}</td>
+                    <td>{item.role}</td>
+                    <td>{item.status}</td>
+                    <td>{item.company_id ?? "-"}</td>
+                    <td>{formatTimestamp(item.updated_at)}</td>
+                    <td>
+                      {canMutateRow ? (
+                        <div className="users-actions">
+                          <div className="users-action-row">
+                            <select
+                              aria-label={`Role for user ${item.id}`}
+                              value={roleValue}
+                              onChange={(event) =>
+                                setRoleDrafts((previous) => ({
+                                  ...previous,
+                                  [item.id]: asEditableRole(event.target.value)
+                                }))
+                              }
+                              disabled={
+                                busyRoleUserID === item.id ||
+                                busyStatusUserID === item.id
+                              }
+                            >
+                              <option value="company_admin">company_admin</option>
+                              <option value="viewer">viewer</option>
+                            </select>
+                            <input
+                              aria-label={`Company for user ${item.id}`}
+                              type="number"
+                              min={1}
+                              value={companyValue}
+                              onChange={(event) =>
+                                setCompanyDrafts((previous) => ({
+                                  ...previous,
+                                  [item.id]: event.target.value
+                                }))
+                              }
+                              disabled={
+                                busyRoleUserID === item.id ||
+                                busyStatusUserID === item.id
+                              }
+                              placeholder="Company ID"
+                            />
+                            <AppButton
+                              type="button"
+                              variant="secondary"
+                              disabled={
+                                busyRoleUserID === item.id ||
+                                busyStatusUserID === item.id
+                              }
+                              onClick={() => {
+                                void handleRoleChange(item);
+                              }}
+                            >
+                              {busyRoleUserID === item.id ? "Saving..." : "Save role"}
+                            </AppButton>
+                          </div>
+
+                          <div className="users-action-row">
+                            <select
+                              aria-label={`Status for user ${item.id}`}
+                              value={statusValue}
+                              onChange={(event) =>
+                                setStatusDrafts((previous) => ({
+                                  ...previous,
+                                  [item.id]: event.target.value as UserStatus
+                                }))
+                              }
+                              disabled={
+                                busyRoleUserID === item.id ||
+                                busyStatusUserID === item.id
+                              }
+                            >
+                              <option value="active">active</option>
+                              <option value="disabled">disabled</option>
+                            </select>
+                            <AppButton
+                              type="button"
+                              variant="secondary"
+                              disabled={
+                                busyRoleUserID === item.id ||
+                                busyStatusUserID === item.id
+                              }
+                              onClick={() => {
+                                void handleStatusChange(item);
+                              }}
+                            >
+                              {busyStatusUserID === item.id
+                                ? "Saving..."
+                                : "Save status"}
+                            </AppButton>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="status-muted">Read-only</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -313,6 +313,10 @@ textarea:focus-visible {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.users-filters {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .analytics-filters {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -360,6 +364,12 @@ textarea:focus-visible {
 .analytics-actions {
   display: flex;
   align-items: flex-end;
+}
+
+.users-filter-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .company-search {
@@ -437,6 +447,35 @@ tbody tr:last-child td {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.users-actions {
+  display: grid;
+  gap: 8px;
+  min-width: 280px;
+}
+
+.users-action-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.users-action-row select,
+.users-action-row input {
+  min-height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 0.8rem;
+  transition: border-color 150ms ease-out, background-color 150ms ease-out;
+}
+
+.users-action-row input {
+  width: 110px;
 }
 
 .state {
@@ -669,6 +708,7 @@ tbody tr:last-child td {
 @media (max-width: 1080px) {
   .filters-grid,
   .streams-v2-filters,
+  .users-filters,
   .analytics-filters,
   .role-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -704,6 +744,7 @@ tbody tr:last-child td {
 
   .filters-grid,
   .streams-v2-filters,
+  .users-filters,
   .analytics-filters,
   .role-form {
     grid-template-columns: 1fr;
