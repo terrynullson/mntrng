@@ -1,4 +1,4 @@
-# Agent DevLog Protocol
+﻿# Agent DevLog Protocol
 
 ## Entry format (mandatory)
 
@@ -46,6 +46,7 @@ Summary:
 - Подтверждён pass полного test suite для принятого шага.
 Notes:
 Backfill после принятия шага: completion-notify отправлен через `cmd/devnotify`.
+
 [2026-02-15] [ui-auth-shell-baseline]
 Agent: FrontendAgent
 Commit: 270ef36d53623be0e69cee011a6df7d0af27091f
@@ -55,12 +56,13 @@ Summary:
 - Страницы Requests/Users/Streams/Settings приведены к read-only baseline без мутаций.
 Notes:
 Сборка web прошла, шаг закрыт без изменений backend/runtime API; дрейф по протоколу подчищен.
+
 [2026-02-16] [ui-rbac-mutations-phase2]
 Agent: FrontendAgent
-Commit: pending_single_commit
+Commit: f0136015d007a5a2bb638c8b267881512894d44c
 Summary:
-- ������������� approve/reject �������� � `/admin/requests` ������ ��� super_admin.
-- ���������� role-management controls � `/admin/users` ��� super_admin; ��������� ���� ��������� � read-only.
-- � `/streams` ��������� Run check � RBAC-�������, � `/settings` ������������ Telegram link/reconnect flow.
+- Восстановлены approve/reject действия в `/admin/requests` только для super_admin.
+- Возвращены role-management controls в `/admin/users` для super_admin; остальные роли оставлены в read-only.
+- В `/streams` возвращён Run check с RBAC-гейтами, в `/settings` восстановлен Telegram link/reconnect flow.
 Notes:
-Protected shell � auth guard �� ���������; ������ web ������, ��� ������ ��� ��������� backend/runtime API.
+Protected shell и auth guard не трогались; сборка web прошла, шаг закрыт без изменений backend/runtime API.
