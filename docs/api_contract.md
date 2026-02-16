@@ -351,6 +351,57 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 - `200` -> updated user profile.
 - Errors: `400`, `401`, `403`, `404`, `500`.
 
+### `GET /api/v1/admin/users`
+
+- Protected, `super_admin` only.
+- Purpose: list users for Admin UI with optional filters.
+- Query params (all optional):
+  - `company_id` (`integer`, filter by tenant company)
+  - `role` (`super_admin|company_admin|viewer`)
+  - `status` (`active|disabled`)
+  - `limit` (`integer`, positive, capped server-side for safe response size)
+- `200`:
+
+```json
+{
+  "items": [
+    {
+      "id": 14,
+      "company_id": 10,
+      "email": "viewer@example.com",
+      "login": "viewer01",
+      "role": "viewer",
+      "status": "active",
+      "created_at": "2026-02-16T10:00:00Z",
+      "updated_at": "2026-02-16T10:00:00Z"
+    }
+  ],
+  "next_cursor": null
+}
+```
+
+- Errors: `400`, `401`, `403`, `500`.
+
+### `PATCH /api/v1/admin/users/{user_id}/status`
+
+- Protected, `super_admin` only.
+- Body:
+
+```json
+{
+  "status": "disabled"
+}
+```
+
+- Allowed status values: `active`, `disabled`.
+- Writes audit log entry (`entity_type=user`, `action=status_change`) with payload:
+  - `user_id`
+  - `old_status`
+  - `new_status`
+  - `actor_user_id`
+- `200` -> updated user profile.
+- Errors: `400`, `401`, `403`, `404`, `500`.
+
 ## 5.3 Companies (CRUD)
 
 ### `POST /companies`

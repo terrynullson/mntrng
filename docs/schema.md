@@ -35,6 +35,7 @@ Migration `0002_telegram_delivery_settings` adds `telegram_delivery_settings` as
 ## Authentication and registration tables
 
 Migration `0004_auth_and_registration` adds authentication, controlled registration, Telegram identity links, and revokable session storage.
+Admin user-management endpoints (`/api/v1/admin/users*`) reuse these tables and constraints; no additional schema changes are required.
 
 ### users
 

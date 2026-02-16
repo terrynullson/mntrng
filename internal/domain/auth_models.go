@@ -116,3 +116,19 @@ type ChangeUserRoleRequest struct {
 	Role      string `json:"role"`
 	CompanyID *int64 `json:"company_id"`
 }
+
+type ChangeUserStatusRequest struct {
+	Status string `json:"status"`
+}
+
+type AdminUserListResponse struct {
+	Items      []AuthUser `json:"items"`
+	NextCursor *string    `json:"next_cursor"`
+}
+
+type AdminUserListFilter struct {
+	CompanyID *int64
+	Role      *string
+	Status    *string
+	Limit     int
+}

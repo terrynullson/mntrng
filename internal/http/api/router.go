@@ -1,9 +1,7 @@
 package api
 
 import (
-	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -60,9 +58,11 @@ type RouterHandlers struct {
 	HandleTelegramLogin              http.HandlerFunc
 	HandleTelegramLink               http.HandlerFunc
 	HandleListPendingRegistration    http.HandlerFunc
+	HandleListUsers                  http.HandlerFunc
 	HandleApproveRegistrationRequest adminResourceHandler
 	HandleRejectRegistrationRequest  adminResourceHandler
 	HandleChangeUserRole             adminResourceHandler
+	HandleChangeUserStatus           adminResourceHandler
 }
 
 func NewRouter(handlers RouterHandlers) http.Handler {
@@ -94,6 +94,9 @@ func NewRouter(handlers RouterHandlers) http.Handler {
 	})
 	mux.HandleFunc("/api/v1/admin/registration-requests/", func(w http.ResponseWriter, r *http.Request) {
 		routeAdminRegistrationRequests(w, r, handlers)
+	})
+	mux.HandleFunc("/api/v1/admin/users", func(w http.ResponseWriter, r *http.Request) {
+		routeAdminUsersCollection(w, r, handlers)
 	})
 	mux.HandleFunc("/api/v1/admin/users/", func(w http.ResponseWriter, r *http.Request) {
 		routeAdminUsers(w, r, handlers)
@@ -360,47 +363,4 @@ func routeStreamCheckJobsCollection(w http.ResponseWriter, r *http.Request, hand
 
 func writeRouterPathNotFound(w http.ResponseWriter, r *http.Request) {
 	WriteJSONError(w, r, http.StatusNotFound, "not_found", "resource not found", map[string]interface{}{"path": r.URL.Path})
-}
-
-func parseCompanyPath(path string) (int64, string, string) {
-	const prefix = "/api/v1/companies/"
-	if !strings.HasPrefix(path, prefix) {
-		return 0, "", "not_found"
-	}
-
-	rawPath := strings.TrimPrefix(path, prefix)
-	if rawPath == "" {
-		return 0, "", "not_found"
-	}
-
-	parts := strings.SplitN(rawPath, "/", 2)
-	companyID, err := parsePositiveID(parts[0])
-	if err != nil {
-		return 0, "", "validation_error"
-	}
-
-	if len(parts) == 1 {
-		return companyID, "", ""
-	}
-	if parts[1] == "" {
-		return 0, "", "not_found"
-	}
-
-	return companyID, parts[1], ""
-}
-
-func parsePositiveID(rawID string) (int64, error) {
-	value, err := strconv.ParseInt(rawID, 10, 64)
-	if err != nil || value <= 0 {
-		return 0, errors.New("invalid id")
-	}
-	return value, nil
-}
-
-func ParseCompanyPath(path string) (int64, string, string) {
-	return parseCompanyPath(path)
-}
-
-func ParsePositiveID(rawID string) (int64, error) {
-	return parsePositiveID(rawID)
 }

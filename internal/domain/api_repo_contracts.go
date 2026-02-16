@@ -28,6 +28,7 @@ var (
 	ErrUserNotFound            = errors.New("user_not_found")
 	ErrUserAlreadyExists       = errors.New("user_already_exists")
 	ErrUserDisabled            = errors.New("user_disabled")
+	ErrUserScopeNotSupported   = errors.New("user_scope_not_supported")
 	ErrInvalidCredentials      = errors.New("invalid_credentials")
 	ErrSessionNotFound         = errors.New("session_not_found")
 	ErrSessionExpired          = errors.New("session_expired")

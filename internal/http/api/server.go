@@ -41,6 +41,8 @@ type registrationRequest = domain.RegistrationRequest
 type approveRegistrationRequest = domain.ApproveRegistrationRequest
 type rejectRegistrationRequest = domain.RejectRegistrationRequest
 type changeUserRoleRequest = domain.ChangeUserRoleRequest
+type changeUserStatusRequest = domain.ChangeUserStatusRequest
+type adminUserListResponse = domain.AdminUserListResponse
 
 type Server struct {
 	companyService      *serviceapi.CompanyService
@@ -118,8 +120,10 @@ func (s *Server) RouterHandlers() RouterHandlers {
 		HandleTelegramLogin:              s.handleTelegramLogin,
 		HandleTelegramLink:               s.handleTelegramLink,
 		HandleListPendingRegistration:    s.handleListPendingRegistrationRequests,
+		HandleListUsers:                  s.handleListUsers,
 		HandleApproveRegistrationRequest: s.handleApproveRegistrationRequest,
 		HandleRejectRegistrationRequest:  s.handleRejectRegistrationRequest,
 		HandleChangeUserRole:             s.handleChangeUserRole,
+		HandleChangeUserStatus:           s.handleChangeUserStatus,
 	}
 }

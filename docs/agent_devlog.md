@@ -66,3 +66,13 @@ Summary:
 - В `/streams` возвращён Run check с RBAC-гейтами, в `/settings` восстановлен Telegram link/reconnect flow.
 Notes:
 Protected shell и auth guard не трогались; сборка web прошла, шаг закрыт без изменений backend/runtime API.
+
+[2026-02-16] [api-admin-users-phase3]
+Agent: BackendAgent
+Commit: a3cf4cc06b03c2cc2bc5a5bb0eade16ef0348f9b
+Summary:
+- Добавлены `GET /api/v1/admin/users` с фильтрами `company_id/role/status/limit` и safe cap.
+- Добавлен `PATCH /api/v1/admin/users/{user_id}/status` с валидацией `active|disabled`.
+- Добавлен audit `status_change` с payload (`user_id`, `old_status`, `new_status`, `actor_user_id`).
+Notes:
+Закрыли админский user-management шаг для Secure Admin UI v2, без дрейфа по RBAC/tenant инвариантам.

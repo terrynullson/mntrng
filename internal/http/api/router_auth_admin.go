@@ -116,7 +116,7 @@ func routeAdminUsers(w http.ResponseWriter, r *http.Request, handlers RouterHand
 
 	rawPath := strings.TrimPrefix(r.URL.Path, prefix)
 	parts := strings.Split(rawPath, "/")
-	if len(parts) != 2 || parts[1] != "role" {
+	if len(parts) != 2 {
 		writeRouterPathNotFound(w, r)
 		return
 	}
@@ -127,9 +127,28 @@ func routeAdminUsers(w http.ResponseWriter, r *http.Request, handlers RouterHand
 		return
 	}
 
-	if r.Method == http.MethodPatch {
-		handlers.HandleChangeUserRole(w, r, userID)
+	switch parts[1] {
+	case "role":
+		if r.Method == http.MethodPatch {
+			handlers.HandleChangeUserRole(w, r, userID)
+			return
+		}
+		WriteMethodNotAllowed(w, r, http.MethodPatch)
+	case "status":
+		if r.Method == http.MethodPatch {
+			handlers.HandleChangeUserStatus(w, r, userID)
+			return
+		}
+		WriteMethodNotAllowed(w, r, http.MethodPatch)
+	default:
+		writeRouterPathNotFound(w, r)
+	}
+}
+
+func routeAdminUsersCollection(w http.ResponseWriter, r *http.Request, handlers RouterHandlers) {
+	if r.Method == http.MethodGet {
+		handlers.HandleListUsers(w, r)
 		return
 	}
-	WriteMethodNotAllowed(w, r, http.MethodPatch)
+	WriteMethodNotAllowed(w, r, http.MethodGet)
 }
