@@ -48,10 +48,10 @@ Notes:
 Backfill после принятия шага: completion-notify отправлен через `cmd/devnotify`.
 [2026-02-15] [ui-auth-shell-baseline]
 Agent: FrontendAgent
-Commit: pending_single_commit
+Commit: 270ef36d53623be0e69cee011a6df7d0af27091f
 Summary:
-- Added baseline security gate for admin UI with public /login and /register.
-- Confirmed protected shell with /me bootstrap, role-aware nav, and logout in topbar.
-- Reduced Requests/Users/Streams/Settings mutation actions to read-only baseline.
+- Закрыт baseline security-gate: публичные страницы `/login` и `/register`.
+- Подтверждён protected shell с `/me` bootstrap, role-aware navigation и logout в topbar.
+- Страницы Requests/Users/Streams/Settings приведены к read-only baseline без мутаций.
 Notes:
-Web build passed; phase-1 closed without backend API changes.
+Сборка web прошла, шаг закрыт без изменений backend/runtime API; дрейф по протоколу подчищен.
