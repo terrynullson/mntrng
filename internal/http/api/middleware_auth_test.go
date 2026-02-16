@@ -89,6 +89,29 @@ func TestAuthMiddlewareDeniesRequestWithoutToken(t *testing.T) {
 	}
 }
 
+func TestAuthMiddlewareDeniesTelegramLinkWithoutToken(t *testing.T) {
+	server := &Server{authService: serviceapi.NewAuthService(&middlewareAuthStore{}, serviceapi.AuthConfig{})}
+	middleware := server.authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/auth/telegram/link", nil)
+	response := httptest.NewRecorder()
+
+	middleware.ServeHTTP(response, request)
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", response.Code)
+	}
+
+	var envelope domain.ErrorEnvelope
+	if err := json.Unmarshal(response.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("decode envelope: %v", err)
+	}
+	if envelope.Code != "unauthorized" {
+		t.Fatalf("expected code unauthorized, got %s", envelope.Code)
+	}
+}
+
 func TestAuthMiddlewareAllowsValidToken(t *testing.T) {
 	accessToken := "valid-access-token"
 	hash := sha256.Sum256([]byte(accessToken))

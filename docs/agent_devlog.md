@@ -86,3 +86,13 @@ Summary:
 - Усилен RBAC в UI: `super_admin` управляет role/status, `company_admin` и `viewer` работают только в read-only режиме.
 Notes:
 Protected-shell и auth flow сохранены; сборка web проходит, визуальный канон admin-first удержан.
+
+[2026-02-16] [api-telegram-auth-hardening]
+Agent: BackendAgent
+Commit: <hash in response>
+Summary:
+- Усилен hardening Telegram auth/link: reason-коды валидации подписи whitelist-only, без утечки секретов.
+- Добавлены тесты login/link: signature success/fail, deny для unlinked/disabled, happy path active+approved flow.
+- Подтверждён guard `/api/v1/auth/telegram/link`: без auth-контекста доступ запрещён middleware.
+Notes:
+Политика controlled registration сохранена, шаг закрыт без изменений API surface и SQL семантики.

@@ -221,7 +221,7 @@ func (s *AuthService) LinkTelegram(ctx context.Context, userID int64, payload ma
 
 	telegramUserID, telegramUsername, verifyErr := verifyTelegramPayload(payload, s.cfg.TelegramBotToken, s.nowFn(), s.cfg.TelegramAuthMaxAge)
 	if verifyErr != nil {
-		return NewUnauthorizedError("invalid telegram auth payload", map[string]interface{}{"reason": verifyErr.Error()})
+		return NewUnauthorizedError("invalid telegram auth payload", map[string]interface{}{"reason": telegramVerifyReason(verifyErr)})
 	}
 
 	if err := s.store.UpsertTelegramLink(ctx, userRecord.AuthUser, telegramUserID, telegramUsername); err != nil {
@@ -236,7 +236,7 @@ func (s *AuthService) LinkTelegram(ctx context.Context, userID int64, payload ma
 func (s *AuthService) TelegramLogin(ctx context.Context, payload map[string]string) (domain.AuthTokensResponse, error) {
 	telegramUserID, _, verifyErr := verifyTelegramPayload(payload, s.cfg.TelegramBotToken, s.nowFn(), s.cfg.TelegramAuthMaxAge)
 	if verifyErr != nil {
-		return domain.AuthTokensResponse{}, NewUnauthorizedError("invalid telegram auth payload", map[string]interface{}{"reason": verifyErr.Error()})
+		return domain.AuthTokensResponse{}, NewUnauthorizedError("invalid telegram auth payload", map[string]interface{}{"reason": telegramVerifyReason(verifyErr)})
 	}
 
 	userRecord, err := s.store.GetUserByTelegramUserID(ctx, telegramUserID)
@@ -355,4 +355,29 @@ func generateToken(length int) (string, error) {
 func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
+}
+
+func telegramVerifyReason(err error) string {
+	switch {
+	case errors.Is(err, errTelegramBotTokenMissing):
+		return errTelegramBotTokenMissing.Error()
+	case errors.Is(err, errTelegramPayloadMissing):
+		return errTelegramPayloadMissing.Error()
+	case errors.Is(err, errTelegramHashMissing):
+		return errTelegramHashMissing.Error()
+	case errors.Is(err, errTelegramHashMismatch):
+		return errTelegramHashMismatch.Error()
+	case errors.Is(err, errTelegramAuthDateMissing):
+		return errTelegramAuthDateMissing.Error()
+	case errors.Is(err, errTelegramAuthDateInvalid):
+		return errTelegramAuthDateInvalid.Error()
+	case errors.Is(err, errTelegramAuthDateExpired):
+		return errTelegramAuthDateExpired.Error()
+	case errors.Is(err, errTelegramUserIDMissing):
+		return errTelegramUserIDMissing.Error()
+	case errors.Is(err, errTelegramUserIDInvalid):
+		return errTelegramUserIDInvalid.Error()
+	default:
+		return "payload_invalid"
+	}
 }

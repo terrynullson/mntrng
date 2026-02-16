@@ -13,6 +13,10 @@ import (
 
 type authServiceStoreStub struct {
 	getUserByLoginOrEmailFn       func(ctx context.Context, identity string) (domain.UserRecord, error)
+	getUserByIDFn                 func(ctx context.Context, userID int64) (domain.UserRecord, error)
+	createSessionFn               func(ctx context.Context, user domain.AuthUser, accessTokenHash string, refreshTokenHash string, accessExpiresAt time.Time, refreshExpiresAt time.Time) (domain.AuthSession, error)
+	upsertTelegramLinkFn          func(ctx context.Context, user domain.AuthUser, telegramUserID int64, telegramUsername *string) error
+	getUserByTelegramUserIDFn     func(ctx context.Context, telegramUserID int64) (domain.UserRecord, error)
 	hasPendingRegistrationFn      func(ctx context.Context, identity string) (bool, error)
 	revokeSessionByIDFn           func(ctx context.Context, sessionID int64) error
 	revokeSessionByRefreshTokenFn func(ctx context.Context, userID int64, refreshTokenHash string) error
@@ -26,10 +30,16 @@ func (s *authServiceStoreStub) GetUserByLoginOrEmail(ctx context.Context, identi
 }
 
 func (s *authServiceStoreStub) GetUserByID(ctx context.Context, userID int64) (domain.UserRecord, error) {
+	if s.getUserByIDFn != nil {
+		return s.getUserByIDFn(ctx, userID)
+	}
 	return domain.UserRecord{}, domain.ErrUserNotFound
 }
 
 func (s *authServiceStoreStub) CreateSession(ctx context.Context, user domain.AuthUser, accessTokenHash string, refreshTokenHash string, accessExpiresAt time.Time, refreshExpiresAt time.Time) (domain.AuthSession, error) {
+	if s.createSessionFn != nil {
+		return s.createSessionFn(ctx, user, accessTokenHash, refreshTokenHash, accessExpiresAt, refreshExpiresAt)
+	}
 	return domain.AuthSession{}, nil
 }
 
@@ -67,10 +77,16 @@ func (s *authServiceStoreStub) HasPendingRegistration(ctx context.Context, ident
 }
 
 func (s *authServiceStoreStub) UpsertTelegramLink(ctx context.Context, user domain.AuthUser, telegramUserID int64, telegramUsername *string) error {
+	if s.upsertTelegramLinkFn != nil {
+		return s.upsertTelegramLinkFn(ctx, user, telegramUserID, telegramUsername)
+	}
 	return nil
 }
 
 func (s *authServiceStoreStub) GetUserByTelegramUserID(ctx context.Context, telegramUserID int64) (domain.UserRecord, error) {
+	if s.getUserByTelegramUserIDFn != nil {
+		return s.getUserByTelegramUserIDFn(ctx, telegramUserID)
+	}
 	return domain.UserRecord{}, domain.ErrUserNotFound
 }
 
