@@ -89,7 +89,7 @@ Protected-shell и auth flow сохранены; сборка web проходи
 
 [2026-02-16] [api-telegram-auth-hardening]
 Agent: BackendAgent
-Commit: <hash in response>
+Commit: 6e655f9c4c8ce52e8dd3eeb6a8733e72a95a099f
 Summary:
 - Усилен hardening Telegram auth/link: reason-коды валидации подписи whitelist-only, без утечки секретов.
 - Добавлены тесты login/link: signature success/fail, deny для unlinked/disabled, happy path active+approved flow.
