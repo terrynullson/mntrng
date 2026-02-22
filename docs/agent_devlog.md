@@ -1,4 +1,4 @@
-﻿# Agent DevLog Protocol
+# Agent DevLog Protocol
 
 ## Entry format (mandatory)
 
@@ -96,3 +96,13 @@ Summary:
 - Подтверждён guard `/api/v1/auth/telegram/link`: без auth-контекста доступ запрещён middleware.
 Notes:
 Политика controlled registration сохранена, шаг закрыт без изменений API surface и SQL семантики.
+
+[2026-02-22] [telegram-delivery-settings]
+Agent: BackendAgent / FrontendAgent
+Commit: bf978c6 (api), d99ed92 + b83781b (ui + playwright)
+Summary:
+- API: GET/PATCH company telegram delivery settings (tenant-scoped, company_admin+).
+- UI: секция «Telegram Alerts (Company)» на /settings (skeleton, empty/error, micro animation).
+- Автоматизация скриншота: npm run screenshot:settings в web/ (playwright, тестовый логин).
+Notes:
+ReviewAgent RV-TDS-001: BLOCK по P0 (скриншот должен быть секции /settings, не логина). Корректный скриншот — после запуска API с DATABASE_URL и npm run screenshot:settings.
