@@ -16,11 +16,15 @@ import (
 )
 
 const (
-	testCompanyName = "Screenshot Test Company"
-	testLogin       = "test_screenshot_admin"
-	testEmail       = "test_screenshot@localhost"
-	testPassword    = "TestScreenshot1"
-	testRole        = "company_admin"
+	testCompanyName   = "Screenshot Test Company"
+	testLogin         = "test_screenshot_admin"
+	testEmail         = "test_screenshot@localhost"
+	testPassword      = "TestScreenshot1"
+	testRole          = "company_admin"
+	superAdminLogin   = "test_super_admin"
+	superAdminEmail   = "test_super@localhost"
+	superAdminPassword = "TestSuper1"
+	superAdminRole    = "super_admin"
 )
 
 func main() {
@@ -78,6 +82,25 @@ func main() {
 	}
 
 	log.Printf("seed ok: login=%s role=%s company_id=%d (use for screenshot automation only)", testLogin, testRole, companyID)
+
+	// Seed test super_admin for admin-requests screenshot (company_id NULL).
+	hashSuper, err := bcrypt.GenerateFromPassword([]byte(superAdminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatalf("hash super_admin password: %v", err)
+	}
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO users (company_id, email, login, password_hash, role, status)
+		 VALUES (NULL, $1, $2, $3, $4, 'active')`,
+		superAdminEmail, superAdminLogin, string(hashSuper), superAdminRole,
+	)
+	if err != nil {
+		if isUniqueViolation(err) {
+			log.Printf("super_admin already exists: login=%s (seed idempotent)", superAdminLogin)
+			return
+		}
+		log.Fatalf("insert super_admin: %v", err)
+	}
+	log.Printf("seed ok: login=%s role=%s (for admin-requests screenshot)", superAdminLogin, superAdminRole)
 }
 
 func isUniqueViolation(err error) bool {

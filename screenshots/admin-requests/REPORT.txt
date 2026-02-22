@@ -1,0 +1,4 @@
+FE-ADMIN-REQUESTS-001 REPORT
+Screenshot: screenshots\admin-requests\20260222223722.png
+Score: 9
+Checks: authorized /admin/requests, Pending Registration Requests title, table or empty or read-only, Approve/Reject or No pending.
