@@ -2,6 +2,24 @@
 
 Для автоматического снятия скриншотов защищённых страниц (например, секция «Telegram Alerts (Company)» на `/settings`) используется тестовая учётная запись. Только для local/dev; в прод не разворачивать.
 
+## Тестовая БД и env_dev
+
+Чтобы не трогать основную БД и иметь предсказуемое окружение для скриншотов и тестов, в репозитории есть конфиг **env_dev** (в корне) и скрипты в **scripts/**:
+
+- **env_dev** — переменные для тестовой БД `hls_monitoring_test` (логин/пароль как в .env.example). Файл в репозитории; при необходимости скопируйте в `.env.dev` и подставьте свои значения (`.env.dev` в .gitignore).
+- **scripts/ensure-test-db.ps1** — создаёт БД `hls_monitoring_test`, если её ещё нет (требует `psql` в PATH).
+- **scripts/run-migrations-dev.ps1** — подгружает env_dev и применяет миграции к тестовой БД. Запускать после создания БД.
+- **scripts/run-api-dev.ps1** — подгружает env_dev и запускает API (`go run ./cmd/api/`). Использовать для пайплайна скриншотов.
+
+**Однократная подготовка тестовой БД (Windows, PowerShell из корня репозитория):**
+
+```powershell
+.\scripts\ensure-test-db.ps1
+.\scripts\run-migrations-dev.ps1
+```
+
+Далее для автоматического скриншота: в одном терминале запустить `.\scripts\run-api-dev.ps1`, в другом — из `web/` выполнить `$env:ENV_FILE="env_dev"; npm run screenshot:settings`. Пайплайн возьмёт `DATABASE_URL` из env_dev, запустит сидер и сделает скриншот.
+
 ## Тестовая учётная запись
 
 - **Login:** `test_screenshot_admin`
@@ -52,7 +70,7 @@ npm run screenshot:settings
 6. Пишет self-score и краткие проверки в `screenshots/telegram-delivery-settings/REPORT.txt` и в stdout.
 7. Выполняет `git add -A` и `git commit -m "ui: automate settings page screenshot (playwright)"` (если нечего коммитить — коммит пропускается).
 
-Требования: API должен быть запущен; для сидера — Go и `DATABASE_URL`. Первый запуск может скачать Chromium (`npx playwright install chromium`).
+Требования: API должен быть запущен (например, `.\scripts\run-api-dev.ps1` с env_dev); для сидера — Go и `DATABASE_URL` (при использовании env_dev задать `$env:ENV_FILE="env_dev"` перед `npm run screenshot:settings`). Первый запуск может скачать Chromium (`npx playwright install chromium`).
 
 ## Безопасность
 

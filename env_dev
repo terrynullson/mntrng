@@ -1,0 +1,16 @@
+# Test/dev environment for automation (screenshots, local runs).
+# DB: hls_monitoring_test (create once: createdb -U app_postgres hls_monitoring_test)
+# Then: scripts/run-migrations-dev.ps1, scripts/run-api-dev.ps1, ENV_FILE=env_dev npm run screenshot:settings
+
+POSTGRES_DB=hls_monitoring_test
+POSTGRES_USER=app_postgres
+POSTGRES_PASSWORD=postgres123
+POSTGRES_PORT=5432
+
+DATABASE_URL=postgres://app_postgres:postgres123@127.0.0.1:5432/hls_monitoring_test?sslmode=disable
+
+API_PORT=8080
+AUTH_ACCESS_TTL_MIN=15
+AUTH_REFRESH_TTL_DAYS=30
+FRONTEND_PORT=3000
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080

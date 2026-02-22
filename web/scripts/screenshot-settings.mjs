@@ -29,9 +29,9 @@ function log(msg) {
   console.log(`[${ts}] ${msg}`);
 }
 
-function loadEnvFromFile(dir) {
+function loadEnvFromFile(dir, filename = ".env") {
   try {
-    const envPath = path.join(dir, ".env");
+    const envPath = path.join(dir, filename);
     if (!existsSync(envPath)) return;
     const content = readFileSync(envPath, "utf8");
     content.split("\n").forEach((line) => {
@@ -97,7 +97,9 @@ function startDevServer() {
 
 async function main() {
   log("FE-AUTO-SCREEN-001: automated settings screenshot pipeline");
-  await loadEnvFromFile(ROOT_DIR);
+  const envFile = process.env.ENV_FILE || ".env";
+  loadEnvFromFile(ROOT_DIR, envFile);
+  if (envFile !== ".env") log("Loaded env from " + envFile);
 
   const apiUp = await waitForPort("127.0.0.1", API_PORT, 5000);
   if (!apiUp) {
