@@ -45,13 +45,14 @@ type changeUserStatusRequest = domain.ChangeUserStatusRequest
 type adminUserListResponse = domain.AdminUserListResponse
 
 type Server struct {
-	companyService      *serviceapi.CompanyService
-	projectService      *serviceapi.ProjectService
-	streamService       *serviceapi.StreamService
-	checkJobService     *serviceapi.CheckJobService
-	checkResultService  *serviceapi.CheckResultService
-	authService         *serviceapi.AuthService
-	registrationService *serviceapi.RegistrationService
+	companyService           *serviceapi.CompanyService
+	projectService           *serviceapi.ProjectService
+	streamService            *serviceapi.StreamService
+	checkJobService          *serviceapi.CheckJobService
+	checkResultService       *serviceapi.CheckResultService
+	telegramSettingsService   *serviceapi.TelegramSettingsService
+	authService              *serviceapi.AuthService
+	registrationService      *serviceapi.RegistrationService
 }
 
 func NewServer(db *sql.DB) *Server {
@@ -74,7 +75,8 @@ func NewServer(db *sql.DB) *Server {
 		projectService:     serviceapi.NewProjectService(postgres.NewAPIProjectRepo(db)),
 		streamService:      serviceapi.NewStreamService(postgres.NewAPIStreamRepo(db)),
 		checkJobService:    serviceapi.NewCheckJobService(postgres.NewAPICheckJobRepo(db)),
-		checkResultService: serviceapi.NewCheckResultService(postgres.NewAPICheckResultRepo(db)),
+		checkResultService:     serviceapi.NewCheckResultService(postgres.NewAPICheckResultRepo(db)),
+		telegramSettingsService: serviceapi.NewTelegramSettingsService(postgres.NewAPITelegramSettingsRepo(db)),
 		authService: serviceapi.NewAuthService(authRepo, serviceapi.AuthConfig{
 			AccessTTL:          time.Duration(config.GetInt("AUTH_ACCESS_TTL_MIN", 15)) * time.Minute,
 			RefreshTTL:         time.Duration(config.GetInt("AUTH_REFRESH_TTL_DAYS", 30)) * 24 * time.Hour,
@@ -111,6 +113,8 @@ func (s *Server) RouterHandlers() RouterHandlers {
 		HandleGetCheckResult:      s.handleGetCheckResult,
 		HandleListCheckResults:    s.handleListCheckResults,
 		HandleGetCheckResultByJob: s.handleGetCheckResultByJob,
+		HandleGetTelegramDeliverySettings:  s.handleGetTelegramDeliverySettings,
+		HandlePatchTelegramDeliverySettings: s.handlePatchTelegramDeliverySettings,
 
 		HandleRegisterRequest:            s.handleRegisterRequest,
 		HandleLogin:                      s.handleLogin,

@@ -6,14 +6,15 @@ import (
 )
 
 const (
-	projectCollectionPath      = "projects"
-	projectItemPrefix          = "projects/"
-	streamCollectionPath       = "streams"
-	streamItemPrefix           = "streams/"
-	checkJobsCollectionPath    = "check-jobs"
-	checkJobsItemPrefix        = "check-jobs/"
-	checkResultsCollectionPath = "check-results"
-	checkResultsItemPrefix     = "check-results/"
+	projectCollectionPath           = "projects"
+	projectItemPrefix               = "projects/"
+	streamCollectionPath           = "streams"
+	streamItemPrefix                = "streams/"
+	checkJobsCollectionPath         = "check-jobs"
+	checkJobsItemPrefix             = "check-jobs/"
+	checkResultsCollectionPath      = "check-results"
+	checkResultsItemPrefix          = "check-results/"
+	telegramDeliverySettingsPath    = "telegram-delivery-settings"
 )
 
 type companyHandler func(http.ResponseWriter, *http.Request, int64)
@@ -49,6 +50,9 @@ type RouterHandlers struct {
 	HandleGetCheckResult      companyResourceHandler
 	HandleListCheckResults    companyResourceHandler
 	HandleGetCheckResultByJob companyResourceHandler
+
+	HandleGetTelegramDeliverySettings  companyHandler
+	HandlePatchTelegramDeliverySettings companyHandler
 
 	HandleRegisterRequest            http.HandlerFunc
 	HandleLogin                      http.HandlerFunc
@@ -139,6 +143,10 @@ func routeCompanyByID(w http.ResponseWriter, r *http.Request, handlers RouterHan
 		routeCompanyRoot(w, r, handlers, companyID)
 		return
 	}
+	if pathRemainder == telegramDeliverySettingsPath {
+		routeTelegramDeliverySettings(w, r, handlers, companyID)
+		return
+	}
 	if routeCompanyProjectPath(w, r, handlers, companyID, pathRemainder) {
 		return
 	}
@@ -156,6 +164,17 @@ func routeCompanyByID(w http.ResponseWriter, r *http.Request, handlers RouterHan
 	}
 
 	writeRouterPathNotFound(w, r)
+}
+
+func routeTelegramDeliverySettings(w http.ResponseWriter, r *http.Request, handlers RouterHandlers, companyID int64) {
+	switch r.Method {
+	case http.MethodGet:
+		handlers.HandleGetTelegramDeliverySettings(w, r, companyID)
+	case http.MethodPatch:
+		handlers.HandlePatchTelegramDeliverySettings(w, r, companyID)
+	default:
+		WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPatch)
+	}
 }
 
 func routeCompanyRoot(w http.ResponseWriter, r *http.Request, handlers RouterHandlers, companyID int64) {

@@ -120,6 +120,20 @@ type CheckResultListResponse struct {
 	NextCursor *string       `json:"next_cursor"`
 }
 
+type TelegramDeliverySettings struct {
+	IsEnabled     bool      `json:"is_enabled"`
+	ChatID        string    `json:"chat_id"`
+	SendRecovered bool      `json:"send_recovered"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+type PatchTelegramDeliverySettingsRequest struct {
+	IsEnabled     *bool   `json:"is_enabled"`
+	ChatID        *string `json:"chat_id"`
+	SendRecovered *bool   `json:"send_recovered"`
+}
+
 type ErrorEnvelope struct {
 	Code      string      `json:"code"`
 	Message   string      `json:"message"`

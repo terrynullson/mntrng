@@ -305,6 +305,27 @@ func TestEvaluateAccessPolicyRBACMatrix(t *testing.T) {
 			},
 			expectDeny: false,
 		},
+		{
+			name:   "viewer denied on telegram-delivery-settings",
+			path:   "/api/v1/companies/3/telegram-delivery-settings",
+			method: http.MethodGet,
+			auth: domain.AuthContext{
+				Role:      domain.RoleViewer,
+				CompanyID: &companyID,
+			},
+			expectDeny: true,
+			expectCode: "forbidden",
+		},
+		{
+			name:   "company_admin can access telegram-delivery-settings",
+			path:   "/api/v1/companies/3/telegram-delivery-settings",
+			method: http.MethodGet,
+			auth: domain.AuthContext{
+				Role:      domain.RoleCompanyAdmin,
+				CompanyID: &companyID,
+			},
+			expectDeny: false,
+		},
 	}
 
 	for _, testCase := range testCases {

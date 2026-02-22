@@ -1,4 +1,4 @@
-﻿# Baseline API Contract
+# Baseline API Contract
 
 ## 1. Scope and principles
 
@@ -655,6 +655,45 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 - Purpose: get result by job id.
 - `200` -> `Check result`.
 - Errors: `401`, `403`, `404`, `500`.
+
+## 5.8 Telegram delivery settings (tenant-scoped)
+
+All endpoints in this section are tenant-scoped by route `company_id`. Access: `company_admin` or `super_admin` only (viewer forbidden).
+
+### `GET /api/v1/companies/{company_id}/telegram-delivery-settings`
+
+- Purpose: get company Telegram delivery settings.
+- `200`:
+
+```json
+{
+  "is_enabled": true,
+  "chat_id": "-1001234567890",
+  "send_recovered": true,
+  "created_at": "2026-02-13T10:00:00Z",
+  "updated_at": "2026-02-13T10:00:00Z"
+}
+```
+
+- `404` when no row exists for the company.
+- Errors: `401`, `403`, `404`, `500`.
+
+### `PATCH /api/v1/companies/{company_id}/telegram-delivery-settings`
+
+- Purpose: create or update (upsert) company Telegram delivery settings. Does not expose or modify `bot_token_ref`.
+- Body (all fields optional; omitted fields are left unchanged on update, or use defaults on create):
+
+```json
+{
+  "is_enabled": true,
+  "chat_id": "-1001234567890",
+  "send_recovered": true
+}
+```
+
+- Validation: when `chat_id` is provided, it must be non-empty after trim.
+- `200` -> same response model as GET (`is_enabled`, `chat_id`, `send_recovered`, `created_at`, `updated_at`).
+- Errors: `400` (e.g. empty `chat_id`), `401`, `403`, `404` (company not found), `500`.
 
 ## 6. Consistency with schema and ADR
 

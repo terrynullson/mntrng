@@ -39,6 +39,9 @@ var (
 	ErrPendingRegistrationOnly = errors.New("pending_registration_only")
 	ErrTelegramLinkNotFound    = errors.New("telegram_link_not_found")
 	ErrTelegramLinkConflict    = errors.New("telegram_link_conflict")
+
+	ErrTelegramDeliverySettingsNotFound    = errors.New("telegram_delivery_settings_not_found")
+	ErrTelegramDeliverySettingsInvalidInput = errors.New("telegram_delivery_settings_invalid_input")
 )
 
 type StreamListFilter struct {
