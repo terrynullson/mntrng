@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { motion } from "framer-motion";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -245,16 +246,52 @@ export default function AnalyticsPage() {
         </div>
       </form>
 
-      {isLoadingStreams ? <SkeletonBlock lines={4} /> : null}
-      {error ? <StatePanel kind="error">{error}</StatePanel> : null}
+      {isLoadingStreams ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          <SkeletonBlock lines={4} />
+        </motion.div>
+      ) : null}
+      {error ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel kind="error">{error}</StatePanel>
+        </motion.div>
+      ) : null}
       {scopeCompanyId && !isLoadingStreams && streams.length === 0 ? (
-        <StatePanel>No streams available for selected company scope.</StatePanel>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel>No streams available for selected company scope.</StatePanel>
+        </motion.div>
       ) : null}
 
-      {isLoadingResults ? <SkeletonBlock lines={6} /> : null}
+      {isLoadingResults ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <SkeletonBlock lines={6} />
+        </motion.div>
+      ) : null}
 
       {hasRequested && !isLoadingResults && !error ? (
-        <div className="summary-grid">
+        <motion.div
+          className="summary-grid"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.28, ease: "easeOut" }}
+        >
           <div className="summary-card">
             <span>OK</span>
             <strong>{summary.OK}</strong>
@@ -267,15 +304,28 @@ export default function AnalyticsPage() {
             <span>FAIL</span>
             <strong>{summary.FAIL}</strong>
           </div>
-        </div>
+        </motion.div>
       ) : null}
 
       {hasRequested && !isLoadingResults && !error && results.length === 0 ? (
-        <StatePanel>No check-results for selected period and filters.</StatePanel>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <StatePanel>No check-results for selected period and filters.</StatePanel>
+        </motion.div>
       ) : null}
 
       {hasRequested && !isLoadingResults && !error && results.length > 0 ? (
-        <div className="table-wrap">
+        <motion.div
+          className="table-wrap"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.28, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
           <table>
             <thead>
               <tr>
@@ -310,7 +360,7 @@ export default function AnalyticsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </motion.div>
       ) : null}
     </section>
   );
