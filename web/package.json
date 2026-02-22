@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "screenshot:settings": "node scripts/screenshot-settings.mjs"
   },
   "dependencies": {
     "framer-motion": "11.3.19",
@@ -17,6 +18,7 @@
     "@types/node": "22.10.2",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
-    "typescript": "5.6.3"
+    "typescript": "5.6.3",
+    "playwright": "1.49.1"
   }
 }
