@@ -1,4 +1,4 @@
-﻿export type Role = "super_admin" | "company_admin" | "viewer";
+export type Role = "super_admin" | "company_admin" | "viewer";
 
 export type UserStatus = "active" | "disabled";
 
@@ -150,3 +150,17 @@ export type CheckResult = {
 };
 
 export type TelegramLinkPayload = Record<string, string>;
+
+export type TelegramDeliverySettings = {
+  is_enabled: boolean;
+  chat_id: string;
+  send_recovered: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TelegramDeliverySettingsPatch = {
+  is_enabled?: boolean;
+  chat_id?: string;
+  send_recovered?: boolean;
+};
