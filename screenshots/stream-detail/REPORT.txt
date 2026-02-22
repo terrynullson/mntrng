@@ -1,0 +1,4 @@
+FE-STREAM-DETAIL-001 REPORT
+Screenshot: screenshots\stream-detail\20260222221909.png
+Score: 9
+Checks: authorized Stream Player, Back to streams, stream card or empty, Latest Status or No check results.

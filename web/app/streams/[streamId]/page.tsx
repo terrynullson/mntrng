@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import type Hls from "hls.js";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -200,14 +201,43 @@ export default function StreamDetailsPageV2() {
       </header>
 
       {!scopeCompanyId ? (
-        <StatePanel>Select company scope in topbar to open stream details.</StatePanel>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel>Select company scope in topbar to open stream details.</StatePanel>
+        </motion.div>
       ) : null}
 
-      {error ? <StatePanel kind="error">{error}</StatePanel> : null}
-      {isLoading ? <SkeletonBlock lines={7} /> : null}
+      {error ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel kind="error">{error}</StatePanel>
+        </motion.div>
+      ) : null}
+      {isLoading ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <SkeletonBlock lines={7} />
+        </motion.div>
+      ) : null}
 
       {!isLoading && !error && stream ? (
-        <div className="stream-details-grid">
+        <motion.div
+          className="stream-details-grid"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.28, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
           <article className="player-card">
             <h3 className="section-title">{stream.name}</h3>
             <p className="section-meta">
@@ -224,14 +254,20 @@ export default function StreamDetailsPageV2() {
             />
 
             {playerError ? (
-              <StatePanel>
-                {playerError}{" "}
-                {fallbackURL ? (
-                  <a href={fallbackURL} target="_blank" rel="noreferrer">
-                    Open stream URL
-                  </a>
-                ) : null}
-              </StatePanel>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
+              >
+                <StatePanel>
+                  {playerError}{" "}
+                  {fallbackURL ? (
+                    <a href={fallbackURL} target="_blank" rel="noreferrer">
+                      Open stream URL
+                    </a>
+                  ) : null}
+                </StatePanel>
+              </motion.div>
             ) : null}
           </article>
 
@@ -239,7 +275,13 @@ export default function StreamDetailsPageV2() {
             <h3 className="section-title">Latest Status</h3>
 
             {!latestResult ? (
-              <StatePanel>No check results available yet.</StatePanel>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
+              >
+                <StatePanel>No check results available yet.</StatePanel>
+              </motion.div>
             ) : (
               <>
                 <p className="status-row">
@@ -250,7 +292,12 @@ export default function StreamDetailsPageV2() {
                 </p>
 
                 {atomicRows.length > 0 ? (
-                  <div className="atomic-checks">
+                  <motion.div
+                    className="atomic-checks"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.24, ease: "easeOut" }}
+                  >
                     <h4 className="section-title section-title-small">Atomic checks</h4>
                     <table>
                       <thead>
@@ -270,12 +317,23 @@ export default function StreamDetailsPageV2() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </motion.div>
                 ) : null}
               </>
             )}
           </article>
-        </div>
+        </motion.div>
+      ) : null}
+
+      {!isLoading && !error && scopeCompanyId && !stream && streamID ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <StatePanel>Stream not found or not accessible.</StatePanel>
+        </motion.div>
       ) : null}
     </section>
   );
