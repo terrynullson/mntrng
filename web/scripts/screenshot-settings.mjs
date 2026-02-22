@@ -22,6 +22,8 @@ const LOGIN = process.env.SCREENSHOT_LOGIN || "test_screenshot_admin";
 const PASSWORD = process.env.SCREENSHOT_PASSWORD || "TestScreenshot1";
 const BASE_URL = process.env.SCREENSHOT_BASE_URL || "http://localhost:3000";
 const API_PORT = Number(process.env.API_PORT || "8080");
+const API_HOST = process.env.API_HOST || "127.0.0.1";
+const FRONTEND_HOST = process.env.FRONTEND_HOST || "127.0.0.1";
 const DEV_PORT = 3000;
 
 function log(msg) {
@@ -101,9 +103,9 @@ async function main() {
   loadEnvFromFile(ROOT_DIR, envFile);
   if (envFile !== ".env") log("Loaded env from " + envFile);
 
-  const apiUp = await waitForPort("127.0.0.1", API_PORT, 5000);
+  const apiUp = await waitForPort(API_HOST, API_PORT, 15000);
   if (!apiUp) {
-    log("API not running on port " + API_PORT + ". Start API (e.g. go run ./cmd/api/) and re-run.");
+    log("API not running at " + API_HOST + ":" + API_PORT + ". Start API (e.g. go run ./cmd/api/ or docker-compose up api) and re-run.");
     process.exit(1);
   }
   log("API is up.");
@@ -111,7 +113,8 @@ async function main() {
   await runSeed();
 
   let devChild = null;
-  const devUp = await waitForPort("127.0.0.1", DEV_PORT, 3000);
+  const frontendWaitMs = FRONTEND_HOST !== "127.0.0.1" && FRONTEND_HOST !== "localhost" ? 30000 : 5000;
+  const devUp = await waitForPort(FRONTEND_HOST, DEV_PORT, frontendWaitMs);
   if (!devUp) {
     log("Starting Next.js dev server...");
     devChild = startDevServer();

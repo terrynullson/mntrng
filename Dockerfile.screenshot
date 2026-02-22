@@ -1,0 +1,13 @@
+# Run screenshot pipeline (Playwright). Expects api + frontend already up.
+# Repo root is mounted at /app; runs npm ci in web/ if needed, then screenshot script.
+FROM node:20-bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+    libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+    libgbm1 libasound2 libpango-1.0-0 libcairo2 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+# When run via docker-compose, repo is mounted at /app; install deps and run script
+CMD ["sh", "-c", "cd /app/web && (test -d node_modules || npm ci) && npx playwright install chromium 2>/dev/null; npm run screenshot:settings"]

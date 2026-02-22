@@ -1,0 +1,4 @@
+#!/bin/sh
+# Send DevLog to Telegram after each commit. Token/chat from .env (DEV_LOG_TELEGRAM_*).
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+cd "$ROOT" && powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/devlog_notify.ps1" 2>/dev/null || true

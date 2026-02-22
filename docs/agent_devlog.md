@@ -1,5 +1,16 @@
 # Agent DevLog Protocol
 
+## После своей работы (обязательно для агентов)
+
+Это касается **всех агентов**: MasterAgent, ReviewAgent, BackendAgent, FrontendAgent.
+
+1. **Запись в этот файл** — добавить одну запись по формату ниже (DATE, MODULE, Agent, Commit, Summary, Notes; до 12 строк).
+2. **Коммит** — закоммитить изменения (включая эту запись и код). После коммита сообщение в Telegram DevLog уходит **автоматически** (post-commit hook → `scripts/devlog_notify.ps1` → `cmd/devnotify` с `-readSummaryFromGit`). Ручной вызов devnotify не нужен; достаточно включённых хуков (`git config core.hooksPath .githooks`) и переменных в `.env` (DEV_LOG_TELEGRAM_*). Если изменений кода не было — достаточно закоммитить только запись в этом файле.
+
+Полный контракт и настройка хука: `docs/agents_and_responsibilities.md`, разделы 5–6 и 9.
+
+---
+
 ## Entry format (mandatory)
 
 [DATE] [MODULE]
@@ -105,4 +116,4 @@ Summary:
 - UI: секция «Telegram Alerts (Company)» на /settings (skeleton, empty/error, micro animation).
 - Автоматизация скриншота: npm run screenshot:settings в web/ (playwright, тестовый логин).
 Notes:
-ReviewAgent RV-TDS-001: BLOCK по P0 (скриншот должен быть секции /settings, не логина). Корректный скриншот — после запуска API с DATABASE_URL и npm run screenshot:settings.
+ReviewAgent RV-TDS-001 / RV-TDS-002 / RV-TDS-003: BLOCK по P0 (в репо только старый скриншот с логином). Для PASS: локально API + DATABASE_URL, затем cd web && npm run screenshot:settings, закоммитить новый .png из screenshots/telegram-delivery-settings/.

@@ -1,0 +1,4 @@
+FE-AUTO-SCREEN-001 REPORT
+Screenshot: screenshots\telegram-delivery-settings\20260222213043.png
+Score: 9
+Checks: automated login, /settings loaded, Settings heading present, Telegram section present, fullPage screenshot.

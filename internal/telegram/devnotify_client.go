@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 const defaultDevLogNotifierTimeout = 5 * time.Second
@@ -50,7 +51,24 @@ func (n *DevLogNotifier) NotifyCompletion(ctx context.Context, payload DevLogPay
 	}
 
 	text := BuildDevLogMessage(payload)
+	text = ensureUTF8(text)
 	return n.sendMessage(ctx, text)
+}
+
+// ensureUTF8 replaces invalid UTF-8 runes so Telegram always receives valid UTF-8.
+func ensureUTF8(s string) string {
+	if utf8.ValidString(s) {
+		return s
+	}
+	var b strings.Builder
+	for _, r := range s {
+		if r != utf8.RuneError {
+			b.WriteRune(r)
+		} else {
+			b.WriteRune('?')
+		}
+	}
+	return b.String()
 }
 
 func (n *DevLogNotifier) sendMessage(ctx context.Context, text string) error {
@@ -67,7 +85,7 @@ func (n *DevLogNotifier) sendMessage(ctx context.Context, text string) error {
 	if err != nil {
 		return errors.New("failed to create telegram request")
 	}
-	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	response, err := n.httpClient.Do(request)
 	if err != nil {

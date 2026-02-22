@@ -2,6 +2,17 @@
 
 Для автоматического снятия скриншотов защищённых страниц (например, секция «Telegram Alerts (Company)» на `/settings`) используется тестовая учётная запись. Только для local/dev; в прод не разворачивать.
 
+## Для агентов (ReviewAgent, FrontendAgent): один способ без тупняка
+
+**Делай скриншот сам так (предпочтительно):**
+
+1. `docker compose up --build -d` — поднять API, frontend, БД (миграции и сидер уже в init).
+2. `docker compose --profile screenshot run --rm screenshot` — контейнер залогинится, откроет /settings и сохранит скриншот в репозиторий.
+
+Файл появится в `screenshots/telegram-delivery-settings/<timestamp>.png`. Ничего вручную не запускать, не использовать MCP browser для логина — всё делает контейнер. Если Docker недоступен — см. ниже «Снятие скриншота (MCP browser)» или «npm run screenshot:settings» (нужны запущенные API и frontend).
+
+**Почему агенты часто не делают скриншот:** (1) В инструкциях было несколько путей (MCP, Playwright, Docker) без явного «сначала делай так». (2) MCP требует заранее запущенные API и frontend в двух терминалах и точные id полей; скриншот может сохраняться во временную папку — «скопировать из Temp» неоднозначно для агента. (3) Итог: агент не знает, какой путь выбрать, или пробует MCP и не доводит до конца. **Фикс:** один приоритетный путь для агента — Docker (две команды, файл сразу в репо). Остальное — запасной вариант.
+
 ## Тестовая БД и env_dev
 
 Чтобы не трогать основную БД и иметь предсказуемое окружение для скриншотов и тестов, в репозитории есть конфиг **env_dev** (в корне) и скрипты в **scripts/**:
@@ -71,6 +82,17 @@ npm run screenshot:settings
 7. Выполняет `git add -A` и `git commit -m "ui: automate settings page screenshot (playwright)"` (если нечего коммитить — коммит пропускается).
 
 Требования: API должен быть запущен (например, `.\scripts\run-api-dev.ps1` с env_dev); для сидера — Go и `DATABASE_URL` (при использовании env_dev задать `$env:ENV_FILE="env_dev"` перед `npm run screenshot:settings`). Первый запуск может скачать Chromium (`npx playwright install chromium`).
+
+## Всё в Docker (без ручных действий)
+
+Миграции и сидер выполняются при старте (сервис `init`). Скриншот — отдельным контейнером:
+
+```bash
+docker compose up --build -d
+docker compose --profile screenshot run --rm screenshot
+```
+
+Скриншот появится в `screenshots/telegram-delivery-settings/<timestamp>.png`. Ручных шагов не требуется (нужен только `.env` с `POSTGRES_PASSWORD`).
 
 ## Безопасность
 

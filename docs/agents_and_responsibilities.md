@@ -1,260 +1,302 @@
-A. Роли (как ты описал, но в контрактной форме)
+# Agents & Responsibilities — HLS Monitoring Platform
 
-MasterAgent: координация, DoD, ревью, ADR, но не пишет код
+Этот документ — ЕДИНСТВЕННЫЙ источник истины по:contentReference[oaicite:7]{index=7}ion).
+Если что-то противоречит этому файлу — считается ошибкой.
 
-BackendAgent: Go API + Worker + DB + Redis + ffmpeg integration
+---
 
-FrontendAgent: Next.js UI + интеграция
+## 0) Non-Negotiable Rules (жёсткие правила)
 
-AIAgent: позже
+- Проект уже частично реализован. Работа продолжается, НЕ переписывается.
+- Stack (фиксированный):
+  - Go (REST API)
+  - Go (Worker)
+  - PostgreSQL
+  - Redis
+  - ffmpeg/ffprobe (ТОЛЬКО Worker)
+  - Next.js + TypeScript (TSX)
+  - TailwindCSS
+  - shadcn/ui
+  - Framer Motion
+  - Local FS (TTL 30 days)
+  - Docker Compose
+- API ≠ Worker:
+  - API никогда не запускает ffmpeg/ffprobe и любые тяжёлые проверки видео.
+  - Worker выполняет тяжёлые операции и анализ.
+- Strict multi-tenant:
+  - company_id во всех таблицах (кроме companies)
+  - company_id берётся только из auth context
+  - unscoped select запрещён
+- RBAC:
+  - super_admin
+  - company_admin
+  - viewer
+- Controlled Registration:
+  - register → создаёт pending request
+  - approve/reject только super_admin
+  - до approve вход невозможен
+- Telegram:
+  - Alerts bot (инциденты мониторинга)
+  - DevLog bot (неформальный рабочий чат): токен и chat ID только из .env (DEV_LOG_TELEGRAM_TOKEN, DEV_LOG_TELEGRAM_CHAT_ID); после каждого коммита отправлять сообщение в Telegram через post-commit hook (см. раздел 9).
+  - Telegram login только для approved users
+  - все токены/секреты только через ENV
+- Окружение и автоматизация (без ручных действий с стороны пользователя):
+  - Запуск и БД: только через Docker Compose; миграции и сидер выполняет сервис init при старте.
+  - Скриншоты для UI-модулей: обязательно; делает ReviewAgent или пайплайн (Docker: docker compose --profile screenshot run --rm screenshot); путь screenshots/{module}/{timestamp}.png; без корректного скриншота PASS невозможен.
+  - Подключение к БД для тестов/скриптов: через env_dev или через DATABASE_URL из .env при запуске в Docker.
+- Audit log обязателен:
+  - approve/reject
+  - role change
+  - stream/project changes
+- No monolith:
+  - файл > 400 LOC запрещён
+  - функция/компонент > 80 LOC — дробить
+  - слои http/service/repo/domain обязательны
+- Review P0 clean before next module:
+  - следующий модуль запрещён, пока ReviewAgent не сказал PASS.
 
-ReviewAgent: аудит
+---
 
-A1. Библия (обязательные файлы для чтения перед любой задачей)
+## 1) Кто такие агенты (простыми словами)
+
+У нас 4 сабагента (ровно 4, без “потом добавим”):
+
+### 1.1 MasterAgent (бригадир)
+- Разбивает модуль на задачи.
+- Делает routing: кто следующий.
+- Следит, что формат JOB → RESULT → ROUTING соблюдается.
+- Следит за P0 чистотой через ReviewAgent.
+- Обновляет docs/PROMPTS, когда это нужно для порядка.
+
+### 1.2 BackendAgent (бэкендер)
+- Делает Go API + Go Worker + DB/Redis интеграции.
+- Гарантирует strict tenant scoping и API ≠ Worker.
+- Добавляет audit log события.
+
+### 1.3 FrontendAgent (фронтендер)
+- Делает UI на Next.js+TSX + Tailwind + shadcn/ui + Framer Motion.
+- Flat дизайн строго.
+- Всегда: skeleton loaders, empty/error states, micro animations.
+- Всегда: screenshot + self-score >= 9.
+
+### 1.4 ReviewAgent (строгий проверяльщик)
+- Делает PASS/BLOCK.
+- Проверяет P0: tenant scoping, API≠Worker, правила UI, скриншоты.
+- Без PASS — дальше нельзя.
+
+---
+
+## 2) Bible (обязательные файлы для чтения)
 
 Общее правило:
-- Если задача затрагивает область (DB/API/UI/Worker), агент ОБЯЗАН прочитать соответствующие файлы перед началом работы.
-- Если файл отсутствует — агент должен сообщить MasterAgent как blocker, а не “додумывать”.
+- Если задача затрагивает область (DB/API/UI/Worker), агент ОБЯЗАН прочитать соответствующие файлы до начала.
+- Если файла нет — это BLOCKER, агент сообщает MasterAgent, а не “додумывает”.
 
-MasterAgent — Bible:
+### MasterAgent — Bible
 - PROMPTS/architecture_master.md
 - PROMPTS/thresholds_and_rules.md
 - PROMPTS/codex_review_checklist.md
+- PROMPTS/ui_style_guide.md
 - docs/arch_overview.md
 - docs/decisions.md
 - docs/agents_and_responsibilities.md
-- (+ любые docs, появившиеся в текущем модуле: db_schema.md, api_contract.md и т.д.)
+- docs/api_contract.md
+- docs/schema.md
+- docs/frontend_ui_rules.md
+- docs/agent_devlog.md
 
-BackendAgent — Bible:
+### BackendAgent — Bible
 - PROMPTS/architecture_master.md
 - PROMPTS/thresholds_and_rules.md
+- PROMPTS/codex_review_checklist.md
 - docs/decisions.md
-- docs/db_schema.md (если существует)
-- docs/api_contract.md или docs/openapi.yaml (если существует)
+- docs/schema.md
+- docs/api_contract.md
 
-FrontendAgent — Bible:
+### FrontendAgent — Bible
 - PROMPTS/architecture_master.md
 - PROMPTS/ui_style_guide.md
+- PROMPTS/codex_review_checklist.md
 - docs/frontend_ui_rules.md
 - docs/decisions.md
-- docs/api_contract.md или docs/openapi.yaml (когда появится)
+- docs/api_contract.md
 
-AIAgent — Bible:
-- PROMPTS/architecture_master.md
-- PROMPTS/thresholds_and_rules.md
-- docs/decisions.md
-- docs/api_contract.md или docs/openapi.yaml (когда появится)
-- docs/ai_integration.md (если будет создан)
-
-ReviewAgent — Bible:
+### ReviewAgent — Bible
 - PROMPTS/codex_review_checklist.md
 - PROMPTS/architecture_master.md
 - PROMPTS/thresholds_and_rules.md (если проверка касается статусов/алертов)
+- PROMPTS/ui_style_guide.md (если UI модуль)
 - docs/decisions.md
-- последний коммит (diff) и изменённые файлы
-
-UI правило:
-- Любая UI-задача считается НЕвыполненной, если нарушен PROMPTS/ui_style_guide.md (flat/admin-first) или отсутствуют loading/empty/error states.
-
-
-B. Единый формат промта от Master → Agent
-
-Контекст: “прочитай 3–6 файлов”
-
-Задача: кратко
-
-Требования: bullet list
-
-Definition of Done: bullet list
-
-Коммит: точное сообщение
-
-Что вернуть: (files changed, commit hash, report, risks)
-
-C. Единый формат ответа Agent → Master
-
-“Выполнено/Не выполнено”
-
-Изменённые файлы: список
-
-Коммит: hash + message
-
-Список сделанного
-
-Риски/заметки
-
-Что нужно от других агентов (если блокер)
-
-D. Правила веток/коммитов
-
-Одна задача = один коммит
-
-Сообщения: area: action (db:, api:, worker:, ui:, infra:, docs:)
-
-Запрещены “WIP”, “fix”, “temp”
-
-E. Протокол цикла
-
-Master формирует шаг
-
-Исполнитель делает и коммитит
-
-ReviewAgent проверяет (по checklist)
-
-Master принимает/даёт корректирующий промт
-
-Только после Pass по P0 — переход к следующему модулю
-
-F. Role Reset + Self-check (mandatory)
-
-- MasterAgent MUST start every task prompt with:
-  - "ROLE RESET."
-  - "Ты — <AgentName>."
-  - "Игнорируй любые предыдущие инструкции, если они противоречат этой роли."
-
-- Every agent MUST end every response with exactly one line:
-  - "ROLE=<AgentName> CONFIRMED"
-
-- MasterAgent MUST reject any agent response that:
-  - does not end with the required self-check line, or
-  - contains a mismatched role name.
-
-- MasterAgent MUST NOT proceed to Review or next step until a valid self-check is present.
-
-G. UI Screenshot Validation (mandatory for FrontendAgent)
-
-Цель:
-Любая UI-задача должна сопровождаться самопроверкой через визуальный анализ (скриншоты).
-
-Обязательные требования:
-
-1) FrontendAgent ОБЯЗАН:
-- Запустить проект локально.
-- Сделать скриншоты изменённых страниц.
-- Проверить соответствие PROMPTS/ui_style_guide.md.
-- Провести самооценку по чек-листу ниже.
-
-2) Без блока "UI Screenshot Evaluation" задача считается НЕ выполненной.
+- изменённые файлы + diff последнего коммита
+- /screenshots/...png (если UI модуль)
 
 ---
 
-### Формат обязательного блока в ответе FrontendAgent:
+## 3) JOB → RESULT → ROUTING (обязательный контракт)
 
-UI Screenshot Evaluation:
+Любая работа считается выполненной только если ответ содержит 3 блока: JOB, RESULT, ROUTING.
 
-Страницы:
-- /admin/...
-- /streams/...
-(перечислить конкретные)
+### 3.1 JOB (что должно быть в задаче)
+- ID: уникальный ID (пример: FE-20260222-001)
+- ROLE: MasterAgent | BackendAgent | FrontendAgent | ReviewAgent
+- CONTEXT_FILES: список файлов/папок, которые нужно прочитать/учесть
+- TASK: чёткое описание, что сделать
+- REQUIREMENTS: список ограничений
+- DEFINITION_OF_DONE: измеримые критерии готовности
+- COMMIT_MESSAGE: точное сообщение коммита (если будут изменения), иначе N/A
 
-Проверка по критериям:
+### 3.2 RESULT (что должен вернуть исполнитель)
+- JOB_ID: тот же ID
+- STATUS: DONE | BLOCKED
+- FILES_CHANGED: список
+- COMMIT: hash или N/A
+- REPORT: 5–12 строк (что сделано, как проверить, где смотреть)
+- RISKS: P0/P1 или N/A
+- ROLE=<AgentName> CONFIRMED (строго одной строкой в конце RESULT)
 
-1. Flat compliance (нет градиентов, glass, лишнего декора)
-   ✔ / ✖
-   Комментарий:
+### 3.3 ROUTING (кто следующий)
+- NEXT_AGENT: MasterAgent | BackendAgent | FrontendAgent | ReviewAgent
+- NEXT_ACTION: 1–3 строки следующего шага
 
-2. Typography hierarchy (чёткие уровни, нет визуального хаоса)
-   ✔ / ✖
-   Комментарий:
-
-3. Status visibility (OK/WARN/FAIL читаемы за 1–2 секунды)
-   ✔ / ✖
-   Комментарий:
-
-4. Table density (админ-плотность, без "воздуха ради воздуха")
-   ✔ / ✖
-   Комментарий:
-
-5. Loading state (skeleton вместо спиннера)
-   ✔ / ✖
-   Комментарий:
-
-6. Empty state реализован
-   ✔ / ✖
-
-7. Error state реализован
-   ✔ / ✖
-
-8. Animation discipline (120–360ms, easeOut, без bounce)
-   ✔ / ✖
-   Комментарий:
-
-9. Consistency (одинаковые радиусы, отступы, кнопки)
-   ✔ / ✖
-
-10. Общая субъективная оценка (0–10):
-Оценка:
-Обоснование:
+Правило:
+- Если формат нарушен — задача считается НЕ выполненной.
 
 ---
 
-Минимальные требования:
-- Ни один критический пункт не должен быть ✖.
-- Общая оценка < 8/10 = MasterAgent автоматически возвращает задачу на доработку.
-- Если отсутствуют loading/empty/error states → задача отклоняется без ревью.
+## 4) UI Screenshot Rules (Mandatory for FrontendAgent)
+
+После завершения каждого визуального модуля FrontendAgent обязан:
+
+1) Сделать screenshot страницы(страниц).
+2) Сохранить в репозитории:
+   - /screenshots/{module}/{timestamp}.png
+3) Провести self-check:
+   - grid alignment
+   - spacing (отступы)
+   - consistency (радиусы/кнопки/таблицы/типографика)
+4) Выставить self-score 1–10.
+5) Если score < 9:
+   - исправить
+   - переснять
+   - повторить оценку
+
+В RESULT обязательно:
+- Screenshot: путь(и)
+- Score: число
+- Checks: 2–5 коротких строк
+
+ReviewAgent:
+- Проверяет screenshot и блокирует при визуальных P0 проблемах.
 
 ---
 
-ReviewAgent дополнительно проверяет:
+## 5) DevLog Rules (Mandatory)
 
-- Нет ли inline-стилей
-- Нет ли магических цветов
-- Нет ли дублирования компонентов
-- Используются ли общие UI primitives (StatusBadge, Table, Button)
+Файл: docs/agent_devlog.md
+
+Каждый завершённый модуль:
+- 5–8 строк
+- Summary
+- Notes (1–2 строки лёгкого стиля допустимо)
+- Commit hash
+- Screenshot score (если UI)
+
+Запрещено в DevLog:
+- архитектурные решения (только docs/decisions.md)
+- секреты/токены/PII
 
 ---
 
-MasterAgent обязан:
+## 6) Telegram DevLog Bot Contract (Mandatory)
 
-- Отклонить UI-задачу без блока Screenshot Evaluation.
-- Отклонить UI-задачу при несоответствии ui_style_guide.
-- Не переходить к следующему модулю без Pass.
+После каждого коммита (1 задача = 1 коммит) отправляется сообщение в Telegram DevLog bot.
 
-H. Refactor Protocol (mandatory when code grows)
+Сообщение состоит из двух частей:
 
-Если исполнитель сделал укрупнённую реализацию (монолит/слишком большой файл), то ОБЯЗАТЕЛЬНО:
+### 6.1 Деловая часть (обязательна)
+- Module
+- Agent
+- Commit hash
+- What changed (3–6 bullets)
+- Files changed (key files)
+- Risks: P0/P1/N/A
+- UI: Screenshot score (если UI модуль)
 
-1) ReviewAgent (или отдельный RefactorPlanAgent) выпускает "Refactor Plan":
-- список файлов-источников монолита
-- предлагаемые новые пакеты/файлы
-- пошаговый план (каждый шаг = 1 коммит)
-- риски
+### 6.2 Неформальная часть (обязательна)
+- 1–3 строки эмоций
+- Мат допустим
+- Оскорбления допустимы ТОЛЬКО в сторону багов/задач/процесса (НЕ в сторону людей)
+- Запрещено: hate/угрозы/призывы к насилию
 
-2) MasterAgent создаёт задачу BackendAgent строго по плану (без расширения функционала).
+### 6.3 Для UI модулей — обязательно фото
+DevLog bot дополнительно отправляет screenshot:
+- /screenshots/{module}/{timestamp}.png
+- score >= 9, иначе переснять
 
-3) BackendAgent выполняет рефакторинг:
-- без изменения поведения (no feature changes)
-- маленькими коммитами
-- с обновлением docs при необходимости
+---
 
-I. DevLog + Telegram Dev Notifications Protocol (mandatory)
+## 7) Telegram Alerts Bot Contract (Mandatory)
 
-1) Completion order is mandatory for every agent task:
-- commit
-- append entry to `docs/agent_devlog.md`
-- send response with self-check line
+Alerts bot пишет только про мониторинг потоков:
+- OK -> WARN
+- WARN -> FAIL
+- FAIL -> OK (recovered)
 
-2) DevLog scope:
-- execution summary only (short factual progress)
-- no architecture decisions
-- no new task initiation from DevLog
-- architecture decisions are ADR-only
-- max 12 lines per DevLog entry
-- Russian language is default for DevLog (`Summary` and `Notes`)
-- Notes may be emotional/conversational and may include non-addressed expressive vocabulary
-- Notes must not include personal insults toward addressees
-- Notes must not include hate/discrimination, secrets/tokens, or PII
+Формат:
+- company / project / stream
+- status
+- top reason (1–2 причины)
+- last check time
 
-3) Telegram Dev Notifications scope:
-- completion-notify channel only
-- not a channel for technical discussions or architecture decisions
-- no business logic orchestration via dev-bot messages
-- Russian language is default for `Summary`/`Mood`/`Thoughts` in dev-notify messages
+Анти-спам:
+- cooldown на одинаковый статус (по stream)
+- streak: подтверждать WARN/FAIL минимум 2 подряд (если так настроено в thresholds)
 
-4) Secrets and safety:
-- dev-bot tokens/secrets are ENV-only
-- token/secret values must never appear in logs/messages
+---
 
-5) Response invariant:
-- every agent response must end with exact self-check line:
-  `ROLE=<AgentName> CONFIRMED`
+## 8) Branch / Commit Rules
+
+- 1 задача = 1 коммит.
+- Сообщения коммитов: area: action
+  - db:, api:, worker:, ui:, docs:, infra:
+- Запрещены: "WIP", "temp", "fix" без контекста.
+
+---
+
+## 9) Automation: Git hook post-commit (Mandatory)
+
+Токен и ID чата DevLog берутся только из .env: DEV_LOG_TELEGRAM_ENABLED=true, DEV_LOG_TELEGRAM_TOKEN=..., DEV_LOG_TELEGRAM_CHAT_ID=...
+
+- Хук: .githooks/post-commit (sh) вызывает scripts/devlog_notify.ps1.
+- devlog_notify.ps1: загружает .env из корня репозитория, передаёт hash последнего коммита и флаг -readSummaryFromGit; go run ./cmd/devnotify/ сам получает subject коммита из git в UTF-8 и выводит module из префикса (api/ui/docs и т.д.).
+
+Первичная настройка (делается ОДИН раз):
+1) Убедиться, что в .env заданы DEV_LOG_TELEGRAM_ENABLED=true, DEV_LOG_TELEGRAM_TOKEN, DEV_LOG_TELEGRAM_CHAT_ID.
+2) Включить хуки: git config core.hooksPath .githooks
+
+После этого любой commit автоматически отправит сообщение в Telegram DevLog.
+
+**Кто пишет в Telegram:** все агенты (MasterAgent, ReviewAgent, BackendAgent, FrontendAgent). Способ один: после выполнения задачи агент делает коммит (код, запись в docs/agent_devlog.md, отчёты — что релевантно). Post-commit hook отправляет сообщение в TG. Если изменений кода не было — достаточно добавить/обновить запись в docs/agent_devlog.md и закоммитить её. Ручной вызов devnotify не нужен.
+
+---
+
+## 10) Cursor Quickstart (для абсолютного новичка)
+
+Цель: ты не “программируешь агента”, ты просто переключаешься между чатами.
+
+1) Создай 4 Subagents (в Cursor: правила в `.cursor/rules/`, например `master-agent.mdc` для MasterAgent):
+   - MasterAgent / BackendAgent / FrontendAgent / ReviewAgent
+2) У всех поставь модель: Auto
+3) Начинай всегда с MasterAgent:
+   - кидаешь ему JOB модуля
+4) MasterAgent в ROUTING скажет, кому дальше:
+   - ты копируешь JOB и вставляешь в чат нужного агента
+5) После DONE исполнитель роутит на ReviewAgent:
+   - ты копируешь туда RESULT
+6) Если Review PASS:
+   - MasterAgent выдаёт следующий шаг
+7) Если Review BLOCK:
+   - возвращаешься к исполнителю и исправляешь
+
+Главное правило:
+- без PASS от ReviewAgent следующий модуль не начинаем.

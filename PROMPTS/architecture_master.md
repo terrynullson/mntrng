@@ -1,221 +1,191 @@
-A. One-liner
+# Architecture Master — HLS Monitoring Platform (Cursor Orchestration)
 
-Multi-tenant HLS Monitoring Platform: Go (API+Worker) + PostgreSQL + Redis + ffmpeg/ffprobe + Next.js (TS/TSX) + local FS + Docker Compose.
+## A) One-liner
+Multi-tenant HLS Monitoring SaaS: Go (API + Worker) + PostgreSQL + Redis + ffmpeg/ffprobe (Worker only) + Next.js (TSX) + local FS (TTL 30 days) + Docker Compose.
 
-B. Цель продукта (что строим)
+---
 
-Мониторинг HLS: m3u8/segments доступность, freshness, declared/effective bitrate, freeze, black frame → OK/WARN/FAIL
+## B) Цель продукта (что строим)
 
-Управление потоками Company → Project → Stream
+### B1) Мониторинг HLS потоков (ядро)
+Проверки (Worker):
+- доступность m3u8/segments
+- freshness (насколько “живой” поток)
+- declared vs effective bitrate
+- freeze detection
+- black frame detection
+Итоговый статус: OK / WARN / FAIL.
 
-Плеер в админке (HLS) + статус рядом
+### B2) Управление потоками (админка)
+Иерархия:
+Company → Project → Stream
 
-Telegram alerts + anti-spam
+Нужно:
+- добавлять/редактировать/удалять потоки
+- каждый заведённый поток автоматически под мониторингом
+- история статусов и инцидентов
 
-Результаты/скриншоты 30 дней + аналитика
+### B3) Плеер в админке (обязательно “крутой”)
+- кастомизированный HLS player
+- удобно переключать потоки
+- аккуратный вывод метаданных (не мешает)
 
-Multi-tenant изоляция
+### B4) Статистика и аналитика
+- аналитическая страница: состояния, тренды, инциденты, частота FAIL/WARN
+- таблицы, фильтры, статусы
 
-Расширяемость (SRT позже, AI позже)
+### B5) Telegram
+- Alerts bot: сообщения об инцидентах мониторинга
+- DevLog bot: сообщения о работе команды/агентов (с неформальным стилем)
+- anti-spam обязателен
 
-C. Стек (фиксированный, не менять)
+### B6) AI (дёшево)
+AI подключается только по событию (WARN/FAIL):
+- берём метрики + 1–2 кадра
+- получаем более точную причину и краткую сводку
+- без постоянной аренды дорогих мощностей
 
-Backend API: Go (REST)
+---
 
-Worker: Go (очередь задач, ffmpeg/ffprobe)
+## C) Стек (фиксированный, не менять)
 
-DB: PostgreSQL
-
-Queue: Redis
-
-Frontend: Next.js + TypeScript (TSX)
-
-Storage: локальная FS (VPS), TTL 30 дней
-
+Backend API: Go (REST)  
+Worker: Go (jobs, ffmpeg/ffprobe)  
+DB: PostgreSQL  
+Queue/state: Redis  
+Frontend: Next.js + TypeScript (TSX)  
+UI: TailwindCSS + shadcn/ui + Framer Motion  
+Storage: Local FS (TTL 30 days)  
 Deploy: Docker Compose (api, worker, postgres, redis, frontend)
 
-D. Негласные “границы” (самое важное)
+---
 
-API НЕ запускает ffmpeg/ffprobe. Любые тяжёлые проверки только Worker.
+## D) Главные границы (самое важное)
 
-API делает: CRUD, выдачу статусов/истории, постановку задач в очередь, RBAC/tenant checks.
+### D1) API ≠ Worker
+- API НЕ запускает ffmpeg/ffprobe
+- API делает:
+  - auth, RBAC, tenant guards
+  - CRUD companies/projects/streams
+  - отдачу статусов/истории
+  - enqueue jobs
+- Worker делает:
+  - все проверки HLS
+  - любые ffmpeg/ffprobe операции
+  - скриншоты
+  - отправку Alerts в Telegram
+  - cleanup TTL
 
-Worker делает: проверки потоков, скриншоты, анализ, алерты, cleanup.
+### D2) Strict multi-tenant
+- company_id должен быть везде (кроме таблицы companies)
+- company_id для доступа берётся только из auth context
+- любая выборка без tenant scope = P0 дефект
 
-Multi-tenant строго: никакой выборки без company\_id, никакой “общей” админки без явного режима.
+---
 
-E. Data model invariants (инварианты данных)
+## E) Инварианты данных (обязательно)
 
-company\_id везде (кроме companies)
+- company_id везде (кроме companies)
+- audit log на изменения сущностей:
+  - stream/project changes
+  - role changes
+  - approve/reject registration
+- alert_state на поток:
+  - streak/cooldown/last_sent
+- результаты проверок immutable (не переписывать прошлое задним числом)
 
-audit log на изменения сущностей (streams/projects/…)
+---
 
-alert\_state на поток (streak/cooldown/последний алерт)
+## F) Хранилище скриншотов (Local FS, TTL 30 days)
 
-результаты проверок immutable (не правим задним числом)
+- Детерминированный путь:
+  storage/{company_id}/{stream_id}/{check_id}.jpg  (или аналогичный, единый)
+- TTL 30 дней:
+  cleanup job — ответственность Worker
+- API отдаёт метаданные/прокси-доступ строго по tenant guard
 
-F. Хранилище скриншотов
+---
 
-Путь на FS формируется детерминированно: storage/{company\_id}/{stream\_id}/{check\_id}.jpg
+## G) Security Canon (обязательно)
 
-TTL 30 дней: cleanup job в Worker
+- Без auth UI недоступен.
+- Public endpoints:
+  - GET /api/v1/health
+  - controlled registration/auth public endpoints
+- Остальные endpoints:
+  - auth middleware
+  - role guard
+  - tenant guard
 
-API отдаёт ссылки/метаданные, чтение файла через API (или прокси), но правила доступа по tenant обязательны
+RBAC:
+- super_admin: cross-company по явной политике
+- company_admin: read/write внутри своей company
+- viewer: read-only внутри своей company
 
-G. Набор модулей (чтобы мастер шёл по шагам)
+Controlled registration:
+- signup создаёт registration_requests со статусом pending
+- approve/reject только super_admin
+- pending/rejected/disabled не могут аутентифицироваться
 
-Repo bootstrap + Docker Compose
+Telegram:
+- токены через ENV
+- без утечек токенов в логах
 
-DB schema + migrations
+---
 
-API contracts (OpenAPI/README endpoints)
+## H) UI Canon (Frontend) — обязательный стандарт
 
-CRUD компаний/проектов/стримов + audit
-
-Worker jobs: enqueue + processing skeleton
-
-HLS checkers (m3u8/segments/freshness/bitrate/freeze/blackframe)
-
-Alerts Telegram + anti-spam
-
-Retention cleanup
-
-Frontend admin shell + таблицы/фильтры
-
-Player page + status
-
-Analytics pages
-
-AI (позже)
-
-H. Стандарты разработки
-
-1 шаг = 1 коммит (узкая задача)
-
-Нет TODO, нет “пока так”
-
-Изменения API → обновить контракт/док
-
-Все thresholds — из thresholds\_and\_rules.md, без магических чисел
-
-
-
-I. UI Canon (Frontend) — обязательный архитектурный стандарт
-
-
-
-UI админки обязан быть:
-
-\- flat
-
-\- modern
-
-\- professional
-
-\- admin-first (плотный, информативный, без декоративности)
-
-
+UI должен быть:
+- flat
+- modern
+- professional
+- admin-first (плотный, информативный)
 
 Источник истины:
+- PROMPTS/ui_style_guide.md
+- docs/frontend_ui_rules.md
 
-\- PROMPTS/ui\_style\_guide.md
-
-\- docs/frontend\_ui\_rules.md
-
-
-
-FrontendAgent обязан читать эти файлы перед любой UI-задачей.
-
-
-
-UI стек (обязательный):
-
-\- TailwindCSS
-
-\- shadcn/ui (Button, Badge, Table, Input, Dropdown, Dialog, Tabs)
-
-\- Framer Motion для микро-анимаций
-
-
-
-Анимационные правила:
-
-\- длительность 120–360ms
-
-\- easing: easeOut
-
-\- без bounce / elastic / spring exaggeration
-
-\- анимации не должны мешать чтению таблиц
-
-
-
-Компонентные требования:
-
-\- Таблицы с фильтрами, поиском и пагинацией
-
-\- StatusBadge (OK/WARN/FAIL/INFO) как единый компонент
-
-\- Skeleton loaders вместо спиннеров
-
-\- Empty state и Error state обязательны
-
-
+Обязательно:
+- skeleton loaders (не спиннеры)
+- empty state и error state
+- micro animations 120–360ms, easeOut
+- sidebar collapsible + topbar user menu
+- Streams table + filters + status badges
+- Player page
+- Analytics page
+- Users page (super_admin)
+- Requests page (approve/reject)
+- Telegram link page
 
 Запрещено:
+- glassmorphism
+- neomorphism
+- тяжёлые градиенты
+- декоративщина без смысла
 
-\- Неоморфизм
+---
 
-\- Glassmorphism
-
-\- Тяжёлые градиенты
-
-\- Декоративные эффекты без бизнес-смысла
-
-\- Несогласованные UI-паттерны
-
-
-
-Definition of Done (UI-задачи):
-
-\- Есть loading / empty / error states
-
-\- Используются общие UI-примитивы
-
-\- Нет inline-стилей
-
-\- Нет магических цветов
-
-\- Один шаг = один коммит
-
-
-
-J. Code Organization (mandatory) — запрет монофайлов
-
-Цель: поддерживаемая структура кода. Любая реализация должна быть разложена по слоям/пакетам.
-Правило: “один файл на весь модуль” запрещён.
+## I) Code Organization (No monolith)
 
 Ограничения:
-- Любой новый файл > 400 строк = требуется разбиение (обоснование только через ADR).
-- Любая функция > 80 строк = требуется разбиение (вынести подфункции/пакеты).
-- В cmd/* только wiring (инициализация, роутинг, DI), без бизнес-логики.
-- Бизнес-логика и доступ к данным разделены.
+- новый файл > 400 строк — дробить
+- функция/компонент > 80 строк — дробить
+- в cmd/* только wiring
 
-Структура Go (baseline):
-
+Go структура (baseline):
 /cmd/api/main.go
 /cmd/worker/main.go
 
-/internal/config        (ENV, конфиг)
-/internal/http          (router, handlers, middleware)
-/internal/service       (use-cases, бизнес-логика)
-/internal/repo          (DB queries, транзакции)
-/internal/domain        (types, enums, status models)
-/internal/queue         (enqueue/dequeue abstraction)
-/internal/ffmpeg        (wrapper/runner for ffmpeg/ffprobe)
-/internal/telegram      (client + templates)
-/internal/storage       (FS paths, read/write)
-/internal/observability (logging, metrics placeholders)
+/internal/config
+/internal/http
+/internal/service
+/internal/repo
+/internal/domain
+/internal/queue
+/internal/ffmpeg
+/internal/telegram
+/internal/storage
+/internal/observability
 /migrations
 
 Запрещено:
@@ -223,33 +193,42 @@ J. Code Organization (mandatory) — запрет монофайлов
 - repo вызывает внешние сервисы (telegram/ffmpeg)
 - worker использует http handlers
 
-K. Security Canon (mandatory)
+---
 
-Authentication and authorization are mandatory for API access.
+## J) Telegram Contracts (Mandatory)
 
-- Public endpoints only:
-  - `GET /api/v1/health`
-  - controlled registration/auth public endpoints
-- All other API endpoints must pass:
-  - auth middleware
-  - role guard
-  - tenant guard
+### J1) Alerts bot
+События:
+- OK -> WARN
+- WARN -> FAIL
+- FAIL -> OK (recovered)
 
-RBAC baseline:
-- `super_admin`: cross-company by explicit policy.
-- `company_admin`: read/write only inside own company.
-- `viewer`: read-only inside own company.
+Содержимое:
+- company/project/stream
+- status
+- причины (1–2)
+- время проверки
 
-Tenant identity source:
-- `company_id` for access control must come from auth context.
-- Route/query values are validation inputs only and must be checked against auth tenant context.
+Анти-спам:
+- cooldown + (опционально) streak
 
-Controlled registration:
-- Public signup creates `registration_requests` with `pending`.
-- Only super_admin can approve/reject and assign role/company.
-- Pending/rejected/disabled identities cannot authenticate.
+### J2) DevLog bot
+Триггер: каждый commit (1 задача = 1 коммит)
 
-Telegram auth policy:
-- Telegram payload signatures must be verified by backend.
-- Telegram login/link allowed only for approved flow + active users.
-- No token/secret leakage in logs.
+Сообщение:
+1) по делу: module/agent/commit/что сделал/файлы/риски/score
+2) эмоции: 1–3 строки, мат допустим, оскорблять людей нельзя
+
+UI:
+- обязательно прикладывать screenshot из /screenshots/{module}/{timestamp}.png
+
+---
+
+## K) Cursor Orchestration (Mandatory)
+
+Процесс: JOB → RESULT → ROUTING
+Единый источник процесса:
+- docs/agents_and_responsibilities.md
+
+Правило:
+- следующий модуль только после ReviewAgent PASS (P0 clean)

@@ -28,11 +28,15 @@ cp .env.example .env
 
 Файл `.env` не добавляется в git (трекается только `.env.example`).
 
-## Запуск локального окружения
+## Запуск в Docker (без ручных шагов)
+
+Миграции и тестовый пользователь для скриншотов применяются автоматически при старте (сервис `init`).
 
 ```bash
 docker compose up --build -d
 ```
+
+После старта: API на 8080, frontend на 3000, БД с миграциями и сидером (логин `test_screenshot_admin` / `TestScreenshot1`).
 
 Проверка API:
 
@@ -40,11 +44,32 @@ docker compose up --build -d
 curl http://localhost:8080/api/v1/health
 ```
 
+### Скриншот страницы Settings (одна команда)
+
+Поднять стек и один раз выполнить контейнер скриншота (Playwright):
+
+```bash
+docker compose up --build -d
+docker compose --profile screenshot run --rm screenshot
+```
+
+Скриншот сохранится в `screenshots/telegram-delivery-settings/<timestamp>.png` (репозиторий смонтирован в контейнер). При необходимости скрипт сделает `git add` и коммит.
+
+### Telegram DevLog после коммита
+
+В `.env` задать: `DEV_LOG_TELEGRAM_ENABLED=true`, `DEV_LOG_TELEGRAM_TOKEN`, `DEV_LOG_TELEGRAM_CHAT_ID`. Один раз включить хуки:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+После каждого коммита будет отправляться сообщение в Telegram (скрипт `scripts/devlog_notify.ps1`).
+
 ## Authentication + controlled registration smoke-check
 
 All API endpoints except health and public auth endpoints are protected by bearer auth.
 
-1. Apply migrations:
+1. Apply migrations (если не используете Docker; при `docker compose up` миграции выполняет сервис `init`):
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0001_baseline_schema.up.sql
