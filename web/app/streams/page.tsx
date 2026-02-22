@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -210,9 +211,15 @@ export default function StreamsPage() {
       </header>
 
       {!scopeCompanyId ? (
-        <StatePanel>
-          Select company scope in topbar to load streams.
-        </StatePanel>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel>
+            Select company scope in topbar to load streams.
+          </StatePanel>
+        </motion.div>
       ) : null}
 
       <div className="filters-grid streams-v2-filters">
@@ -277,19 +284,71 @@ export default function StreamsPage() {
       </div>
 
       {isViewer ? (
-        <StatePanel>Viewer role is read-only. Run check actions are disabled.</StatePanel>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel>Viewer role is read-only. Run check actions are disabled.</StatePanel>
+        </motion.div>
       ) : null}
-      {runCheckSuccess ? <StatePanel>{runCheckSuccess}</StatePanel> : null}
-      {runCheckError ? <StatePanel kind="error">{runCheckError}</StatePanel> : null}
-      {error ? <StatePanel kind="error">{error}</StatePanel> : null}
-      {isLoading ? <SkeletonBlock lines={7} /> : null}
+      {runCheckSuccess ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel>{runCheckSuccess}</StatePanel>
+        </motion.div>
+      ) : null}
+      {runCheckError ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel kind="error">{runCheckError}</StatePanel>
+        </motion.div>
+      ) : null}
+      {error ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel kind="error">{error}</StatePanel>
+        </motion.div>
+      ) : null}
+      {isLoading ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <SkeletonBlock lines={7} />
+        </motion.div>
+      ) : null}
 
       {!isLoading && !error && scopeCompanyId && filteredStreams.length === 0 ? (
-        <StatePanel>No streams found for selected filters.</StatePanel>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <StatePanel>No streams found for selected filters.</StatePanel>
+        </motion.div>
       ) : null}
 
       {!isLoading && !error && scopeCompanyId && filteredStreams.length > 0 ? (
-        <div className="table-wrap">
+        <motion.div
+          className="table-wrap"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.28, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
           <table>
             <thead>
               <tr>
@@ -344,7 +403,7 @@ export default function StreamsPage() {
               })}
             </tbody>
           </table>
-        </div>
+        </motion.div>
       ) : null}
     </section>
   );

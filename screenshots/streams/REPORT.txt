@@ -1,0 +1,4 @@
+FE-STREAMS-001 REPORT
+Screenshot: screenshots\streams\20260222215347.png
+Score: 9
+Checks: authorized /streams, Streams title, Search/Project/Active/Status filters, table or empty state.

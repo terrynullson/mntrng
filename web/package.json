@@ -6,7 +6,8 @@
     "build": "next build",
     "start": "next start",
     "screenshot:settings": "node scripts/screenshot-settings.mjs",
-    "screenshot:analytics": "node scripts/screenshot-analytics.mjs"
+    "screenshot:analytics": "node scripts/screenshot-analytics.mjs",
+    "screenshot:streams": "node scripts/screenshot-streams.mjs"
   },
   "dependencies": {
     "framer-motion": "11.3.19",
