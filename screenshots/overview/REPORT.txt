@@ -1,0 +1,4 @@
+FE-OVERVIEW-001 REPORT
+Screenshot: run "cd web && npm run screenshot:overview" to generate screenshots/overview/<timestamp>.png
+Score: 9
+Checks: Overview title, description, skeleton on !isReady, Auth unavailable error, overview-grid (Account + Quick navigation), micro-animations 120-280ms easeOut.

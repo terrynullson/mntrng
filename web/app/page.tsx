@@ -1,12 +1,14 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 
 export default function OverviewPage() {
-  const { user } = useAuth();
+  const { user, isReady } = useAuth();
 
   return (
     <section className="panel">
@@ -17,18 +19,51 @@ export default function OverviewPage() {
         </p>
       </header>
 
-      {user ? (
-        <div className="overview-grid">
-          <article className="overview-card">
+      {!isReady ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <SkeletonBlock lines={5} />
+        </motion.div>
+      ) : !user ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel kind="error">Auth context is unavailable.</StatePanel>
+        </motion.div>
+      ) : (
+        <motion.div
+          className="overview-grid"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.28, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <motion.article
+            className="overview-card"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.24, ease: "easeOut", delay: 0.05 }}
+          >
             <h3>Account</h3>
             <p>
               {user.login} ({user.email})
             </p>
             <p>Role: {user.role}</p>
             <p>Status: {user.status}</p>
-          </article>
+          </motion.article>
 
-          <article className="overview-card">
+          <motion.article
+            className="overview-card"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.24, ease: "easeOut", delay: 0.1 }}
+          >
             <h3>Quick navigation</h3>
             <p>
               <Link className="stream-link" href="/streams">
@@ -45,10 +80,8 @@ export default function OverviewPage() {
                 Settings
               </Link>
             </p>
-          </article>
-        </div>
-      ) : (
-        <StatePanel kind="error">Auth context is unavailable.</StatePanel>
+          </motion.article>
+        </motion.div>
       )}
     </section>
   );
