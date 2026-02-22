@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { FormEvent, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -286,9 +287,15 @@ export default function AdminUsersPage() {
       </header>
 
       {!isSuperAdmin ? (
-        <StatePanel>
-          Read-only mode. Role and status mutations are available only for super_admin.
-        </StatePanel>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel>
+            Read-only mode. Role and status mutations are available only for super_admin.
+          </StatePanel>
+        </motion.div>
       ) : (
         <form className="filters-grid users-filters" onSubmit={applyFilters}>
           <label className="form-field" htmlFor="users-company-filter">
@@ -368,17 +375,63 @@ export default function AdminUsersPage() {
         </form>
       )}
 
-      {error ? <StatePanel kind="error">{error}</StatePanel> : null}
-      {actionError ? <StatePanel kind="error">{actionError}</StatePanel> : null}
-      {actionSuccess ? <StatePanel>{actionSuccess}</StatePanel> : null}
-      {isLoading ? <SkeletonBlock lines={7} /> : null}
+      {error ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel kind="error">{error}</StatePanel>
+        </motion.div>
+      ) : null}
+      {actionError ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel kind="error">{actionError}</StatePanel>
+        </motion.div>
+      ) : null}
+      {actionSuccess ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel>{actionSuccess}</StatePanel>
+        </motion.div>
+      ) : null}
+      {isLoading ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <SkeletonBlock lines={7} />
+        </motion.div>
+      ) : null}
 
       {!isLoading && !error && isSuperAdmin && items.length === 0 ? (
-        <StatePanel>No users found for selected filters.</StatePanel>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <StatePanel>No users found for selected filters.</StatePanel>
+        </motion.div>
       ) : null}
 
       {!isLoading && !error && items.length > 0 ? (
-        <div className="table-wrap">
+        <motion.div
+          className="table-wrap"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.28, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
           <table>
             <thead>
               <tr>
@@ -508,7 +561,7 @@ export default function AdminUsersPage() {
               })}
             </tbody>
           </table>
-        </div>
+        </motion.div>
       ) : null}
     </section>
   );

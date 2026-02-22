@@ -1,0 +1,4 @@
+FE-ADMIN-USERS-001 REPORT
+Screenshot: screenshots\admin-users\20260222224250.png
+Score: 9
+Checks: authorized /admin/users, Users title, filters or read-only, table or empty.
