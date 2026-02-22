@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -73,32 +74,74 @@ export default function CompaniesPage() {
       </header>
 
       {!isSuperAdmin ? (
-        <StatePanel kind="error">
-          Access denied. Companies inventory is available only for super_admin.
-        </StatePanel>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel kind="error">
+            Access denied. Companies inventory is available only for super_admin.
+          </StatePanel>
+        </motion.div>
       ) : null}
 
       {isSuperAdmin ? (
-        <label className="form-field company-search" htmlFor="company-search-input">
-          <span>Search</span>
-          <input
-            id="company-search-input"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Find by id or name"
-          />
-        </label>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+        >
+          <label className="form-field company-search" htmlFor="company-search-input">
+            <span>Search</span>
+            <input
+              id="company-search-input"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Find by id or name"
+            />
+          </label>
+        </motion.div>
       ) : null}
 
-      {isLoading ? <SkeletonBlock lines={6} /> : null}
-      {error ? <StatePanel kind="error">{error}</StatePanel> : null}
+      {isLoading ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <SkeletonBlock lines={6} />
+        </motion.div>
+      ) : null}
+      {error ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel kind="error">{error}</StatePanel>
+        </motion.div>
+      ) : null}
 
       {!isLoading && !error && isSuperAdmin && filtered.length === 0 ? (
-        <StatePanel>No companies found.</StatePanel>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
+          <StatePanel>No companies found.</StatePanel>
+        </motion.div>
       ) : null}
 
       {!isLoading && !error && isSuperAdmin && filtered.length > 0 ? (
-        <div className="table-wrap">
+        <motion.div
+          className="table-wrap"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.28, ease: "easeOut" }}
+          style={{ marginTop: "12px" }}
+        >
           <table>
             <thead>
               <tr>
@@ -117,7 +160,7 @@ export default function CompaniesPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </motion.div>
       ) : null}
     </section>
   );

@@ -1,0 +1,4 @@
+FE-COMPANIES-001 REPORT
+Screenshot: screenshots\companies\20260222224756.png
+Score: 9
+Checks: authorized /companies, Companies title, Super-admin inventory, Search or Access denied, table or empty.

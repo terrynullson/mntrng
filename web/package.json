@@ -10,7 +10,8 @@
     "screenshot:streams": "node scripts/screenshot-streams.mjs",
     "screenshot:stream-detail": "node scripts/screenshot-stream-detail.mjs",
     "screenshot:admin-requests": "node scripts/screenshot-admin-requests.mjs",
-    "screenshot:admin-users": "node scripts/screenshot-admin-users.mjs"
+    "screenshot:admin-users": "node scripts/screenshot-admin-users.mjs",
+    "screenshot:companies": "node scripts/screenshot-companies.mjs"
   },
   "dependencies": {
     "framer-motion": "11.3.19",
