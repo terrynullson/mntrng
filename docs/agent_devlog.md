@@ -246,3 +246,11 @@ Summary:
 - Контракт B6: docs/ai_incident_contract.md, ADR-0012 в docs/decisions.md, ссылка в architecture_master.md § B6. Реализация не делалась.
 Notes:
 Worker-only; API не дергает AI.
+
+[2026-02-23] [be-docs-001]
+Agent: BackendAgent
+Commit: 8c768bd
+Summary:
+- README: раздел «Документация» со ссылками на api_contract, schema, telegram_alerts_contract, retention_cleanup, ai_incident_contract, decisions, screenshot_automation; отсылка к DevLog/retention/telegram в .env.example.
+Notes:
+Только правки README.
