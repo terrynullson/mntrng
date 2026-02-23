@@ -545,6 +545,14 @@ Summary:
 Notes:
 Закрывает P1 из RV-BE-TEST-API-HANDLERS-001. После коммита — scripts/devlog_notify.ps1.
 
+[2026-02-23] [BE-DOCS-README-002]
+Agent: BackendAgent
+Commit: b9362e7
+Summary:
+- README: добавлен подпункт «Быстрый старт» после «Запуск в Docker» (docker compose up, http://localhost:3000, логин test_screenshot_admin / TestScreenshot1). В «Реализованные возможности» — строка про тесты (API handlers, Worker) и про DevLog (настроение из .devlog_mood.txt).
+Notes:
+Только README.
+
 [2026-02-22] [RV-P0-STATE-004]
 Agent: ReviewAgent
 Summary:

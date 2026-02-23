@@ -19,10 +19,11 @@
 - **HLS-мониторинг:** Worker выполняет проверки (playlist, segments, freshness, freeze, blackframe, declared_bitrate, effective_bitrate), статусы OK/WARN/FAIL, сохранение результатов и скриншотов.
 - **Потоки и проекты:** tenant-scoped CRUD компаний, проектов, потоков; постановка check-jobs в очередь, история проверок и результатов.
 - **Админка:** controlled registration (pending → approve/reject только super_admin), список пользователей и заявок, смена ролей и статусов, audit log.
-- **Telegram:** алерты при переходах OK→WARN, WARN→FAIL и recovered (cooldown, streak); настройки доставки по компании (chat_id, send_recovered); DevLog в Telegram после каждого коммита (post-commit hook).
+- **Telegram:** алерты при переходах OK→WARN, WARN→FAIL и recovered (cooldown, streak); настройки доставки по компании (chat_id, send_recovered); DevLog в Telegram после каждого коммита (post-commit hook); «настроение» в сообщении — из `.devlog_mood.txt` в корне (опционально).
 - **Аналитика:** отображение состояний потоков, тренды, фильтрация по FAIL/WARN в UI.
 - **Плеер HLS:** просмотр потока в браузере, тёмная тема.
 - **AI по инцидентам:** при WARN/FAIL Worker после сохранения результата вызывает AI (cause/summary), результат сохраняется в БД; API отдаёт его по GET для job (только чтение).
+- **Тесты:** юнит-тесты API handlers (streams, check-jobs, check-results, ai-incident — 200/404/401/403) и Worker (job flow, persist, alert state); `go test ./...`.
 
 ## Документация
 
@@ -75,6 +76,10 @@ docker compose up --build -d
 ```
 
 После старта: API на 8080, frontend на 3000, БД с миграциями и сидером (логин `test_screenshot_admin` / `TestScreenshot1`).
+
+### Быстрый старт
+
+Выполните `docker compose up --build -d`, откройте http://localhost:3000 и войдите под пользователем `test_screenshot_admin` / `TestScreenshot1`.
 
 Проверка API:
 
