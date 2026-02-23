@@ -476,3 +476,10 @@ Summary:
 - Добавлены тесты для GET .../check-jobs/{job_id}/ai-incident: 200 (есть запись — cause, summary), 404 (нет записи), 401 (без токена), 403 (tenant escape). Стиль как в middleware_auth_test: mock store (mockAIIncidentStore), handler в изоляции для 200/404, роутер с auth для 401/403.
 Notes:
 internal/http/api/handlers_ai_incident_test.go; go test ./... проходит.
+
+[2026-02-22] [RV-BE-TEST-AI-INCIDENT-001]
+Agent: ReviewAgent
+Summary:
+- P0-ревью коммита f40fedd (BE-TEST-AI-INCIDENT-001): тесты GET ai-incident — 200, 404, 401, 403; mock store; tenant scope (403 tenant_scope_required). Вердикт: PASS.
+Notes:
+Код не менялся; коммит только devlog.
