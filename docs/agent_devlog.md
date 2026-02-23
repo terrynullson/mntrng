@@ -544,3 +544,10 @@ Summary:
 - Добавлены тесты 403 tenant_scope_required (TenantEscape) для check-jobs: enqueue (POST companies/2/streams/1/check-jobs), list (GET companies/2/streams/1/check-jobs), get (GET companies/2/check-jobs/1) при пользователе company_id=1. По образцу streams и check-results; mock store и роутер с auth.
 Notes:
 Закрывает P1 из RV-BE-TEST-API-HANDLERS-001. После коммита — scripts/devlog_notify.ps1.
+
+[2026-02-22] [RV-P0-STATE-004]
+Agent: ReviewAgent
+Summary:
+- P0-ревью состояния кодовой базы: tenant scoping (company_id в API/Worker, unscoped только companies), API≠Worker (ffmpeg/ffprobe/AI только в Worker), скриншоты UI (10 модулей с REPORT), логи без секретов. Verdict: PASS.
+Notes:
+Правки не вносились; коммит только devlog.
