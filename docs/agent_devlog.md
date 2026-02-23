@@ -477,6 +477,14 @@ Summary:
 Notes:
 internal/http/api/handlers_ai_incident_test.go; go test ./... проходит.
 
+[2026-02-23] [BE-TEST-API-HANDLERS-001]
+Agent: BackendAgent
+Commit: 6da8d0d
+Summary:
+- Добавлен батч тестов для основной tenant API: Streams (list 200, get 200/404, create 201/404 project miss, patch 200/404, delete 204/404, 401/403), Check jobs (enqueue 202/404 stream miss, get 200/404, list 200/404 stream miss, 401), Check results (get 200/404, get by job 200/404, list 200/404 stream miss, 401/403). Mock stores в стиле handlers_ai_incident_test; tenant scope в тестах соблюдён.
+Notes:
+internal/http/api/handlers_streams_check_test.go; go test ./... проходит.
+
 [2026-02-22] [RV-BE-TEST-AI-INCIDENT-001]
 Agent: ReviewAgent
 Summary:
