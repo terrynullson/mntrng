@@ -391,3 +391,12 @@ Summary:
 - P0-ревью BE-AI-INCIDENT-API-001: tenant (endpoint companies/.../streams/.../check-jobs/.../ai-incident, выборка WHERE company_id, stream_id, job_id), только чтение, API не вызывает AI, соответствие api_contract. Вердикт PASS.
 Notes:
 Правки не вносились; коммит только devlog.
+
+[2026-02-23] [FE-AI-INCIDENT-UI-001]
+Agent: FrontendAgent
+Commit: (см. коммит после этой записи)
+Summary:
+- На странице детали потока (/streams/[streamId]) при наличии последнего check result с job_id добавлен вызов GET .../check-jobs/{job_id}/ai-incident и блок «AI incident» (cause, summary). Skeleton при загрузке, empty при 404, error state при ошибке. Flat, без лишнего декора.
+- Тип AiIncident в lib/api/types.ts; tenant scope через существующий auth/scope.
+Notes:
+Скриншот секции: npm run screenshot:stream-detail при поднятых API и frontend (screenshots/stream-detail/).

@@ -10,9 +10,9 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { apiRequest, toErrorMessage } from "@/lib/api/client";
+import { ApiError, apiRequest, toErrorMessage } from "@/lib/api/client";
 import { resolveCompanyScope } from "@/lib/auth/tenant-scope";
-import type { CheckResult, CheckStatus, Stream } from "@/lib/api/types";
+import type { AiIncident, CheckResult, CheckStatus, Stream } from "@/lib/api/types";
 
 const ATOMIC_CHECK_ORDER: Array<keyof CheckResult["checks"]> = [
   "playlist",
@@ -53,6 +53,10 @@ export default function StreamDetailsPageV2() {
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [aiIncident, setAiIncident] = useState<AiIncident | null>(null);
+  const [aiIncidentLoading, setAiIncidentLoading] = useState<boolean>(false);
+  const [aiIncidentError, setAiIncidentError] = useState<string | null>(null);
 
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [fallbackURL, setFallbackURL] = useState<string | null>(null);
@@ -103,6 +107,51 @@ export default function StreamDetailsPageV2() {
 
     return () => abortController.abort();
   }, [accessToken, scopeCompanyId, streamID]);
+
+  useEffect(() => {
+    if (
+      !accessToken ||
+      !scopeCompanyId ||
+      !streamID ||
+      !latestResult?.job_id
+    ) {
+      setAiIncident(null);
+      setAiIncidentLoading(false);
+      setAiIncidentError(null);
+      return;
+    }
+
+    const jobId = latestResult.job_id;
+    const abort = new AbortController();
+    setAiIncidentLoading(true);
+    setAiIncidentError(null);
+    setAiIncident(null);
+
+    apiRequest<AiIncident>(
+      `/companies/${scopeCompanyId}/streams/${streamID}/check-jobs/${jobId}/ai-incident`,
+      { accessToken, signal: abort.signal }
+    )
+      .then((data) => {
+        if (!abort.signal.aborted) {
+          setAiIncident(data);
+        }
+      })
+      .catch((err) => {
+        if (abort.signal.aborted) return;
+        if (err instanceof ApiError && err.status === 404) {
+          setAiIncident(null);
+          return;
+        }
+        setAiIncidentError(toErrorMessage(err));
+      })
+      .finally(() => {
+        if (!abort.signal.aborted) {
+          setAiIncidentLoading(false);
+        }
+      });
+
+    return () => abort.abort();
+  }, [accessToken, scopeCompanyId, streamID, latestResult?.job_id]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -320,6 +369,49 @@ export default function StreamDetailsPageV2() {
                   </motion.div>
                 ) : null}
               </>
+            )}
+          </article>
+
+          <article className="status-card">
+            <h3 className="section-title">AI incident</h3>
+            {aiIncidentLoading ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <SkeletonBlock lines={3} />
+              </motion.div>
+            ) : aiIncidentError ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
+              >
+                <StatePanel kind="error">{aiIncidentError}</StatePanel>
+              </motion.div>
+            ) : aiIncident ? (
+              <motion.div
+                className="ai-incident-content"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
+              >
+                <p className="section-meta">
+                  <strong>Cause:</strong> {aiIncident.cause}
+                </p>
+                <p className="section-meta">
+                  <strong>Summary:</strong> {aiIncident.summary}
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
+              >
+                <StatePanel>No AI incident analysis for this check.</StatePanel>
+              </motion.div>
             )}
           </article>
         </motion.div>

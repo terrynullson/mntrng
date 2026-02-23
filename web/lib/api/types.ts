@@ -149,6 +149,11 @@ export type CheckResult = {
   created_at: string;
 };
 
+export type AiIncident = {
+  cause: string;
+  summary: string;
+};
+
 export type TelegramLinkPayload = Record<string, string>;
 
 export type TelegramDeliverySettings = {
