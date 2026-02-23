@@ -58,7 +58,7 @@ func (r *APIStreamRepo) CreateStream(
 		return domain.Stream{}, err
 	}
 
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		companyID,
@@ -174,7 +174,7 @@ func (r *APIStreamRepo) PatchStream(
 		return domain.Stream{}, err
 	}
 
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		companyID,
@@ -229,7 +229,7 @@ func (r *APIStreamRepo) DeleteStream(ctx context.Context, companyID int64, strea
 		return err
 	}
 
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		companyID,

@@ -110,7 +110,7 @@ func (r *APIRegistrationRepo) ChangeUserStatus(
 		"new_status":    updatedUser.Status,
 		"actor_user_id": actorUserID,
 	}
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		*currentUser.CompanyID,

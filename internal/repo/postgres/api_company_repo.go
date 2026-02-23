@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
@@ -38,7 +37,7 @@ func (r *APICompanyRepo) CreateCompany(ctx context.Context, name string) (domain
 		return domain.Company{}, err
 	}
 
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		item.ID,
@@ -121,7 +120,7 @@ func (r *APICompanyRepo) UpdateCompany(ctx context.Context, companyID int64, nam
 		return domain.Company{}, err
 	}
 
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		item.ID,
@@ -164,7 +163,7 @@ func (r *APICompanyRepo) DeleteCompany(ctx context.Context, companyID int64) err
 		return err
 	}
 
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		existing.ID,
@@ -195,37 +194,6 @@ func (r *APICompanyRepo) DeleteCompany(ctx context.Context, companyID int64) err
 		return err
 	}
 	return nil
-}
-
-func insertAuditLogTx(
-	ctx context.Context,
-	tx *sql.Tx,
-	companyID int64,
-	actorType string,
-	actorID string,
-	entityType string,
-	entityID int64,
-	action string,
-	payload map[string]interface{},
-) error {
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.ExecContext(
-		ctx,
-		`INSERT INTO audit_log (company_id, actor_type, actor_id, entity_type, entity_id, action, payload)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
-		companyID,
-		actorType,
-		actorID,
-		entityType,
-		entityID,
-		action,
-		string(payloadJSON),
-	)
-	return err
 }
 
 func isUniqueViolation(err error) bool {

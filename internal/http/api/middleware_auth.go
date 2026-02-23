@@ -43,10 +43,9 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 }
 
 func isPublicPath(path string) bool {
-	if path == "/api/v1/health" {
-		return true
-	}
 	switch path {
+	case "/api/v1/health", "/api/v1/metrics":
+		return true
 	case "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/telegram/login":
 		return true
 	default:

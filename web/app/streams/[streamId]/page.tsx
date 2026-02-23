@@ -248,9 +248,9 @@ export default function StreamDetailsPageV2() {
       if (hlsInstance) {
         hlsInstance.destroy();
       }
-      if (videoRef.current) {
-        videoRef.current.removeAttribute("src");
-        videoRef.current.load();
+      if (video) {
+        video.removeAttribute("src");
+        video.load();
       }
     };
   }, [stream?.url]);

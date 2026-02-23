@@ -11,11 +11,19 @@ import (
 
 	"github.com/example/hls-monitoring-platform/internal/config"
 	httpapi "github.com/example/hls-monitoring-platform/internal/http/api"
+	"github.com/example/hls-monitoring-platform/internal/ratelimit"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/redis/go-redis/v9"
 )
 
 const apiShutdownTimeout = 15 * time.Second
 
 func main() {
+	prometheus.MustRegister(
+		prometheus.NewGoCollector(),
+		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{Namespace: "hls_api"}),
+	)
+
 	port := config.GetString("API_PORT", "8080")
 	databaseURL := config.GetString("DATABASE_URL", "")
 	if databaseURL == "" {
@@ -34,7 +42,24 @@ func main() {
 		log.Fatalf("failed to ping database: %v", err)
 	}
 
-	server := httpapi.NewHTTPServer(":"+port, db)
+	authPerMin := config.IntAtLeast(config.GetInt("RATE_LIMIT_AUTH_PER_MIN", 10), 1)
+	var limiter ratelimit.Limiter
+	redisAddr := config.GetString("REDIS_ADDR", "")
+	if redisAddr != "" {
+		rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
+		pingCtx2, pingCancel2 := context.WithTimeout(context.Background(), 2*time.Second)
+		defer pingCancel2()
+		if err := rdb.Ping(pingCtx2).Err(); err != nil {
+			log.Printf("redis ping failed, using in-memory rate limiter: %v", err)
+			limiter = ratelimit.NewInMemLimiter(authPerMin)
+		} else {
+			limiter = ratelimit.NewRedisLimiter(rdb, authPerMin)
+		}
+	} else {
+		limiter = ratelimit.NewInMemLimiter(authPerMin)
+	}
+
+	server := httpapi.NewHTTPServer(":"+port, db, limiter)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

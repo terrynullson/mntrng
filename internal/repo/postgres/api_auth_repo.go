@@ -312,7 +312,7 @@ func (r *APIAuthRepo) UpsertTelegramLink(ctx context.Context, user domain.AuthUs
 		if telegramUsername != nil {
 			auditPayload["telegram_username"] = *telegramUsername
 		}
-		if err := insertAuditLogTx(
+		if err := InsertAuditLogTx(
 			ctx,
 			tx,
 			*user.CompanyID,

@@ -5,6 +5,7 @@ web/.next/
 .env.*
 !.env.example
 .devlog_mood.txt
+backups/
 
 # Документация и конфиг агентов (не пушить на GitHub)
 .cursor/

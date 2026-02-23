@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 	"strings"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -77,6 +79,7 @@ func NewRouter(handlers RouterHandlers) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/health", handlers.HandleHealth)
 	mux.HandleFunc("/api/v1/ready", handlers.HandleReady)
+	mux.Handle("/api/v1/metrics", promhttp.Handler())
 	mux.HandleFunc("/api/v1/auth/register", func(w http.ResponseWriter, r *http.Request) {
 		routeAuthRegister(w, r, handlers)
 	})

@@ -163,7 +163,7 @@ func (r *APIRegistrationRepo) ApproveRegistrationRequest(
 		return domain.AuthUser{}, err
 	}
 
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		companyID,
@@ -226,7 +226,7 @@ func (r *APIRegistrationRepo) RejectRegistrationRequest(ctx context.Context, req
 	if reason != nil {
 		auditPayload["reason"] = *reason
 	}
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		requestItem.Record.CompanyID,
@@ -304,7 +304,7 @@ func (r *APIRegistrationRepo) ChangeUserRole(
 		payload["to_company_id"] = *updatedUser.CompanyID
 	}
 
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		*auditCompanyID,

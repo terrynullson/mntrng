@@ -40,7 +40,7 @@ func (r *APIProjectRepo) CreateProject(ctx context.Context, companyID int64, nam
 		return domain.Project{}, err
 	}
 
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		companyID,
@@ -129,7 +129,7 @@ func (r *APIProjectRepo) UpdateProject(ctx context.Context, companyID int64, pro
 		return domain.Project{}, err
 	}
 
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		companyID,
@@ -178,7 +178,7 @@ func (r *APIProjectRepo) DeleteProject(ctx context.Context, companyID int64, pro
 		return err
 	}
 
-	if err := insertAuditLogTx(
+	if err := InsertAuditLogTx(
 		ctx,
 		tx,
 		companyID,
