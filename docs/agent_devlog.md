@@ -460,3 +460,11 @@ Summary:
 - P0-ревью FE-PLAYER-DESIGN-001: плеер 16/9, Fullscreen по контейнеру, hls.js; flat и типографика/отступы по гайду; тёмная тема через CSS-переменные, переключатель в topbar и на публичных страницах. Verdict: PASS.
 Notes:
 Код не менялся; коммит только devlog.
+
+[2026-02-23] [BE-DOCS-README-001]
+Agent: BackendAgent
+Commit: a738886
+Summary:
+- В README добавлен раздел «Реализованные возможности» после «Frontend»: HLS-мониторинг (Worker, проверки, статусы), потоки/проекты, админка (users, requests), Telegram (alerts, delivery settings, DevLog), аналитика (состояния, тренды, FAIL/WARN), плеер HLS (просмотр, тёмная тема), AI по инцидентам (WARN/FAIL). Только README.
+Notes:
+Соответствие текущему состоянию по devlog и architecture_master.

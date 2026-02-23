@@ -14,6 +14,16 @@
 
 Из каталога `web/`: `npm install` — установка зависимостей; `npm run dev` — режим разработки (dev-сервер с hot reload); `npm run build` — продакшен-сборка. После сборки запуск: `npm run start`.
 
+## Реализованные возможности
+
+- **HLS-мониторинг:** Worker выполняет проверки (playlist, segments, freshness, freeze, blackframe, declared_bitrate, effective_bitrate), статусы OK/WARN/FAIL, сохранение результатов и скриншотов.
+- **Потоки и проекты:** tenant-scoped CRUD компаний, проектов, потоков; постановка check-jobs в очередь, история проверок и результатов.
+- **Админка:** controlled registration (pending → approve/reject только super_admin), список пользователей и заявок, смена ролей и статусов, audit log.
+- **Telegram:** алерты при переходах OK→WARN, WARN→FAIL и recovered (cooldown, streak); настройки доставки по компании (chat_id, send_recovered); DevLog в Telegram после каждого коммита (post-commit hook).
+- **Аналитика:** отображение состояний потоков, тренды, фильтрация по FAIL/WARN в UI.
+- **Плеер HLS:** просмотр потока в браузере, тёмная тема.
+- **AI по инцидентам:** при WARN/FAIL Worker после сохранения результата вызывает AI (cause/summary), результат сохраняется в БД; API отдаёт его по GET для job (только чтение).
+
 ## Документация
 
 - [docs/api_contract.md](docs/api_contract.md) — контракт REST API (эндпоинты, форматы, коды ошибок, tenant scope).
