@@ -61,7 +61,11 @@ async function main() {
 
   const browser = await chromium.launch({ headless: true });
   try {
-    const context = await browser.newContext({ baseURL: BASE_URL });
+    const context = await browser.newContext({
+      baseURL: BASE_URL,
+      viewport: { width: 1280, height: 720 },
+      deviceScaleFactor: 2,
+    });
     const page = await context.newPage();
 
     await page.goto("/login", { waitUntil: "networkidle", timeout: 30000 });
