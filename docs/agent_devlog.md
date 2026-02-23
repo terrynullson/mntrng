@@ -230,3 +230,11 @@ Summary:
 - Ссылки в docs/api_contract.md (§5.8) и docs/decisions.md (ADR-0007). Антиспам и тесты уже в коде.
 Notes:
 API алерты не шлёт; только Worker.
+
+[2026-02-23] [be-retention-001]
+Agent: BackendAgent
+Commit: 2aeecca
+Summary:
+- docs/retention_cleanup.md: TTL 30 дней, батчи, tenant scope, путь storage, конфиг ENV, идемпотентность. ADR-0005 и api_contract §6 обновлены.
+Notes:
+Cleanup только в Worker; код не менялся.
