@@ -238,3 +238,11 @@ Summary:
 - docs/retention_cleanup.md: TTL 30 дней, батчи, tenant scope, путь storage, конфиг ENV, идемпотентность. ADR-0005 и api_contract §6 обновлены.
 Notes:
 Cleanup только в Worker; код не менялся.
+
+[2026-02-23] [be-ai-001]
+Agent: BackendAgent
+Commit: 9213225
+Summary:
+- Контракт B6: docs/ai_incident_contract.md, ADR-0012 в docs/decisions.md, ссылка в architecture_master.md § B6. Реализация не делалась.
+Notes:
+Worker-only; API не дергает AI.
