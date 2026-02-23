@@ -318,3 +318,12 @@ Summary:
 - README: в раздел «Документация» добавлена ссылка на docs/agents_and_responsibilities.md (процесс, роли, JOB→RESULT→ROUTING).
 Notes:
 Только правки README.
+
+[2026-02-23] [rv-p0-state-001]
+Agent: ReviewAgent
+Commit: db7e426
+Summary:
+- P0-ревью состояния кодовой базы (RV-P0-STATE-001): tenant scoping, API≠Worker, UI/скриншоты, общие P0. Правки не вносились.
+- Tenant: company_id в запросах api_* репозиториев; ListCompanies и admin ListUsers — исключения по архитектуре (companies / super_admin). API: ffmpeg/ffprobe только в worker. UI: скриншоты по всем модулям в screenshots/{module}/, score 9 в devlog.
+Notes:
+Вердикт PASS. Закоммитить только эту запись в agent_devlog при отсутствии других изменений.
