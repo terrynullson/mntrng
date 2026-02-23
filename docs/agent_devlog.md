@@ -221,3 +221,12 @@ Summary:
 - docs/schema.md обновлён: порядок миграций и описание индексов 0005.
 Notes:
 P0-поведение не менялось. Миграции воспроизводимы.
+
+[2026-02-23] [be-alerts-001]
+Agent: BackendAgent
+Commit: 8482e33
+Summary:
+- Контракт Telegram Alerts: docs/telegram_alerts_contract.md (переходы OK→WARN, WARN→FAIL, FAIL→OK; формат; антиспам cooldown/streak).
+- Ссылки в docs/api_contract.md (§5.8) и docs/decisions.md (ADR-0007). Антиспам и тесты уже в коде.
+Notes:
+API алерты не шлёт; только Worker.
