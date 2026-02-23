@@ -302,3 +302,11 @@ Summary:
 - README: в раздел «Документация» добавлена ссылка на docs/agent_devlog.md.
 Notes:
 Только правки README.
+
+[2026-02-23] [be-env-comment-001]
+Agent: BackendAgent
+Commit: 2df1f35
+Summary:
+- .env.example: комментарий над группой RETENTION_* (retention cleanup Worker).
+Notes:
+Только комментарий.
