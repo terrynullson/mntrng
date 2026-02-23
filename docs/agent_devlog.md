@@ -4,8 +4,12 @@
 
 Это касается **всех агентов**: MasterAgent, ReviewAgent, BackendAgent, FrontendAgent.
 
+После выполнения задачи каждый агент обязан:
 1. **Запись в этот файл** — добавить одну запись по формату ниже (DATE, MODULE, Agent, Commit, Summary, Notes; до 12 строк).
-2. **Коммит** — закоммитить изменения (включая эту запись и код). После коммита сообщение в Telegram DevLog уходит **автоматически** (post-commit hook → `scripts/devlog_notify.ps1` → `cmd/devnotify` с `-readSummaryFromGit`). Ручной вызов devnotify не нужен; достаточно включённых хуков (`git config core.hooksPath .githooks`) и переменных в `.env` (DEV_LOG_TELEGRAM_*). Если изменений кода не было — достаточно закоммитить только запись в этом файле.
+2. **Коммит** — закоммитить изменения (код + эта запись). Если изменений кода не было — закоммитить только запись в этом файле.
+3. **Telegram DevLog** — сообщение уйдёт автоматически после коммита (post-commit hook). Ручной вызов devnotify не нужен; нужны включённые хуки (`git config core.hooksPath .githooks`) и переменные в `.env` (DEV_LOG_TELEGRAM_*).
+
+Итог: запись в файл + коммит → и в файле DevLog, и в Telegram.
 
 Полный контракт и настройка хука: `docs/agents_and_responsibilities.md`, разделы 5–6 и 9.
 
@@ -110,10 +114,82 @@ Notes:
 
 [2026-02-22] [telegram-delivery-settings]
 Agent: BackendAgent / FrontendAgent
-Commit: bf978c6 (api), d99ed92 + b83781b (ui + playwright)
+Commit: bf978c6 (api), d99ed92 + b83781b (ui), eddadd8 (screenshot)
 Summary:
 - API: GET/PATCH company telegram delivery settings (tenant-scoped, company_admin+).
 - UI: секция «Telegram Alerts (Company)» на /settings (skeleton, empty/error, micro animation).
-- Автоматизация скриншота: npm run screenshot:settings в web/ (playwright, тестовый логин).
+- Скриншот: screenshots/telegram-delivery-settings/20260222213043.png, score 9; Dockerfile.api на Go 1.24, run-init.sh доработан для стабильного init.
 Notes:
-ReviewAgent RV-TDS-001 / RV-TDS-002 / RV-TDS-003: BLOCK по P0 (в репо только старый скриншот с логином). Для PASS: локально API + DATABASE_URL, затем cd web && npm run screenshot:settings, закоммитить новый .png из screenshots/telegram-delivery-settings/.
+Модуль закрыт. ReviewAgent PASS по скриншоту секции /settings (eddadd8).
+
+[2026-02-22] [analytics]
+Agent: FrontendAgent
+Commit: b0cf9ad
+Summary:
+- Страница /analytics: flat, skeleton/empty/error, микроанимации 200–280 ms easeOut.
+- Скриншот: screenshots/analytics/20260222213536.png, score 9; скрипт npm run screenshot:analytics.
+Notes:
+Модуль закрыт. ReviewAgent RV-ANALYTICS-001: PASS.
+
+[2026-02-22] [streams]
+Agent: FrontendAgent
+Commit: 3338eb4
+Summary:
+- Страница /streams: flat, skeleton/empty/error, микроанимации 200–280 ms easeOut; скрипт npm run screenshot:streams.
+- Скриншот: screenshots/streams/20260222215347.png, score 9.
+Notes:
+Модуль закрыт. ReviewAgent RV-STREAMS-001: PASS.
+
+[2026-02-22] [stream-detail]
+Agent: FrontendAgent
+Commit: 833aabc
+Summary:
+- Страница /streams/[streamId] (Stream Player): flat, skeleton/empty/error, микроанимации 200–280 ms easeOut; скрипт npm run screenshot:stream-detail.
+- Скриншот: screenshots/stream-detail/20260222221909.png, score 9.
+Notes:
+Модуль закрыт. ReviewAgent RV-STREAM-DETAIL-001: PASS.
+
+[2026-02-22] [admin-requests]
+Agent: FrontendAgent
+Commit: 69439d4
+Summary:
+- Страница /admin/requests: flat, skeleton/empty/error, read-only для не–super_admin, микроанимации 200–280 ms easeOut; сидер test_super_admin, скрипт npm run screenshot:admin-requests.
+- Скриншот: screenshots/admin-requests/20260222223722.png, score 9.
+Notes:
+Модуль закрыт. ReviewAgent RV-ADMIN-REQUESTS-001: PASS.
+
+[2026-02-22] [admin-users]
+Agent: FrontendAgent
+Commit: fb9f235
+Summary:
+- Страница /admin/users: flat, skeleton/empty/error, read-only для не–super_admin, микроанимации 200–280 ms easeOut; скрипт npm run screenshot:admin-users.
+- Скриншот: screenshots/admin-users/20260222224250.png, score 9.
+Notes:
+Модуль закрыт. ReviewAgent RV-ADMIN-USERS-001: PASS.
+
+[2026-02-22] [companies]
+Agent: FrontendAgent
+Commit: e8375ac
+Summary:
+- Страница /companies: flat, skeleton/empty/error, «Access denied» для не–super_admin, микроанимации 200–280 ms easeOut; скрипт npm run screenshot:companies.
+- Скриншот: screenshots/companies/20260222224756.png, score 9.
+Notes:
+Модуль закрыт. ReviewAgent RV-COMPANIES-001: PASS.
+
+[2026-02-22] [overview]
+Agent: FrontendAgent
+Commit: c779bd4 (page), отдельный коммит со скриншотом 20260222231707.png
+Summary:
+- Главная / (Overview): skeleton при !isReady, error «Auth context is unavailable», карточки Account и Quick navigation, микроанимации 200–280 ms easeOut; скрипт npm run screenshot:overview.
+- Скриншот: screenshots/overview/20260222231707.png, score 9.
+Notes:
+Модуль закрыт. ReviewAgent RV-OVERVIEW-002/003: PASS после добавления .png в репо.
+
+[2026-02-23] [login]
+Agent: FrontendAgent
+Commit: 0eec6a4 (polish+script), 829d91b (screenshot)
+Summary:
+- Страница /login: flat, микроанимации auth-card и error (120–360 ms easeOut); скрипт npm run screenshot:login.
+- Скриншот: screenshots/login/20260223065518.png, score 9.
+Notes:
+FE-LOGIN-001 готов. Роутинг: ReviewAgent.
