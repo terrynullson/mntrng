@@ -6,6 +6,7 @@ import (
 	"flag"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
@@ -39,6 +40,23 @@ func (t *thoughtFlags) String() string {
 func (t *thoughtFlags) Set(value string) error {
 	*t = append(*t, value)
 	return nil
+}
+
+var devLogMoods = []string{
+	"Коммит прошел, жизнь хороша.",
+	"Бодро и с огоньком.",
+	"Ещё один кирпичик в стену.",
+	"Чисто, без багов (пока).",
+	"Кофе выпит, коммит ушёл.",
+	"Всё по плану.",
+	"Тик-так, тик-так — дедлайн не спит.",
+	"Код ревью одобрит (надеюсь).",
+	"Маленький шаг для агента.",
+	"Спокойно и с достоинством.",
+}
+
+func randomMood() string {
+	return devLogMoods[rand.Intn(len(devLogMoods))]
 }
 
 func main() {
@@ -98,7 +116,7 @@ func main() {
 				}
 			}
 		}
-		mood = "Коммит прошел"
+		mood = randomMood()
 	} else if summaryFile != "" {
 		s, err := readUTF8File(summaryFile)
 		if err != nil {

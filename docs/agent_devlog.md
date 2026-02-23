@@ -507,6 +507,14 @@ Summary:
 Notes:
 Отправку в TG делают агенты; хук post-commit может не сработать при коммите из IDE.
 
+[2026-02-23] [devnotify-mood]
+Agent: MasterAgent
+Commit: (см. коммит после этой записи)
+Summary:
+- cmd/devnotify: при -readSummaryFromGit поле «Настроение» выбирается случайно из списка коротких эмоциональных фраз вместо фиксированного «Коммит прошел».
+Notes:
+По запросу пользователя — разнообразие в DevLog.
+
 [2026-02-22] [RV-BE-TEST-API-HANDLERS-001]
 Agent: ReviewAgent
 Summary:
