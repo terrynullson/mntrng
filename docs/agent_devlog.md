@@ -498,3 +498,11 @@ Summary:
 - P0-ревью состояния кодовой базы: tenant scoping (company_id в API/Worker, unscoped только companies), API≠Worker (ffmpeg/ffprobe/AI только в Worker), скриншоты UI (10 модулей с REPORT), логи без секретов. Verdict: PASS.
 Notes:
 Правки не вносились; коммит только devlog.
+
+[2026-02-23] [docs-devlog-agents-notify]
+Agent: MasterAgent
+Commit: (см. коммит после этой записи)
+Summary:
+- Правила обновлены: после коммита агенты обязаны запускать scripts/devlog_notify.ps1 (из корня репо), чтобы сообщение ушло в Telegram DevLog. Обновлены: .cursor/rules/project.mdc, docs/agents_and_responsibilities.md, .cursor/agents (backend, frontend, review, master).
+Notes:
+Отправку в TG делают агенты; хук post-commit может не сработать при коммите из IDE.

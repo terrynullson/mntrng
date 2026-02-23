@@ -28,7 +28,7 @@ description: P0 gatekeeper: PASS/BLOCK, tenant-scope, API≠Worker, UI+screensho
 - Если Docker недоступен: docs/screenshot_automation.md — вариант «Снятие скриншота (MCP browser)» (запустить API и frontend, затем MCP: login → /settings → browser_take_screenshot, сохранить в screenshots/<module>/<timestamp>.png) или из web/ запустить `npm run screenshot:settings` при уже запущенном API.
 - Если скриншота в репо нет или он не той страницы (например, экран логина вместо секции) — сделать самому по шагам выше и закоммитить; в отчёте указать путь.
 
-После задачи: запись в docs/agent_devlog.md + коммит (если были изменения) → сообщение в Telegram уходит по post-commit hook автоматически.
+После задачи обязательно: 1) запись в docs/agent_devlog.md, 2) коммит (если были изменения — код и DevLog; если нет — только запись в agent_devlog), 3) из корня репо запустить `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1`, чтобы сообщение ушло в Telegram DevLog.
 
 Проверяешь DevLog:
 - docs/agent_devlog.md обновлён по модулю (5–8 строк, commit hash, screenshot score если UI)
@@ -37,6 +37,8 @@ description: P0 gatekeeper: PASS/BLOCK, tenant-scope, API≠Worker, UI+screensho
 Формат:
 - Только PASS или BLOCK с конкретными P0/P1.
 - Никаких “альтернатив”.
+
+**Запрещено выдавать пользователю пошаговые инструкции.** Не пиши блоки вида «Что сделать для PASS», «выполни npm run...», «закоммить...», «повторно отправить». Работу выполняет агент (FrontendAgent/BackendAgent и т.д.). В ROUTING укажи NEXT_AGENT и в блоке ПРОМТ ДЛЯ КОПИРОВАНИЯ — полный JOB для этого агента. Пользователь копирует промт и вставляет в чат агента; агент сам переснимет скриншот, закоммитит и т.д.
 
 ОБЯЗАТЕЛЬНЫЙ ФОРМАТ:
 
@@ -64,6 +66,22 @@ RESULT:
 - RISKS: P0/P1 или N/A
 - ROLE=ReviewAgent CONFIRMED
 
+**РЕЗУЛЬТАТ ДЛЯ MASTER (обязательно):** результат ревью всегда пересылается мастеру. Ты обязан **включить этот блок в свой ответ в чате** (в том сообщении, которое присылаешь пользователю) — не в файл, а именно в тело ответа. Тогда пользователь видит блок в чате и копирует его одной кнопкой (иконка у блока) и вставляет в чат MasterAgent.
+
+Формат (включи в свой ответ):
+**РЕЗУЛЬТАТ ДЛЯ MASTER (скопируй блок и вставь в чат MasterAgent):**
+```
+/master-agent
+JOB_ID: <тот же>
+Verdict: PASS | BLOCK
+Findings: P0: ... P1: ...
+Screenshot Review: ...
+DevLog: OK | MISSING
+Risks: ...
+[кратко что делать дальше]
+```
+
 ROUTING:
 - NEXT_AGENT: MasterAgent | BackendAgent | FrontendAgent
 - NEXT_ACTION: <что делать дальше>
+- **ПРОМТ ДЛЯ КОПИРОВАНИЯ:** если NEXT_AGENT = MasterAgent — блок для копирования уже дан выше (РЕЗУЛЬТАТ ДЛЯ MASTER). Если NEXT_AGENT = BackendAgent/FrontendAgent — строка **ПРОМТ ДЛЯ СЛЕДУЮЩЕГО АГЕНТА (ИмяАгента):** и блок кода с первой строкой `/backend-agent` или `/frontend-agent`, далее JOB для этого агента. Пользователь копирует блок одной кнопкой и вставляет в чат агента.

@@ -20,9 +20,15 @@ alwaysApply: true
 
 ## Telegram DevLog и запись в Agent DevLog
 
-- **Токен и ID чата** только из `.env`: `DEV_LOG_TELEGRAM_ENABLED=true`, `DEV_LOG_TELEGRAM_TOKEN`, `DEV_LOG_TELEGRAM_CHAT_ID`.
-- После каждого коммита в Telegram DevLog уходит сообщение **автоматически**: post-commit hook (`.githooks/post-commit` → `scripts/devlog_notify.ps1` → `cmd/devnotify` с `-readSummaryFromGit`). Включение хуков: `git config core.hooksPath .githooks`. Ручной вызов devnotify не нужен.
-- **Перед коммитом** агент добавляет запись в `docs/agent_devlog.md` по формату из этого файла (раздел «После своей работы»). В Telegram пишут все агенты (Master, Review, Backend, Frontend) — путём коммита; hook отправляет сообщение сам. Итог: 1) запись в agent_devlog, 2) коммит → Telegram приходит сам.
+- **Все агенты** после выполнения задачи обязаны: 1) добавить запись в `docs/agent_devlog.md`, 2) закоммитить (код + запись; при отсутствии изменений кода — только запись), 3) **после коммита запустить отправку в Telegram**: из корня репо выполнить `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1`, чтобы сообщение гарантированно ушло в DevLog (хук post-commit может не сработать при коммите из IDE).
+- **Токен и ID чата** только из `.env`: `DEV_LOG_TELEGRAM_ENABLED=true`, `DEV_LOG_TELEGRAM_TOKEN`, `DEV_LOG_TELEGRAM_CHAT_ID`. Хуки: `git config core.hooksPath .githooks`.
+- **MasterAgent не пишет код** — только JOB, RESULT, ROUTING и при необходимости правки в docs/PROMPTS (текст).
+
+## ROUTING и промт для копирования
+
+- При указании NEXT_AGENT в ROUTING агент обязан привести промт для копирования в едином стиле: строка **ПРОМТ ДЛЯ СЛЕДУЮЩЕГО АГЕНТА (ИмяАгента):** и блок кода (```). Внутри блока первая строка — адрес агента после слеша: `/master-agent`, `/backend-agent`, `/frontend-agent` или `/review-agent`; со второй строки — текст для пересылки. Пользователь копирует блок одной кнопкой и вставляет в чат агента.
+- **ReviewAgent:** блок «РЕЗУЛЬТАТ ДЛЯ MASTER» обязан быть **в ответе в чате** (в теле сообщения), не только в файле — чтобы пользователь мог скопировать его из ответа одной кнопкой и вставить в чат MasterAgent.
+- **Не давать пользователю пошаговые инструкции** («что сделать для PASS», «выполни npm...», «закоммить...», «отправь на ревью»). Работу делают агенты. Пользователь только копирует промт и вставляет в чат NEXT_AGENT; агент выполняет задачу сам.
 
 ## Источник истины
 
