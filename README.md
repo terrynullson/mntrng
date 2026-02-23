@@ -22,6 +22,7 @@
 - [docs/retention_cleanup.md](docs/retention_cleanup.md) — retention cleanup в Worker: TTL, батчи, tenant scope, конфиг ENV.
 - [docs/ai_incident_contract.md](docs/ai_incident_contract.md) — целевой контракт интеграции AI по инцидентам (B6): триггер WARN/FAIL, вход/выход, on-demand.
 - [docs/decisions.md](docs/decisions.md) — архитектурные решения (ADR).
+- [docs/agents_and_responsibilities.md](docs/agents_and_responsibilities.md) — процесс, роли агентов, JOB→RESULT→ROUTING, источник истины по правилам.
 - [docs/screenshot_automation.md](docs/screenshot_automation.md) — автоматизация скриншотов для UI-модулей (Docker, скрипты).
 - [docs/agent_devlog.md](docs/agent_devlog.md) — журнал работ агентов по модулям, формат записей и ограничения.
 
