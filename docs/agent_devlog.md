@@ -506,3 +506,10 @@ Summary:
 - Правила обновлены: после коммита агенты обязаны запускать scripts/devlog_notify.ps1 (из корня репо), чтобы сообщение ушло в Telegram DevLog. Обновлены: .cursor/rules/project.mdc, docs/agents_and_responsibilities.md, .cursor/agents (backend, frontend, review, master).
 Notes:
 Отправку в TG делают агенты; хук post-commit может не сработать при коммите из IDE.
+
+[2026-02-22] [RV-BE-TEST-API-HANDLERS-001]
+Agent: ReviewAgent
+Summary:
+- P0-ревью батча тестов BE-TEST-API-HANDLERS-001: Streams (list/get/create/patch/delete — 200/201/204/404), Check jobs (enqueue/list/get — 202/200/404), Check results (list/get/get-by-job — 200/404); 401/403 (streams, check-results, ai-incident); tenant scope (403 tenant_scope_required); стиль как в handlers_ai_incident_test (mock store, router для auth). Verdict: PASS.
+Notes:
+P1: для check-jobs нет теста 403 TenantEscape. Код не менялся; коммит только devlog.
