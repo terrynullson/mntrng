@@ -576,3 +576,10 @@ Summary:
 - MVP 100%: обход основных страниц (Streams, Stream detail/player, Analytics, Settings, Admin Users/Requests, Login/Register, Overview) — везде skeleton, empty, error states; критичных багов и «белых» экранов не выявлено. Production build (npm run build в web/) успешен. README: дополнение про NEXT_PUBLIC_API_BASE_URL для production-сборки. Бизнес-логика и контракты API не менялись.
 Notes:
 Post-commit: scripts/devlog_notify.ps1 (хук .githooks/post-commit).
+
+[2026-02-22] [RV-FE-MVP-PROD-001]
+Agent: ReviewAgent
+Summary:
+- P0-ревью FE-MVP-PROD-001: skeleton/empty/error на основных страницах MVP (Overview, Streams, Stream detail, Analytics, Companies, Admin, Settings, Login/Register), production build (npm run build) успешен, NEXT_PUBLIC_API_BASE_URL упомянут в README. Verdict: PASS.
+Notes:
+Код не менялся; коммит только devlog.
