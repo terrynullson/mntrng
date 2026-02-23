@@ -1,4 +1,4 @@
 FE-LOGIN-001 REPORT
-Screenshot: screenshots\login\20260223065518.png
+Screenshot: screenshots\login\20260223165240.png
 Score: 9
 Checks: /login public, Login title, Sign in caption, form (login-or-email, password, Login button), Create registration request link.

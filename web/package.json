@@ -14,7 +14,8 @@
     "screenshot:companies": "node scripts/screenshot-companies.mjs",
     "screenshot:overview": "node scripts/screenshot-overview.mjs",
     "screenshot:login": "node scripts/screenshot-login.mjs",
-    "screenshot:register": "node scripts/screenshot-register.mjs"
+    "screenshot:register": "node scripts/screenshot-register.mjs",
+    "screenshot:all": "node scripts/screenshot-all.mjs"
   },
   "dependencies": {
     "framer-motion": "11.3.19",
