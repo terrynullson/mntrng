@@ -422,3 +422,12 @@ Summary:
 - P0-ревью FE-ANALYTICS-B4-001: Analytics — состояния, тренды, частота FAIL/WARN, таблица, фильтры (поток, период, статус), skeleton/empty/error, flat, tenant scope. Screenshot Score 9. Verdict: PASS.
 Notes:
 P1: поиск по таблице не реализован. Код не менялся; коммит только devlog.
+
+[2026-02-23] [FE-PLAYER-B3-001]
+Agent: FrontendAgent
+Commit: (см. коммит после этой записи)
+Summary:
+- Страница детали потока (/streams/[streamId]) приведена к B3: кастомизированный HLS player (единый вид и контролы), аккуратный вывод метаданных (название, id, проект, активность, atomic checks, AI incident) без перегруза экрана, добавлен dropdown для переключения потоков в рамках текущей компании.
+- Tenant scope через auth/scope, skeleton/empty/error сохранены. Плеер flat, admin-first.
+Notes:
+Скриншот: npm run screenshot:stream-detail при API + frontend (screenshots/stream-detail/).

@@ -3,7 +3,7 @@
 import type Hls from "hls.js";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -41,6 +41,7 @@ function normalizeStatus(status: string): CheckStatus | null {
 
 export default function StreamDetailsPageV2() {
   const params = useParams<{ streamId: string }>();
+  const router = useRouter();
   const streamID = Array.isArray(params.streamId)
     ? params.streamId[0]
     : params.streamId;
@@ -57,6 +58,10 @@ export default function StreamDetailsPageV2() {
   const [aiIncident, setAiIncident] = useState<AiIncident | null>(null);
   const [aiIncidentLoading, setAiIncidentLoading] = useState<boolean>(false);
   const [aiIncidentError, setAiIncidentError] = useState<string | null>(null);
+
+  const [companyStreams, setCompanyStreams] = useState<Stream[]>([]);
+  const [isLoadingStreams, setIsLoadingStreams] = useState<boolean>(false);
+  const [streamsError, setStreamsError] = useState<string | null>(null);
 
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [fallbackURL, setFallbackURL] = useState<string | null>(null);
@@ -107,6 +112,40 @@ export default function StreamDetailsPageV2() {
 
     return () => abortController.abort();
   }, [accessToken, scopeCompanyId, streamID]);
+
+  useEffect(() => {
+    if (!accessToken || !scopeCompanyId) {
+      setCompanyStreams([]);
+      setIsLoadingStreams(false);
+      setStreamsError(null);
+      return;
+    }
+
+    const abort = new AbortController();
+    setIsLoadingStreams(true);
+    setStreamsError(null);
+
+    apiRequest<{ items: Stream[] }>(
+      `/companies/${scopeCompanyId}/streams?limit=200`,
+      { accessToken, signal: abort.signal }
+    )
+      .then((response) => {
+        if (abort.signal.aborted) return;
+        const items = Array.isArray(response.items) ? response.items : [];
+        setCompanyStreams(items);
+      })
+      .catch((loadError) => {
+        if (abort.signal.aborted) return;
+        setStreamsError(toErrorMessage(loadError));
+      })
+      .finally(() => {
+        if (!abort.signal.aborted) {
+          setIsLoadingStreams(false);
+        }
+      });
+
+    return () => abort.abort();
+  }, [accessToken, scopeCompanyId]);
 
   useEffect(() => {
     if (
@@ -247,6 +286,31 @@ export default function StreamDetailsPageV2() {
             Back to streams
           </Link>
         </p>
+        {scopeCompanyId ? (
+          <div className="page-note">
+            <label className="form-field" htmlFor="stream-switcher">
+              <span>Switch stream</span>
+              <select
+                id="stream-switcher"
+                value={streamID ?? ""}
+                onChange={(event) => {
+                  const targetId = event.target.value;
+                  if (targetId && targetId !== streamID) {
+                    router.push(`/streams/${targetId}`);
+                  }
+                }}
+                disabled={isLoadingStreams || companyStreams.length === 0}
+              >
+                <option value="">Select stream</option>
+                {companyStreams.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} ({item.id})
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : null}
       </header>
 
       {!scopeCompanyId ? (
@@ -256,6 +320,16 @@ export default function StreamDetailsPageV2() {
           transition={{ duration: 0.24, ease: "easeOut" }}
         >
           <StatePanel>Select company scope in topbar to open stream details.</StatePanel>
+        </motion.div>
+      ) : null}
+
+      {streamsError ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+        >
+          <StatePanel kind="error">{streamsError}</StatePanel>
         </motion.div>
       ) : null}
 
