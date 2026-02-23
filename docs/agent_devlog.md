@@ -365,3 +365,11 @@ Summary:
 - При недоступности AI Worker не падает — ошибки только логируются (без секретов). Реализация: internal/ai (Analyzer, StubAnalyzer, LogAnalyzer), internal/repo/postgres (SaveAIIncidentResult), internal/service/worker (runAIIncidentIfNeeded после persist в job_flow).
 Notes:
 StubAnalyzer — заглушка; реальный провайдер подключается позже. docs/schema.md и scripts/run-init.sh обновлены под 0006.
+
+[2026-02-23] [rv-be-ai-incident-001]
+Agent: ReviewAgent
+Commit: N/A
+Summary:
+- P0-ревью BE-AI-INCIDENT-001: tenant (ai_incident_results, SaveAIIncidentResult по company_id/stream_id), API не вызывает AI (только Worker), секреты не в логах, соответствие ai_incident_contract и ADR-0012. Вердикт PASS.
+Notes:
+Правки не вносились; коммит только devlog.
