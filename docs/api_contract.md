@@ -663,6 +663,8 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 
 All endpoints in this section are tenant-scoped by route `company_id`. Access: `company_admin` or `super_admin` only (viewer forbidden).
 
+Telegram **alerts** (when and how the Worker sends notifications) are defined in **`docs/telegram_alerts_contract.md`**: transitions OK→WARN, WARN→FAIL, FAIL→OK (recovered), message format, anti-spam (cooldown per stream, streak for FAIL). API only manages delivery settings; it does not send alerts.
+
 ### `GET /api/v1/companies/{company_id}/telegram-delivery-settings`
 
 - Purpose: get company Telegram delivery settings.
