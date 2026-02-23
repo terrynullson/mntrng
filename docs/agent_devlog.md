@@ -339,7 +339,7 @@ Notes:
 
 [2026-02-23] [be-telegram-alerts-001]
 Agent: BackendAgent
-Commit: fe5817c
+Commit: 0ca9968
 Summary:
 - Добавлена отправка алертов при переходе OK→WARN: internal/domain (WorkerAlertEventWarn, ComputeWorkerAlertTransition — ветка ok_to_warn с cooldown). WARN→FAIL уже был (streak + cooldown). Recovered без изменений.
 - Антиспам сохранён: cooldown по stream_id, streak для FAIL, send_recovered в настройках компании. Токены/chat_id не логируются.
