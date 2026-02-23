@@ -618,6 +618,14 @@ Summary:
 Notes:
 Файлы: screenshots/login/20260223173917.png, screenshots/register/20260223173920.png (~16 KB).
 
+[2026-02-23] [FE-MVP-FINAL-001]
+Agent: FrontendAgent
+Commit: (в коммите)
+Summary:
+- Финальная полировка MVP: focus уже в globals (outline), тёмная тема для .state-error. aria-label на Login, Create registration request, Submit request, Back to login/Login, Run check, Connect/Reconnect Telegram, Retry, Save (settings), Approve/Reject, Apply/Reset, Save role/Save status.
+Notes:
+Сборка и скриншоты ок. Только UI/доступность.
+
 [2026-02-22] [RV-FE-SCREENSHOTS-ALL-001]
 Agent: ReviewAgent
 Summary:

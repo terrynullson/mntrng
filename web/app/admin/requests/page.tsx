@@ -198,6 +198,7 @@ export default function AdminRequestsPage() {
                       onClick={() => {
                         void handleApprove(item);
                       }}
+                      aria-label={`Approve request ${item.id}`}
                     >
                       Approve
                     </AppButton>
@@ -208,6 +209,7 @@ export default function AdminRequestsPage() {
                       onClick={() => {
                         void handleReject(item);
                       }}
+                      aria-label={`Reject request ${item.id}`}
                     >
                       Reject
                     </AppButton>

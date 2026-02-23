@@ -108,13 +108,13 @@ export default function LoginPage() {
             </motion.p>
           ) : null}
 
-          <AppButton type="submit" disabled={isSubmitting}>
+          <AppButton type="submit" disabled={isSubmitting} aria-label="Sign in">
             {isSubmitting ? "Signing in..." : "Login"}
           </AppButton>
         </form>
 
         <p className="auth-secondary">
-          No account? <Link href="/register">Create registration request</Link>
+          No account? <Link href="/register" aria-label="Create registration request">Create registration request</Link>
         </p>
       </motion.section>
     </div>

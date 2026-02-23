@@ -394,6 +394,7 @@ export default function StreamsPage() {
                         onClick={() => {
                           void handleRunCheck(stream);
                         }}
+                        aria-label={busyStreamID === stream.id ? "Queueing check" : `Run check for stream ${stream.name}`}
                       >
                         {busyStreamID === stream.id ? "Queueing..." : "Run check"}
                       </AppButton>

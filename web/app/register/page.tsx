@@ -89,7 +89,7 @@ export default function RegisterPage() {
             </p>
             <p>Login will be available only after approval and activation.</p>
             <p>
-              <Link href="/login" className="stream-link">
+              <Link href="/login" className="stream-link" aria-label="Back to login">
                 Back to login
               </Link>
             </p>
@@ -176,14 +176,14 @@ export default function RegisterPage() {
               </motion.p>
             ) : null}
 
-            <AppButton type="submit" disabled={isSubmitting}>
+            <AppButton type="submit" disabled={isSubmitting} aria-label="Submit registration request">
               {isSubmitting ? "Submitting..." : "Submit request"}
             </AppButton>
           </motion.form>
         )}
 
         <p className="auth-secondary">
-          Already approved? <Link href="/login">Login</Link>
+          Already approved? <Link href="/login" aria-label="Go to login">Login</Link>
         </p>
       </motion.section>
     </div>

@@ -360,7 +360,7 @@ export default function AdminUsersPage() {
           </label>
 
           <div className="users-filter-actions">
-            <AppButton type="submit" variant="secondary" disabled={isLoading}>
+            <AppButton type="submit" variant="secondary" disabled={isLoading} aria-label="Apply filters">
               Apply filters
             </AppButton>
             <AppButton
@@ -368,6 +368,7 @@ export default function AdminUsersPage() {
               variant="ghost"
               disabled={isLoading}
               onClick={resetFilters}
+              aria-label="Reset filters"
             >
               Reset
             </AppButton>
@@ -512,6 +513,7 @@ export default function AdminUsersPage() {
                               onClick={() => {
                                 void handleRoleChange(item);
                               }}
+                              aria-label={busyRoleUserID === item.id ? "Saving role" : `Save role for user ${item.login}`}
                             >
                               {busyRoleUserID === item.id ? "Saving..." : "Save role"}
                             </AppButton>
@@ -535,21 +537,22 @@ export default function AdminUsersPage() {
                               <option value="active">active</option>
                               <option value="disabled">disabled</option>
                             </select>
-                            <AppButton
-                              type="button"
-                              variant="secondary"
-                              disabled={
-                                busyRoleUserID === item.id ||
-                                busyStatusUserID === item.id
-                              }
-                              onClick={() => {
-                                void handleStatusChange(item);
-                              }}
-                            >
-                              {busyStatusUserID === item.id
-                                ? "Saving..."
-                                : "Save status"}
-                            </AppButton>
+<AppButton
+                            type="button"
+                            variant="secondary"
+                            disabled={
+                              busyRoleUserID === item.id ||
+                              busyStatusUserID === item.id
+                            }
+                            onClick={() => {
+                              void handleStatusChange(item);
+                            }}
+                            aria-label={busyStatusUserID === item.id ? "Saving status" : `Save status for user ${item.login}`}
+                          >
+                            {busyStatusUserID === item.id
+                              ? "Saving..."
+                              : "Save status"}
+                          </AppButton>
                           </div>
                         </div>
                       ) : (

@@ -570,6 +570,11 @@ tbody tr:last-child td {
   border-color: #f6c8c4;
 }
 
+[data-theme="dark"] .state-error {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
 .stream-link {
   color: var(--accent-strong);
   text-decoration: underline;

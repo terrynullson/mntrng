@@ -200,7 +200,7 @@ export default function SettingsPage() {
             />
           </label>
 
-          <AppButton type="submit" disabled={isSubmitting}>
+          <AppButton type="submit" disabled={isSubmitting} aria-label={linkStatus === "idle" ? "Connect Telegram account" : "Reconnect Telegram account"}>
             {isSubmitting
               ? "Processing..."
               : linkStatus === "idle"
@@ -241,6 +241,7 @@ export default function SettingsPage() {
                 variant="secondary"
                 onClick={() => void loadTelegramSettings()}
                 style={{ marginTop: "10px" }}
+                aria-label="Retry loading Telegram settings"
               >
                 Retry
               </AppButton>
@@ -307,7 +308,7 @@ export default function SettingsPage() {
                 {tgValidationError ? (
                   <StatePanel kind="error">{tgValidationError}</StatePanel>
                 ) : null}
-                <AppButton type="submit" disabled={tgSubmitting}>
+                <AppButton type="submit" disabled={tgSubmitting} aria-label="Save Telegram alerts settings">
                   {tgSubmitting ? "Saving…" : tgSettings ? "Update" : "Create"}
                 </AppButton>
               </form>
