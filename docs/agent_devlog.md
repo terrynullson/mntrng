@@ -346,3 +346,11 @@ Summary:
 - Обновлён docs/telegram_alerts_contract.md; тесты TestComputeAlertTransition дополнены (ok_to_warn sends, ok_to_warn blocked by cooldown).
 Notes:
 Только Worker шлёт алерты; tenant scope соблюдён.
+
+[2026-02-23] [rv-be-telegram-alerts-001]
+Agent: ReviewAgent
+Commit: N/A
+Summary:
+- P0-ревью BE-TELEGRAM-ALERTS-001 (коммиты 0ca9968, 5b0c92c): tenant (alert_state по company_id/stream_id), API≠Worker (изменения только domain/worker/repo), логи без секретов. Вердикт PASS.
+Notes:
+Краткое ревью по чеклисту; правки не вносились.
