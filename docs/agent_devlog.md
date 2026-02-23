@@ -394,7 +394,7 @@ Notes:
 
 [2026-02-23] [FE-AI-INCIDENT-UI-001]
 Agent: FrontendAgent
-Commit: (см. коммит после этой записи)
+Commit: e9c9e25
 Summary:
 - На странице детали потока (/streams/[streamId]) при наличии последнего check result с job_id добавлен вызов GET .../check-jobs/{job_id}/ai-incident и блок «AI incident» (cause, summary). Skeleton при загрузке, empty при 404, error state при ошибке. Flat, без лишнего декора.
 - Тип AiIncident в lib/api/types.ts; tenant scope через существующий auth/scope.
