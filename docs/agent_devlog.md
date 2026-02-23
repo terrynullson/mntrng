@@ -571,7 +571,7 @@ Notes:
 
 [2026-02-23] [FE-MVP-PROD-001]
 Agent: FrontendAgent
-Commit: (см. коммит после этой записи)
+Commit: cd42c2e
 Summary:
 - MVP 100%: обход основных страниц (Streams, Stream detail/player, Analytics, Settings, Admin Users/Requests, Login/Register, Overview) — везде skeleton, empty, error states; критичных багов и «белых» экранов не выявлено. Production build (npm run build в web/) успешен. README: дополнение про NEXT_PUBLIC_API_BASE_URL для production-сборки. Бизнес-логика и контракты API не менялись.
 Notes:
