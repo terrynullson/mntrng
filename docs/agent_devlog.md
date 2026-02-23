@@ -620,7 +620,7 @@ Notes:
 
 [2026-02-23] [FE-MVP-FINAL-001]
 Agent: FrontendAgent
-Commit: (в коммите)
+Commit: 14bf095
 Summary:
 - Финальная полировка MVP: focus уже в globals (outline), тёмная тема для .state-error. aria-label на Login, Create registration request, Submit request, Back to login/Login, Run check, Connect/Reconnect Telegram, Retry, Save (settings), Approve/Reject, Apply/Reset, Save role/Save status.
 Notes:
