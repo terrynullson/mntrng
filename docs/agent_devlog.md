@@ -438,3 +438,10 @@ Summary:
 - P0-ревью FE-PLAYER-B3-001: страница /streams/[streamId] — HLS player (единый вид/контролы), dropdown переключения потоков, метаданные (название, id, проект, активность, статус/проверки, AI incident), flat, skeleton/empty/error, tenant scope, без изменения бизнес-логики. Verdict: PASS.
 Notes:
 P1: обновить REPORT/скриншот stream-detail с проверкой «Switch stream». Код не менялся; коммит только devlog.
+
+[2026-02-22] [RV-P0-STATE-002]
+Agent: ReviewAgent
+Summary:
+- P0-ревью состояния кодовой базы: tenant scoping (company_id в API/Worker, unscoped только companies), API≠Worker (ffmpeg/ffprobe/AI только в Worker), скриншоты UI (10 модулей, REPORT с path/score), логи без секретов. Verdict: PASS.
+Notes:
+Правки не вносились; коммит только devlog.
