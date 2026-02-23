@@ -310,3 +310,11 @@ Summary:
 - .env.example: комментарий над группой RETENTION_* (retention cleanup Worker).
 Notes:
 Только комментарий.
+
+[2026-02-23] [be-readme-aor-001]
+Agent: BackendAgent
+Commit: 1c26ec1
+Summary:
+- README: в раздел «Документация» добавлена ссылка на docs/agents_and_responsibilities.md (процесс, роли, JOB→RESULT→ROUTING).
+Notes:
+Только правки README.
