@@ -705,4 +705,4 @@ Telegram **alerts** (when and how the Worker sends notifications) are defined in
 - Tenant contract aligns with ADR-0002 and ADR-0006: no tenant endpoint without `company_id` scope.
 - Job lifecycle (`queued/running/done/failed`) aligns with `check_jobs.status` constraint from schema.
 - Results are read-only at API contract level, aligned with immutable `check_results` rows in schema.
-- Retention policy is Worker responsibility (ADR-0005); API contract does not expose retention execution endpoints.
+- Retention policy is Worker responsibility (ADR-0005); API contract does not expose retention execution endpoints. Подробности cleanup (TTL, батчи, tenant scope): **`docs/retention_cleanup.md`**.
