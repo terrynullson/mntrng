@@ -270,3 +270,11 @@ Summary:
 - README: подраздел «Тесты» (go test ./..., DATABASE_URL для тестов с БД).
 Notes:
 Только правки README.
+
+[2026-02-23] [fe-readme-build-001]
+Agent: FrontendAgent
+Commit: a268db1
+Summary:
+- README: подраздел «Frontend (сборка и запуск)» — npm install, npm run dev, npm run build, npm run start. Проверка: npm run build в web/ прошла (Next.js 14.2.5).
+Notes:
+Ограничения не выявлены.
