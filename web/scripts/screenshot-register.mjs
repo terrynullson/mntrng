@@ -63,8 +63,9 @@ async function main() {
     const context = await browser.newContext({ baseURL: BASE_URL });
     const page = await context.newPage();
 
-    await page.goto("/register", { waitUntil: "networkidle", timeout: 30000 });
-    await page.waitForTimeout(500);
+    await page.goto("/register", { waitUntil: "load", timeout: 30000 });
+    await page.waitForSelector("h1", { state: "visible", timeout: 25000 });
+    await page.waitForTimeout(800);
 
     const hasTitle = await page.locator("h1:has-text('Registration Request')").count() > 0;
     const hasCaption = await page
