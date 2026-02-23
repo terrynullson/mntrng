@@ -28,10 +28,17 @@ if (-not $hash) {
     exit 0
 }
 
-# Summary and mood are read inside devnotify from git (UTF-8) to avoid PowerShell/console encoding
-& go run ./cmd/devnotify/ -agent=Hook -module=commit -commit=$hash -readSummaryFromGit
+$moodFile = Join-Path $RootDir ".devlog_mood.txt"
+$moodArg = @()
+if (Test-Path $moodFile) {
+    $moodArg = @("-moodFile", $moodFile)
+}
+
+# Summary from git (UTF-8). Mood: from .devlog_mood.txt if agent wrote it, else random in devnotify.
+& go run ./cmd/devnotify/ -agent=Hook -module=commit -commit=$hash -readSummaryFromGit @moodArg
 if ($LASTEXITCODE -ne 0) {
     Write-Host "DevLog notify failed (check DEV_LOG_TELEGRAM_TOKEN and DEV_LOG_TELEGRAM_CHAT_ID in .env)."
     exit 0
 }
+if (Test-Path $moodFile) { Remove-Item $moodFile -Force }
 Write-Host "DevLog sent to Telegram."

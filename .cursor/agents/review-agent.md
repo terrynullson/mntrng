@@ -28,7 +28,7 @@ description: P0 gatekeeper: PASS/BLOCK, tenant-scope, API≠Worker, UI+screensho
 - Если Docker недоступен: docs/screenshot_automation.md — вариант «Снятие скриншота (MCP browser)» (запустить API и frontend, затем MCP: login → /settings → browser_take_screenshot, сохранить в screenshots/<module>/<timestamp>.png) или из web/ запустить `npm run screenshot:settings` при уже запущенном API.
 - Если скриншота в репо нет или он не той страницы (например, экран логина вместо секции) — сделать самому по шагам выше и закоммитить; в отчёте указать путь.
 
-После задачи обязательно: 1) запись в docs/agent_devlog.md, 2) коммит (если были изменения — код и DevLog; если нет — только запись в agent_devlog), 3) из корня репо запустить `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1`, чтобы сообщение ушло в Telegram DevLog.
+После задачи обязательно: 1) запись в docs/agent_devlog.md, 2) коммит (если были изменения — код и DevLog; если нет — только запись в agent_devlog), 3) при желании записать одну строку (настроение) в .devlog_mood.txt в корне репо, затем из корня репо запустить `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1` — сообщение уйдёт в Telegram DevLog. Если сообщение в TG не пришло — сам запускаешь scripts/devlog_notify_check.ps1 и при необходимости выполняешь `git config core.hooksPath .githooks`. Пользователь диагностику не делает.
 
 Проверяешь DevLog:
 - docs/agent_devlog.md обновлён по модулю (5–8 строк, commit hash, screenshot score если UI)

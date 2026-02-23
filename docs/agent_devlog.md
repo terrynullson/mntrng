@@ -515,6 +515,14 @@ Summary:
 Notes:
 По запросу пользователя — разнообразие в DevLog.
 
+[2026-02-23] [devlog-mood-free]
+Agent: MasterAgent
+Commit: (см. коммит после этой записи)
+Summary:
+- Настроение в Telegram DevLog — как в рабочем чате: агент может записать одну строку (свободный текст) в .devlog_mood.txt в корне репо перед запуском devlog_notify.ps1; скрипт подхватит её в «Настроение» и удалит файл. Файл в .gitignore. Обновлены: scripts/devlog_notify.ps1, .gitignore, project.mdc, agents_and_responsibilities, инструкции агентов.
+Notes:
+Без ограничений по тексту (в рамках guardrails). Если файла нет — случайная фраза из devnotify.
+
 [2026-02-22] [RV-BE-TEST-API-HANDLERS-001]
 Agent: ReviewAgent
 Summary:

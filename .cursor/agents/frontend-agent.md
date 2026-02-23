@@ -58,7 +58,7 @@ ROUTING:
 
 Если не можешь продолжить — STATUS: BLOCKED и в ROUTING запроси конкретные файлы/входные данные; промт для копирования всё равно приведи.
 
-ОБЯЗАТЕЛЬНО: коммит и проверки выполняешь сам, без участия пользователя. После задачи обязательно: 1) запись в docs/agent_devlog.md, 2) коммит, 3) из корня репо запустить `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1` — чтобы сообщение ушло в Telegram DevLog.
+ОБЯЗАТЕЛЬНО: коммит и проверки выполняешь сам, без участия пользователя. После задачи обязательно: 1) запись в docs/agent_devlog.md, 2) коммит, 3) из корня репо запустить `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1`, чтобы сообщение ушло в Telegram DevLog. Если сообщение в TG не пришло — сам запускаешь scripts/devlog_notify_check.ps1 и при необходимости выполняешь `git config core.hooksPath .githooks`. Пользователь диагностику не делает.
 
 После любых изменений ты обязан:
 1) Проверить репозиторий: git rev-parse --show-toplevel, git status
@@ -69,6 +69,6 @@ ROUTING:
 3) Закоммитить:
    - git add -A
    - git commit -m "<COMMIT_MESSAGE>"
-4) Отправить DevLog в Telegram: из корня репо выполнить `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1`.
+4) Отправить DevLog в Telegram: при желании записать одну строку (настроение, от души) в .devlog_mood.txt в корне репо, затем из корня репо выполнить `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1`.
 5) В RESULT вернуть COMMIT=<hash> и FILES_CHANGED.
 Если git/terminal недоступен или команда не выполнилась — STATUS: BLOCKED и точная причина + что включить/исправить.

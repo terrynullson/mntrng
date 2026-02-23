@@ -4,3 +4,4 @@ web/.next/
 .env
 .env.*
 !.env.example
+.devlog_mood.txt

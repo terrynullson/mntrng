@@ -21,7 +21,9 @@ alwaysApply: true
 ## Telegram DevLog и запись в Agent DevLog
 
 - **Все агенты** после выполнения задачи обязаны: 1) добавить запись в `docs/agent_devlog.md`, 2) закоммитить (код + запись; при отсутствии изменений кода — только запись), 3) **после коммита запустить отправку в Telegram**: из корня репо выполнить `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1`, чтобы сообщение гарантированно ушло в DevLog (хук post-commit может не сработать при коммите из IDE).
-- **Токен и ID чата** только из `.env`: `DEV_LOG_TELEGRAM_ENABLED=true`, `DEV_LOG_TELEGRAM_TOKEN`, `DEV_LOG_TELEGRAM_CHAT_ID`. Хуки: `git config core.hooksPath .githooks`.
+- **Настроение в DevLog** — как в рабочем чате: агент может перед запуском `devlog_notify.ps1` записать одну строку (свободный текст, от души) в файл `.devlog_mood.txt` в корне репо; скрипт подхватит её в поле «Настроение» и удалит файл после отправки. Файл в .gitignore. Если файла нет — используется случайная фраза из списка в devnotify. Пользователь ничего не запускает.
+- **Если сообщения в TG не пришли:** агент сам запускает `scripts/devlog_notify_check.ps1`, по выводу при необходимости выполняет `git config core.hooksPath .githooks`; диагностику и исправление делают агенты, не пользователь.
+- **Токен и ID чата** только из `.env`: `DEV_LOG_TELEGRAM_ENABLED=true`, `DEV_LOG_TELEGRAM_TOKEN`, `DEV_LOG_TELEGRAM_CHAT_ID`.
 - **MasterAgent не пишет код** — только JOB, RESULT, ROUTING и при необходимости правки в docs/PROMPTS (текст).
 
 ## ROUTING и промт для копирования

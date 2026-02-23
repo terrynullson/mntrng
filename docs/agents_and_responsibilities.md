@@ -214,7 +214,7 @@ ReviewAgent:
 **Все агенты после выполнения своей задачи обязаны:**
 1) Добавить запись в docs/agent_devlog.md (формат ниже).
 2) Закоммитить изменения (код + запись в DevLog; если изменений кода не было — коммит только записи в agent_devlog.md).
-3) **Отправить сообщение в Telegram DevLog:** после коммита запустить из корня репозитория `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1`. Так сообщение гарантированно уходит в чат (post-commit hook при коммите из IDE может не выполниться).
+3) **Отправить сообщение в Telegram DevLog:** после коммита запустить из корня репозитория `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1`. Так сообщение гарантированно уходит в чат (post-commit hook при коммите из IDE может не выполниться). По желанию перед запуском скрипта можно записать одну строку (свободный текст — как в рабочем чате) в файл `.devlog_mood.txt` в корне репо: она пойдёт в поле «Настроение»; скрипт удалит файл после отправки. Файл в .gitignore.
 
 Каждая запись по модулю:
 - 5–8 строк
@@ -298,9 +298,9 @@ Alerts bot пишет только про мониторинг потоков:
 
 После этого любой commit автоматически отправит сообщение в Telegram DevLog.
 
-**Если сообщения не приходят:** из корня репозитория запусти `.\scripts\devlog_notify_check.ps1`. Скрипт проверит core.hooksPath, наличие .env и переменных DEV_LOG_TELEGRAM_*, затем отправит тестовое сообщение (`go run ./cmd/devnotify/ -test`). Частые причины: не задан `git config core.hooksPath .githooks` (хук не вызывается); пустые TOKEN или CHAT_ID в .env; в окружении хука нет Go в PATH.
+**Если сообщения не приходят:** диагностику выполняет **агент**, не пользователь. Агент запускает из корня репо `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify_check.ps1`; скрипт проверит core.hooksPath, .env и переменные DEV_LOG_TELEGRAM_*, отправит тестовое сообщение. При отсутствии core.hooksPath агент выполняет `git config core.hooksPath .githooks`. Пользователь проверки вручную не делает.
 
-**Кто пишет в Telegram:** все агенты (MasterAgent, ReviewAgent, BackendAgent, FrontendAgent). После выполнения задачи агент: 1) делает коммит (код, запись в docs/agent_devlog.md — что релевантно); 2) **обязательно запускает** из корня репо `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devlog_notify.ps1`, чтобы сообщение ушло в TG (агенты сами обеспечивают отправку; хук post-commit дублирует отправку при коммите из терминала).
+**Кто пишет в Telegram:** все агенты. После коммита агент запускает scripts/devlog_notify.ps1. **Настроение** — свободное: агент может перед запуском записать одну строку в `.devlog_mood.txt` (корень репо); она уйдёт в поле «Настроение», затем файл удаляется. Без файла — случайная фраза из devnotify. Как в рабочем чате, без ограничений по тексту (в рамках guardrails: не оскорблять людей).
 
 ---
 
