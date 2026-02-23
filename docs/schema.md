@@ -9,11 +9,13 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0001_baseline_schema.up.sq
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0002_telegram_delivery_settings.up.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_preserve_company_audit_history.up.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_auth_and_registration.up.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0005_indexes_admin_and_lists.up.sql
 ```
 
 ## Roll back migrations
 
 ```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0005_indexes_admin_and_lists.down.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_auth_and_registration.down.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_preserve_company_audit_history.down.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0002_telegram_delivery_settings.down.sql
@@ -83,6 +85,10 @@ Admin user-management endpoints (`/api/v1/admin/users*`) reuse these tables and 
 - `audit_log` is append-only operational history and must persist after `companies` deletion; migration `0003_preserve_company_audit_history` removes cascade deletion for `audit_log`.
 - Required indexes are present on `company_id`, `stream_id`, and `created_at` where applicable.
 - Auth/audit support indexes include:
-  - `idx_users_company_id`, `idx_users_role_status`.
+  - `idx_users_company_id`, `idx_users_role_status`, `idx_users_created_at`.
   - `idx_registration_requests_status_created_at`, `idx_registration_requests_company_id`.
   - `idx_auth_sessions_user_id`, `idx_auth_sessions_active`.
+- Migration `0005_indexes_admin_and_lists` adds P1 indexes for list queries:
+  - `idx_users_company_id_created_at` — GET /admin/users with optional company_id and ORDER BY created_at DESC.
+  - `idx_check_results_company_stream_created` — list check_results by company_id, stream_id, ORDER BY created_at DESC.
+  - `idx_streams_company_project` — list streams by company_id and optional project_id.

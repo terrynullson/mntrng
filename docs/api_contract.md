@@ -355,6 +355,9 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 
 - Protected, `super_admin` only.
 - Purpose: list users for Admin UI with optional filters.
+- **List scope (super_admin only):**
+  - When `company_id` is **not** provided (or omitted): the response includes users from **all companies** (cross-company list). Only `super_admin` may call this endpoint.
+  - When `company_id` **is** provided: the response is limited to users belonging to that company.
 - Query params (all optional):
   - `company_id` (`integer`, filter by tenant company)
   - `role` (`super_admin|company_admin|viewer`)
