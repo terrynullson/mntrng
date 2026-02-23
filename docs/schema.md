@@ -10,11 +10,13 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0002_telegram_delivery_set
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_preserve_company_audit_history.up.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_auth_and_registration.up.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0005_indexes_admin_and_lists.up.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0006_ai_incident_results.up.sql
 ```
 
 ## Roll back migrations
 
 ```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0006_ai_incident_results.down.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0005_indexes_admin_and_lists.down.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_auth_and_registration.down.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_preserve_company_audit_history.down.sql
@@ -92,3 +94,4 @@ Admin user-management endpoints (`/api/v1/admin/users*`) reuse these tables and 
   - `idx_users_company_id_created_at` — GET /admin/users with optional company_id and ORDER BY created_at DESC.
   - `idx_check_results_company_stream_created` — list check_results by company_id, stream_id, ORDER BY created_at DESC.
   - `idx_streams_company_project` — list streams by company_id and optional project_id.
+- Migration `0006_ai_incident_results` adds `ai_incident_results`: one row per check_result (by job_id), stores cause and summary from Worker AI incident analysis (B6). Tenant-scoped (company_id, stream_id); FK to check_results(job_id).

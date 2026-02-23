@@ -42,6 +42,10 @@ type RetentionRepository interface {
 	DeleteStaleCheckResult(ctx context.Context, companyID int64, resultID int64, cutoff time.Time) (int64, error)
 }
 
+type AIIncidentRepository interface {
+	SaveAIIncidentResult(ctx context.Context, jobID int64, companyID int64, streamID int64, cause string, summary string) error
+}
+
 type Repositories struct {
 	JobRepo              JobRepository
 	StreamRepo           StreamRepository
@@ -49,4 +53,5 @@ type Repositories struct {
 	AlertStateRepo       AlertStateRepository
 	TelegramSettingsRepo TelegramSettingsRepository
 	RetentionRepo        RetentionRepository
+	AIIncidentRepo       AIIncidentRepository
 }

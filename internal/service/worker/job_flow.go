@@ -42,6 +42,8 @@ func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {
 		return nil
 	}
 
+	w.runAIIncidentIfNeeded(ctx, job, evaluation)
+
 	alertDecision, alertErr := w.applyAlertStateWithRetry(ctx, job, evaluation.DBStatus)
 	if alertErr != nil {
 		if finalizeErr := w.finalizeWithRetry(ctx, job, domain.WorkerJobStatusFailed, alertErr.Error()); finalizeErr != nil {

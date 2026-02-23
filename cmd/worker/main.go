@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/example/hls-monitoring-platform/internal/ai"
 	"github.com/example/hls-monitoring-platform/internal/config"
 	postgresrepo "github.com/example/hls-monitoring-platform/internal/repo/postgres"
 	workerservice "github.com/example/hls-monitoring-platform/internal/service/worker"
@@ -71,6 +72,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	incidentAnalyzer := &ai.LogAnalyzer{Inner: ai.NewStubAnalyzer()}
+
 	workerConfig := workerservice.Config{
 		PollInterval:              pollInterval,
 		RetentionTTL:              retentionTTL,
@@ -97,6 +100,7 @@ func main() {
 		TelegramBotTokenDefault:   telegramBotTokenDefault,
 		RetryMax:                  retryMax,
 		RetryBackoff:              retryBackoff,
+		IncidentAnalyzer:          incidentAnalyzer,
 	}
 
 	log.Printf(
@@ -138,6 +142,7 @@ func main() {
 			AlertStateRepo:       workerRepo,
 			TelegramSettingsRepo: workerRepo,
 			RetentionRepo:        workerRepo,
+			AIIncidentRepo:        workerRepo,
 		},
 	)
 	app := workerservice.NewApp(

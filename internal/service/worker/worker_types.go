@@ -3,6 +3,7 @@ package worker
 import (
 	"time"
 
+	"github.com/example/hls-monitoring-platform/internal/ai"
 	"github.com/example/hls-monitoring-platform/internal/domain"
 )
 
@@ -32,6 +33,7 @@ type Config struct {
 	TelegramBotTokenDefault   string
 	RetryMax                  int
 	RetryBackoff              time.Duration
+	IncidentAnalyzer          ai.Analyzer
 }
 
 type claimedJob = domain.WorkerClaimedJob
@@ -43,6 +45,8 @@ type worker struct {
 	alertStateRepo            AlertStateRepository
 	telegramSettingsRepo      TelegramSettingsRepository
 	retentionRepo             RetentionRepository
+	aiIncidentRepo            AIIncidentRepository
+	incidentAnalyzer          ai.Analyzer
 	retentionTTL              time.Duration
 	retentionCleanupBatchSize int
 	jobTimeout                time.Duration
@@ -85,6 +89,8 @@ func NewWorker(cfg Config, repos Repositories) *worker {
 		alertStateRepo:            repos.AlertStateRepo,
 		telegramSettingsRepo:      repos.TelegramSettingsRepo,
 		retentionRepo:             repos.RetentionRepo,
+		aiIncidentRepo:            repos.AIIncidentRepo,
+		incidentAnalyzer:          cfg.IncidentAnalyzer,
 		retentionTTL:              cfg.RetentionTTL,
 		retentionCleanupBatchSize: cfg.RetentionCleanupBatchSize,
 		jobTimeout:                cfg.JobTimeout,

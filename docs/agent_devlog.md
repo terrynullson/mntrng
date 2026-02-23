@@ -354,3 +354,14 @@ Summary:
 - P0-ревью BE-TELEGRAM-ALERTS-001 (коммиты 0ca9968, 5b0c92c): tenant (alert_state по company_id/stream_id), API≠Worker (изменения только domain/worker/repo), логи без секретов. Вердикт PASS.
 Notes:
 Краткое ревью по чеклисту; правки не вносились.
+
+[2026-02-23] [BE-AI-INCIDENT-001]
+Agent: BackendAgent
+Commit: (см. коммит после этой записи)
+Summary:
+- Реализован вызов AI по событию WARN/FAIL по контракту docs/ai_incident_contract.md (ADR-0012, B6). После persist check_result при статусе WARN или FAIL Worker передаёт в AI-клиент метрики проверки (checks) и путь к скриншоту (screenshot_path), получает cause и summary.
+- Результат сохраняется в БД: таблица ai_incident_results (миграция 0006), привязка по job_id/company_id/stream_id; INSERT ... ON CONFLICT (job_id) DO UPDATE.
+- AI только из Worker; API не вызывает AI. On-demand только при WARN/FAIL. Секреты только из ENV (AI_INCIDENT_API_KEY), в логах не выводятся. Tenant scope соблюдён.
+- При недоступности AI Worker не падает — ошибки только логируются (без секретов). Реализация: internal/ai (Analyzer, StubAnalyzer, LogAnalyzer), internal/repo/postgres (SaveAIIncidentResult), internal/service/worker (runAIIncidentIfNeeded после persist в job_flow).
+Notes:
+StubAnalyzer — заглушка; реальный провайдер подключается позже. docs/schema.md и scripts/run-init.sh обновлены под 0006.

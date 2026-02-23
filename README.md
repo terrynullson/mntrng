@@ -105,6 +105,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0002_telegram_delivery_set
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_preserve_company_audit_history.up.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_auth_and_registration.up.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0005_indexes_admin_and_lists.up.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0006_ai_incident_results.up.sql
 ```
 
 2. Create bootstrap super-admin user (local smoke):
