@@ -1,4 +1,4 @@
-FE-REGISTER-001 REPORT
-Screenshot: screenshots\register\20260223072330.png
+FE-REGISTER-002 REPORT (re-capture after script fix)
+Screenshot: screenshots\register\20260223074332.png
 Score: 9
-Checks: /register public, Registration Request title, caption, form (Company ID, Email, Login, Password, Requested role, Submit), Already approved? link.
+Checks: /register public, h1 visible + 800ms delay; Registration Request title, caption, form (Company ID, Email, Login, Password, Requested role, Submit), Already approved? link.
