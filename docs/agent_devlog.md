@@ -602,9 +602,25 @@ Summary:
 Notes:
 Полный набор скриншотов всех модулей: поднять стек (docker compose up -d, после исправления Go в worker при необходимости) или API+frontend локально, затем из web/ выполнить npm run screenshot:all. Post-commit: scripts/devlog_notify.ps1.
 
+[2026-02-23] [FE-FIX-UI-SCREENSHOTS-001]
+Agent: FrontendAgent
+Commit: (см. коммит после этой записи)
+Summary:
+- Устранена возможность показа ошибки Next.js «Module not found: next/dist/pages/_app»: добавлен app/global-error.tsx (кастомная страница ошибки без зависимости от Pages Router). Login и Register приведены к единому стилю: явные background/color для .public-root и .auth-page, min-height и font-size для полей формы, тёмная тема для disabled полей. Переключатель темы (Dark) уже в едином стиле (AppButton). Пересняты скриншоты login и register.
+Notes:
+Скриншоты: screenshots/login/<timestamp>.png, screenshots/register/<timestamp>.png.
+
 [2026-02-22] [RV-FE-SCREENSHOTS-ALL-001]
 Agent: ReviewAgent
 Summary:
 - P0-ревью FE-SCREENSHOTS-ALL-001: скрипт screenshot:all в package.json и screenshot-all.mjs (порядок: settings…overview, login, register), обновлённые скриншоты и REPORT для login/register, документация в screenshot_automation.md. Verdict: PASS.
 Notes:
 Код не менялся; коммит только devlog.
+
+[2026-02-23] [FE-FIX-UI-SCREENSHOTS-001]
+Agent: FrontendAgent
+Commit: (см. коммит после этой записи)
+Summary:
+- Устранена возможность показа ошибки Next.js «Module not found: next/dist/pages/_app»: добавлен app/global-error.tsx (кастомная страница ошибки без зависимости от Pages Router). Login и Register приведены к единому стилю: явные background/color для .public-root и .auth-page, min-height и font-size для полей формы, тёмная тема для disabled полей. Переключатель темы (Dark) уже в едином стиле (AppButton). Пересняты скриншоты login и register.
+Notes:
+Скриншоты: screenshots/login/<timestamp>.png, screenshots/register/<timestamp>.png.

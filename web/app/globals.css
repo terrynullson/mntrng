@@ -65,6 +65,13 @@
   );
 }
 
+[data-theme="dark"] .form-field input:disabled,
+[data-theme="dark"] .form-field select:disabled,
+[data-theme="dark"] .form-field textarea:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -101,6 +108,8 @@ textarea:focus-visible {
   justify-content: center;
   padding: 24px;
   position: relative;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .public-theme-toggle {
@@ -111,6 +120,8 @@ textarea:focus-visible {
 
 .auth-page {
   width: min(520px, 100%);
+  background: var(--bg);
+  color: var(--text);
 }
 
 .auth-card {
@@ -396,12 +407,14 @@ textarea:focus-visible {
 .form-field select,
 .form-field textarea {
   width: 100%;
+  min-height: 40px;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   background: var(--surface);
   color: var(--text);
   padding: 9px 10px;
   font: inherit;
+  font-size: 0.94rem;
 }
 
 .form-field input:disabled,
