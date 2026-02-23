@@ -234,3 +234,25 @@ All architecture decisions remain ADR-only. Dev-notification secrets/tokens are 
 - Use DevLog as an architecture decision source: rejected due governance ambiguity and decision drift.
 - Use Telegram dev-bot as interactive planning/control channel: rejected due boundary violations and security risk.
 - Skip DevLog and rely only on commit history: rejected because commit logs do not enforce a uniform, compact task journal protocol.
+
+## ADR-0012: AI incident analysis — Worker-only, on-demand
+
+### Context
+Architecture B6 требует подключения AI по инцидентам (WARN/FAIL) для уточнённой причины и краткой сводки при ограничении затрат: без постоянной аренды мощностей, вызов только по событию.
+
+### Decision
+- **Единственная точка вызова AI — Worker.** API не вызывает внешние AI-сервисы и не инициирует анализ инцидентов. Вызов выполняется по событию WARN/FAIL после оценки проверки в Worker.
+- **On-demand:** запрос к AI только при наступлении инцидента; нет постоянного стриминга или фоновой подписки на модели.
+- **Вход:** метрики проверки (уже доступные в Worker) + 1–2 кадра (путь к скриншоту или идентификатор). **Выход:** уточнённая причина и краткая сводка (текст).
+- Секреты и ключи провайдера — только из ENV; в логах и ответах не отдаются. Tenant scope (company_id/stream_id) соблюдается при передаче контекста и при сохранении результатов (если будут храниться в БД).
+
+Детальный контракт (триггер, input/output, границы): **`docs/ai_incident_contract.md`**.
+
+### Consequences
+- Затраты на AI ограничены объёмом инцидентов; нет постоянной аренды.
+- Граница API ≠ Worker сохраняется: тяжёлые и внешние вызовы остаются в Worker.
+- Единый источник истины по контракту — документ в репо; реализация кода следует контракту.
+
+### Alternatives considered
+- Вызов AI из API по запросу UI: отклонено из-за нарушения границы API ≠ Worker и риска роста latency API.
+- Постоянный анализ всех потоков через AI: отклонено из-за стоимости и избыточности для baseline.
