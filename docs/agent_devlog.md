@@ -583,3 +583,12 @@ Summary:
 - P0-ревью FE-MVP-PROD-001: skeleton/empty/error на основных страницах MVP (Overview, Streams, Stream detail, Analytics, Companies, Admin, Settings, Login/Register), production build (npm run build) успешен, NEXT_PUBLIC_API_BASE_URL упомянут в README. Verdict: PASS.
 Notes:
 Код не менялся; коммит только devlog.
+
+[2026-02-23] [BE-PROD-95-001]
+Agent: BackendAgent
+Commit: b196a8a
+Summary:
+- CI: .github/workflows/ci.yml — на push (master/main) go test ./... и в web/ npm ci + npm run build. README: упоминание CI; после «Деплой» добавлены подразделы «Мониторинг» (health, логи контейнеров, место на диске) и «Откат» (docker compose down, откат образа/кода, up, проверка health).
+- API: security headers X-Content-Type-Options: nosniff и X-Frame-Options: DENY через обёртку securityHeaders в bootstrap.
+Notes:
+go test ./... проходит; npm build в CI на ubuntu-latest.

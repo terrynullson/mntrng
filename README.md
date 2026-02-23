@@ -124,6 +124,16 @@ docker compose up --build -d
 
 **Проверка после старта:** `GET /api/v1/health` возвращает 200 и JSON `{"status":"ok","service":"api",...}`. Этого достаточно для liveness и readiness в оркестраторе (Kubernetes, Docker Swarm); отдельный readiness endpoint с проверкой БД/Redis не обязателен для базового деплоя.
 
+**CI:** на каждый push (ветки `master`/`main`) запускается [GitHub Actions](.github/workflows/ci.yml): `go test ./...` и в `web/` — `npm ci` и `npm run build`. Убедитесь, что оба шага проходят перед мержем.
+
+### Мониторинг
+
+Рекомендуется проверять: (1) **liveness/readiness** — `GET /api/v1/health` (200); (2) **логи контейнеров** — `docker compose logs -f api`, `docker compose logs -f worker` и т.д.; (3) **место на диске** — для логов, volume БД и локальных скриншотов (при хранении на том же хосте).
+
+### Откат
+
+Чтобы откатить деплой: выполните `docker compose down`, верните предыдущий образ или код (например, `git checkout <тег>` или пересоберите из нужного коммита), затем снова `docker compose up --build -d`. После подъёма проверьте `GET /api/v1/health` и при необходимости логи сервисов.
+
 ## Authentication + controlled registration smoke-check
 
 All API endpoints except health and public auth endpoints are protected by bearer auth.
