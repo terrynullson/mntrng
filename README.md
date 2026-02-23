@@ -10,6 +10,18 @@
 - `redis` (Redis)
 - `frontend` (Next.js + TypeScript)
 
+## Документация
+
+- [docs/api_contract.md](docs/api_contract.md) — контракт REST API (эндпоинты, форматы, коды ошибок, tenant scope).
+- [docs/schema.md](docs/schema.md) — схема БД и порядок применения/отката миграций.
+- [docs/telegram_alerts_contract.md](docs/telegram_alerts_contract.md) — контракт Telegram Alerts (Worker): переходы статуса, формат сообщения, антиспам (cooldown/streak).
+- [docs/retention_cleanup.md](docs/retention_cleanup.md) — retention cleanup в Worker: TTL, батчи, tenant scope, конфиг ENV.
+- [docs/ai_incident_contract.md](docs/ai_incident_contract.md) — целевой контракт интеграции AI по инцидентам (B6): триггер WARN/FAIL, вход/выход, on-demand.
+- [docs/decisions.md](docs/decisions.md) — архитектурные решения (ADR).
+- [docs/screenshot_automation.md](docs/screenshot_automation.md) — автоматизация скриншотов для UI-модулей (Docker, скрипты).
+
+Переменные DevLog (`DEV_LOG_*`), retention (`RETENTION_*`) и Telegram Alerts (`TELEGRAM_*`, `ALERT_*`) описаны в [.env.example](.env.example) и в подразделах README ниже.
+
 ## Переменные окружения
 
 1. Создать локальный env-файл:
