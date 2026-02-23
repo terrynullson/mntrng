@@ -287,22 +287,26 @@ export default function AnalyticsPage() {
 
       {hasRequested && !isLoadingResults && !error ? (
         <motion.div
-          className="summary-grid"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
         >
-          <div className="summary-card">
-            <span>OK</span>
-            <strong>{summary.OK}</strong>
-          </div>
-          <div className="summary-card">
-            <span>WARN</span>
-            <strong>{summary.WARN}</strong>
-          </div>
-          <div className="summary-card">
-            <span>FAIL</span>
-            <strong>{summary.FAIL}</strong>
+          <h3 className="section-title section-title-small" style={{ marginBottom: "8px" }}>
+            Status summary (FAIL/WARN frequency)
+          </h3>
+          <div className="summary-grid">
+            <div className="summary-card">
+              <span>OK</span>
+              <strong>{summary.OK}</strong>
+            </div>
+            <div className="summary-card">
+              <span>WARN</span>
+              <strong>{summary.WARN}</strong>
+            </div>
+            <div className="summary-card">
+              <span>FAIL</span>
+              <strong>{summary.FAIL}</strong>
+            </div>
           </div>
         </motion.div>
       ) : null}
@@ -334,6 +338,7 @@ export default function AnalyticsPage() {
                 <th>Playlist</th>
                 <th>Freshness</th>
                 <th>Segments</th>
+                <th>Declared bitrate</th>
                 <th>Effective bitrate</th>
                 <th>Freeze</th>
                 <th>Blackframe</th>
@@ -353,6 +358,7 @@ export default function AnalyticsPage() {
                   <td>{result.checks?.playlist ?? "-"}</td>
                   <td>{result.checks?.freshness ?? "-"}</td>
                   <td>{result.checks?.segments ?? "-"}</td>
+                  <td>{result.checks?.declared_bitrate ?? "-"}</td>
                   <td>{result.checks?.effective_bitrate ?? "-"}</td>
                   <td>{result.checks?.freeze ?? "-"}</td>
                   <td>{result.checks?.blackframe ?? "-"}</td>

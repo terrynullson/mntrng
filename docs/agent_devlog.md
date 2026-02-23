@@ -407,3 +407,11 @@ Summary:
 - P0-ревью FE-AI-INCIDENT-UI-001: блок «AI incident» на /streams/[streamId], GET .../ai-incident при job_id, tenant scope через auth, skeleton/empty/error, flat UI. Verdict: PASS.
 Notes:
 Код не менялся; коммит только devlog.
+
+[2026-02-23] [FE-ANALYTICS-B4-001]
+Agent: FrontendAgent
+Commit: (см. коммит после этой записи)
+Summary:
+- Analytics (/analytics) приведена к B4: состояния, тренды (таблица по времени), инциденты/частота FAIL/WARN (summary cards + заголовок «Status summary (FAIL/WARN frequency)»). Таблицы, фильтры (поток, период from/to, статус) по API check-results. Добавлена колонка Declared bitrate. Skeleton, empty, error; flat, admin-first.
+Notes:
+Скриншот: npm run screenshot:analytics при API + frontend (screenshots/analytics/).
