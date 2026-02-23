@@ -53,6 +53,16 @@ func ComputeWorkerAlertTransition(
 			nextLastAlertAt = sql.NullTime{Time: nowUTC, Valid: true}
 			nextCooldownUntil = sql.NullTime{Time: nowUTC.Add(alertCooldown), Valid: true}
 		}
+	} else if currentStatus == WorkerStatusDBWarn && previousStatus == WorkerStatusDBOK {
+		if cooldownActive {
+			decision.Reason = "cooldown_active"
+		} else {
+			decision.ShouldSend = true
+			decision.EventType = WorkerAlertEventWarn
+			decision.Reason = "ok_to_warn_transition"
+			nextLastAlertAt = sql.NullTime{Time: nowUTC, Valid: true}
+			nextCooldownUntil = sql.NullTime{Time: nowUTC.Add(alertCooldown), Valid: true}
+		}
 	} else if currentStatus == WorkerStatusDBOK && previousStatus == WorkerStatusDBFail {
 		if !alertSendRecovered {
 			decision.Reason = "recovered_suppressed_by_config"

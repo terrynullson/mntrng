@@ -209,6 +209,53 @@ func TestComputeAlertTransition(t *testing.T) {
 			t.Fatalf("unexpected reason: %s", result.Decision.Reason)
 		}
 	})
+
+	t.Run("ok_to_warn sends when no cooldown", func(t *testing.T) {
+		result := domain.ComputeWorkerAlertTransition(
+			now,
+			"warn",
+			"ok",
+			0,
+			sql.NullTime{},
+			previousAlertTime,
+			2,
+			cooldown,
+			true,
+		)
+		if !result.Decision.ShouldSend {
+			t.Fatalf("expected should_send=true")
+		}
+		if result.Decision.EventType != domain.WorkerAlertEventWarn {
+			t.Fatalf("unexpected event type: %s", result.Decision.EventType)
+		}
+		if result.Decision.Reason != "ok_to_warn_transition" {
+			t.Fatalf("unexpected reason: %s", result.Decision.Reason)
+		}
+		if !result.NextCooldownUntil.Valid || !result.NextCooldownUntil.Time.Equal(now.Add(cooldown)) {
+			t.Fatalf("unexpected cooldown_until: %#v", result.NextCooldownUntil)
+		}
+	})
+
+	t.Run("ok_to_warn blocked by cooldown", func(t *testing.T) {
+		cooldownUntil := sql.NullTime{Time: now.Add(5 * time.Minute), Valid: true}
+		result := domain.ComputeWorkerAlertTransition(
+			now,
+			"warn",
+			"ok",
+			0,
+			cooldownUntil,
+			previousAlertTime,
+			2,
+			cooldown,
+			true,
+		)
+		if result.Decision.ShouldSend {
+			t.Fatalf("expected should_send=false")
+		}
+		if result.Decision.Reason != "cooldown_active" {
+			t.Fatalf("unexpected reason: %s", result.Decision.Reason)
+		}
+	})
 }
 
 func TestNormalizeTokenRef(t *testing.T) {

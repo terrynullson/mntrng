@@ -336,3 +336,13 @@ Summary:
 - Все атомарные проверки реализованы и пишутся в checks: playlist, freshness, segments, declared_bitrate, effective_bitrate, freeze, blackframe (+ *_details где нужно). Агрегация FAIL > WARN > OK (checks.AggregateStatuses). Изменений кода не потребовалось.
 Notes:
 Тесты internal/service/worker проходят. Redis в контракте не используется для очереди — только PostgreSQL check_jobs.
+
+[2026-02-23] [be-telegram-alerts-001]
+Agent: BackendAgent
+Commit: fe5817c
+Summary:
+- Добавлена отправка алертов при переходе OK→WARN: internal/domain (WorkerAlertEventWarn, ComputeWorkerAlertTransition — ветка ok_to_warn с cooldown). WARN→FAIL уже был (streak + cooldown). Recovered без изменений.
+- Антиспам сохранён: cooldown по stream_id, streak для FAIL, send_recovered в настройках компании. Токены/chat_id не логируются.
+- Обновлён docs/telegram_alerts_contract.md; тесты TestComputeAlertTransition дополнены (ok_to_warn sends, ok_to_warn blocked by cooldown).
+Notes:
+Только Worker шлёт алерты; tenant scope соблюдён.

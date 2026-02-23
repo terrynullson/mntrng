@@ -79,6 +79,7 @@ const (
 	WorkerStatusDBWarn = "warn"
 	WorkerStatusDBFail = "fail"
 
+	WorkerAlertEventWarn      = "warn"
 	WorkerAlertEventFail      = "fail"
 	WorkerAlertEventRecovered = "recovered"
 )
