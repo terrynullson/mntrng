@@ -601,3 +601,10 @@ Summary:
 - Выполнено снятие: при работающем frontend на 3000 обновлены скриншоты login и register; остальные 8 модулей требуют API на 8080 (docker compose up -d или локальный API). В репо закоммичены обновлённые screenshots/login, screenshots/register и скрипт.
 Notes:
 Полный набор скриншотов всех модулей: поднять стек (docker compose up -d, после исправления Go в worker при необходимости) или API+frontend локально, затем из web/ выполнить npm run screenshot:all. Post-commit: scripts/devlog_notify.ps1.
+
+[2026-02-22] [RV-FE-SCREENSHOTS-ALL-001]
+Agent: ReviewAgent
+Summary:
+- P0-ревью FE-SCREENSHOTS-ALL-001: скрипт screenshot:all в package.json и screenshot-all.mjs (порядок: settings…overview, login, register), обновлённые скриншоты и REPORT для login/register, документация в screenshot_automation.md. Verdict: PASS.
+Notes:
+Код не менялся; коммит только devlog.
