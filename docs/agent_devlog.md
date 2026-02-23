@@ -262,3 +262,11 @@ Summary:
 - README: в блок Apply migrations добавлена миграция 0005_indexes_admin_and_lists.up.sql.
 Notes:
 Список миграций 0001–0005 актуален.
+
+[2026-02-23] [be-readme-test-001]
+Agent: BackendAgent
+Commit: c3c7acf
+Summary:
+- README: подраздел «Тесты» (go test ./..., DATABASE_URL для тестов с БД).
+Notes:
+Только правки README.
