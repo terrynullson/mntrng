@@ -46,6 +46,7 @@ type changeUserStatusRequest = domain.ChangeUserStatusRequest
 type adminUserListResponse = domain.AdminUserListResponse
 
 type Server struct {
+	db                       *sql.DB
 	companyService           *serviceapi.CompanyService
 	projectService           *serviceapi.ProjectService
 	streamService            *serviceapi.StreamService
@@ -73,6 +74,7 @@ func NewServer(db *sql.DB) *Server {
 	)
 
 	return &Server{
+		db:                 db,
 		companyService:     serviceapi.NewCompanyService(postgres.NewAPICompanyRepo(db)),
 		projectService:     serviceapi.NewProjectService(postgres.NewAPIProjectRepo(db)),
 		streamService:      serviceapi.NewStreamService(postgres.NewAPIStreamRepo(db)),
@@ -95,6 +97,7 @@ func (s *Server) RouterHandlers() RouterHandlers {
 		WrapWithAuth: s.authMiddleware,
 
 		HandleHealth:              s.handleHealth,
+		HandleReady:               s.handleReady,
 		HandleCreateCompany:       s.handleCreateCompany,
 		HandleListCompanies:       s.handleListCompanies,
 		HandleGetCompany:          s.handleGetCompany,

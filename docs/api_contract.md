@@ -19,6 +19,7 @@
 - Every non-public endpoint requires `Authorization: Bearer <access_token>`.
 - Public endpoints:
   - `GET /api/v1/health`
+  - `GET /api/v1/ready`
   - `POST /api/v1/auth/register`
   - `POST /api/v1/auth/login`
   - `POST /api/v1/auth/refresh`
@@ -181,7 +182,7 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 
 ### `GET /api/v1/health`
 
-- Purpose: liveness/readiness probe of API process.
+- Purpose: liveness probe of API process (no dependency checks).
 - `200` response example:
 
 ```json
@@ -191,6 +192,12 @@ API contract uses uppercase status values. Persistence layer may store lowercase
   "time": "2026-02-13T10:00:00Z"
 }
 ```
+
+### `GET /api/v1/ready`
+
+- Purpose: readiness probe; checks availability of dependencies (e.g. database).
+- `200`: dependencies OK — body `{"ready": true}`.
+- `503`: dependency unavailable — body `{"ready": false}`. Orchestrators (Kubernetes, Docker Swarm) may use this for readiness.
 
 ## 5.2 Auth and controlled registration
 

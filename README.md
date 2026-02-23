@@ -120,15 +120,15 @@ docker compose up --build -d
 
 **Порты:** API — 8080, frontend — 3000. При необходимости пробросьте их в `docker-compose.yml` на хосте.
 
-**Volumes:** для персистентности БД используйте volume для PostgreSQL (в стандартном `docker-compose.yml` уже задан). Локальные скриншоты и миграции — по текущей конфигурации Compose.
+**Volumes:** для персистентности БД используйте volume для PostgreSQL (в стандартном `docker-compose.yml` уже задан). Рекомендуется хранить volume PostgreSQL на надёжном диске; для резервного копирования данных выполнять `pg_dump` (или аналог). Локальные скриншоты и миграции — по текущей конфигурации Compose.
 
-**Проверка после старта:** `GET /api/v1/health` возвращает 200 и JSON `{"status":"ok","service":"api",...}`. Этого достаточно для liveness и readiness в оркестраторе (Kubernetes, Docker Swarm); отдельный readiness endpoint с проверкой БД/Redis не обязателен для базового деплоя.
+**Проверка после старта:** liveness — `GET /api/v1/health` (200, JSON `{"status":"ok","service":"api",...}`). Для readiness оркестратор (Kubernetes, Docker Swarm) может использовать `GET /api/v1/ready`: при доступности БД — 200 и `{"ready":true}`, при ошибке — 503 и `{"ready":false}`.
 
 **CI:** на каждый push (ветки `master`/`main`) запускается [GitHub Actions](.github/workflows/ci.yml): `go test ./...` и в `web/` — `npm ci` и `npm run build`. Убедитесь, что оба шага проходят перед мержем.
 
 ### Мониторинг
 
-Рекомендуется проверять: (1) **liveness/readiness** — `GET /api/v1/health` (200); (2) **логи контейнеров** — `docker compose logs -f api`, `docker compose logs -f worker` и т.д.; (3) **место на диске** — для логов, volume БД и локальных скриншотов (при хранении на том же хосте).
+Рекомендуется проверять: (1) **liveness** — `GET /api/v1/health` (200); (2) **readiness** — `GET /api/v1/ready` (200 при доступности БД); (3) **логи контейнеров** — `docker compose logs -f api`, `docker compose logs -f worker` и т.д.; (4) **место на диске** — для логов, volume БД и локальных скриншотов (при хранении на том же хосте).
 
 ### Откат
 

@@ -27,6 +27,7 @@ type RouterHandlers struct {
 	WrapWithAuth func(http.Handler) http.Handler
 
 	HandleHealth http.HandlerFunc
+	HandleReady  http.HandlerFunc
 
 	HandleCreateCompany http.HandlerFunc
 	HandleListCompanies http.HandlerFunc
@@ -75,6 +76,7 @@ type RouterHandlers struct {
 func NewRouter(handlers RouterHandlers) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/health", handlers.HandleHealth)
+	mux.HandleFunc("/api/v1/ready", handlers.HandleReady)
 	mux.HandleFunc("/api/v1/auth/register", func(w http.ResponseWriter, r *http.Request) {
 		routeAuthRegister(w, r, handlers)
 	})

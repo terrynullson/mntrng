@@ -624,3 +624,13 @@ Summary:
 - P0-ревью FE-SCREENSHOTS-ALL-001: скрипт screenshot:all в package.json и screenshot-all.mjs (порядок: settings…overview, login, register), обновлённые скриншоты и REPORT для login/register, документация в screenshot_automation.md. Verdict: PASS.
 Notes:
 Код не менялся; коммит только devlog.
+
+[2026-02-22] [BE-PROD-FINAL-001]
+Agent: BackendAgent
+Commit: 15f69d1
+Summary:
+- Добавлен readiness endpoint GET /api/v1/ready: пинг БД (PingContext 2s), при успехе — 200 и {"ready":true}, при ошибке — 503 и {"ready":false}.
+- README: в Деплой/Мониторинг указано использование GET /api/v1/ready для readiness оркестратором; добавлена рекомендация по бэкапу БД (pg_dump, надёжный диск для volume).
+- docs/api_contract.md: описан GET /api/v1/ready; health оставлен как liveness.
+Notes:
+go test ./... проходит; API ≠ Worker не затронуты.
