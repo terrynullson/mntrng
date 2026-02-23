@@ -410,7 +410,7 @@ Notes:
 
 [2026-02-23] [FE-ANALYTICS-B4-001]
 Agent: FrontendAgent
-Commit: (см. коммит после этой записи)
+Commit: 08a27ff
 Summary:
 - Analytics (/analytics) приведена к B4: состояния, тренды (таблица по времени), инциденты/частота FAIL/WARN (summary cards + заголовок «Status summary (FAIL/WARN frequency)»). Таблицы, фильтры (поток, период from/to, статус) по API check-results. Добавлена колонка Declared bitrate. Skeleton, empty, error; flat, admin-first.
 Notes:
