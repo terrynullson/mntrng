@@ -278,3 +278,11 @@ Summary:
 - README: подраздел «Frontend (сборка и запуск)» — npm install, npm run dev, npm run build, npm run start. Проверка: npm run build в web/ прошла (Next.js 14.2.5).
 Notes:
 Ограничения не выявлены.
+
+[2026-02-23] [be-init-001]
+Agent: BackendAgent
+Commit: 1c35bb0
+Summary:
+- scripts/run-init.sh: в цикл миграций добавлена 0005_indexes_admin_and_lists.up.sql; init применяет 0001–0005.
+Notes:
+Идемпотентность сохранена.
