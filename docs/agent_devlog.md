@@ -553,6 +553,15 @@ Summary:
 Notes:
 Только README.
 
+[2026-02-23] [BE-MVP-PROD-001]
+Agent: BackendAgent
+Commit: d59b988
+Summary:
+- API: graceful shutdown по SIGTERM/SIGINT (signal.NotifyContext, Shutdown с таймаутом 15s), как в Worker — завершение без потери запросов в разумном таймауте.
+- README: раздел «Деплой (запуск в production)» — docker compose, обязательные env (DATABASE_URL, API_PORT, NEXT_PUBLIC_API_BASE_URL), порты 8080/3000, volumes, проверка health; документировано, что GET /api/v1/health достаточен для liveness/readiness оркестратора.
+Notes:
+Отдельный /ready не добавляли; go test ./... проходит.
+
 [2026-02-22] [RV-P0-STATE-004]
 Agent: ReviewAgent
 Summary:

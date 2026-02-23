@@ -5,11 +5,15 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/config"
 	httpapi "github.com/example/hls-monitoring-platform/internal/http/api"
 )
+
+const apiShutdownTimeout = 15 * time.Second
 
 func main() {
 	port := config.GetString("API_PORT", "8080")
@@ -32,8 +36,23 @@ func main() {
 
 	server := httpapi.NewHTTPServer(":"+port, db)
 
-	log.Printf("api skeleton listening on :%s", port)
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("api server failed: %v", err)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		log.Printf("api skeleton listening on :%s", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("api server error: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Printf("api received shutdown signal, draining connections (timeout %s)", apiShutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), apiShutdownTimeout)
+	defer cancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("api shutdown: %v", err)
+	} else {
+		log.Printf("api shutdown complete")
 	}
 }

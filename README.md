@@ -108,6 +108,22 @@ git config core.hooksPath .githooks
 
 После каждого коммита будет отправляться сообщение в Telegram (скрипт `scripts/devlog_notify.ps1`).
 
+## Деплой (запуск в production)
+
+Для оценки или продакшена поднимите стек через Docker Compose из корня репозитория:
+
+```bash
+docker compose up --build -d
+```
+
+**Обязательные переменные окружения** (в `.env` или в среде контейнеров): `DATABASE_URL`, `API_PORT` (по умолчанию 8080), для frontend — `NEXT_PUBLIC_API_BASE_URL` (URL API с точки зрения браузера). Остальные переменные — см. [.env.example](.env.example) и разделы README выше.
+
+**Порты:** API — 8080, frontend — 3000. При необходимости пробросьте их в `docker-compose.yml` на хосте.
+
+**Volumes:** для персистентности БД используйте volume для PostgreSQL (в стандартном `docker-compose.yml` уже задан). Локальные скриншоты и миграции — по текущей конфигурации Compose.
+
+**Проверка после старта:** `GET /api/v1/health` возвращает 200 и JSON `{"status":"ok","service":"api",...}`. Этого достаточно для liveness и readiness в оркестраторе (Kubernetes, Docker Swarm); отдельный readiness endpoint с проверкой БД/Redis не обязателен для базового деплоя.
+
 ## Authentication + controlled registration smoke-check
 
 All API endpoints except health and public auth endpoints are protected by bearer auth.
