@@ -366,6 +366,86 @@ func TestCheckJobs_401_NoAuth(t *testing.T) {
 	assertErrorCode(t, rec.Body.Bytes(), "unauthorized")
 }
 
+func TestCheckJobs_403_TenantEscape_Enqueue(t *testing.T) {
+	companyID := int64(1)
+	hash := sha256.Sum256([]byte("checkjob-tenant-token"))
+	authStore := &middlewareAuthStore{
+		sessionByAccess: map[string]domain.AuthSessionUser{
+			hex.EncodeToString(hash[:]): {
+				Session: domain.AuthSession{ID: 1, AccessExpiresAt: time.Now().Add(15 * time.Minute), RefreshExpiresAt: time.Now().Add(24 * time.Hour)},
+				User:    domain.AuthUser{ID: 1, CompanyID: &companyID, Role: domain.RoleViewer, Status: domain.UserStatusActive},
+			},
+		},
+	}
+	srv := &Server{
+		authService:     serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
+		checkJobService: serviceapi.NewCheckJobService(&mockCheckJobStore{}),
+	}
+	router := NewRouter(srv.RouterHandlers())
+	body := []byte(`{"planned_at":"2026-02-01T12:00:00Z"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/companies/2/streams/1/check-jobs", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer checkjob-tenant-token")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+	assertErrorCode(t, rec.Body.Bytes(), "tenant_scope_required")
+}
+
+func TestCheckJobs_403_TenantEscape_List(t *testing.T) {
+	companyID := int64(1)
+	hash := sha256.Sum256([]byte("checkjob-tenant-token-list"))
+	authStore := &middlewareAuthStore{
+		sessionByAccess: map[string]domain.AuthSessionUser{
+			hex.EncodeToString(hash[:]): {
+				Session: domain.AuthSession{ID: 1, AccessExpiresAt: time.Now().Add(15 * time.Minute), RefreshExpiresAt: time.Now().Add(24 * time.Hour)},
+				User:    domain.AuthUser{ID: 1, CompanyID: &companyID, Role: domain.RoleViewer, Status: domain.UserStatusActive},
+			},
+		},
+	}
+	srv := &Server{
+		authService:     serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
+		checkJobService: serviceapi.NewCheckJobService(&mockCheckJobStore{}),
+	}
+	router := NewRouter(srv.RouterHandlers())
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/companies/2/streams/1/check-jobs", nil)
+	req.Header.Set("Authorization", "Bearer checkjob-tenant-token-list")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+	assertErrorCode(t, rec.Body.Bytes(), "tenant_scope_required")
+}
+
+func TestCheckJobs_403_TenantEscape_Get(t *testing.T) {
+	companyID := int64(1)
+	hash := sha256.Sum256([]byte("checkjob-tenant-token-get"))
+	authStore := &middlewareAuthStore{
+		sessionByAccess: map[string]domain.AuthSessionUser{
+			hex.EncodeToString(hash[:]): {
+				Session: domain.AuthSession{ID: 1, AccessExpiresAt: time.Now().Add(15 * time.Minute), RefreshExpiresAt: time.Now().Add(24 * time.Hour)},
+				User:    domain.AuthUser{ID: 1, CompanyID: &companyID, Role: domain.RoleViewer, Status: domain.UserStatusActive},
+			},
+		},
+	}
+	srv := &Server{
+		authService:     serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
+		checkJobService: serviceapi.NewCheckJobService(&mockCheckJobStore{}),
+	}
+	router := NewRouter(srv.RouterHandlers())
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/companies/2/check-jobs/1", nil)
+	req.Header.Set("Authorization", "Bearer checkjob-tenant-token-get")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+	assertErrorCode(t, rec.Body.Bytes(), "tenant_scope_required")
+}
+
 // --- Check result mocks and tests ---
 
 type mockCheckResultStore struct {

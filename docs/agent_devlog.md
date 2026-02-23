@@ -536,3 +536,11 @@ Summary:
 - P0-ревью батча тестов BE-TEST-WORKER-001: persistCheckResult (tenant scope и payload в mock repo), applyAlertState (tenant scope и конфиг AlertFailStreak/AlertCooldown/AlertSendRecovered), ProcessSingleJobCycle при отсутствии джобов (no error). Моки в пакете worker, изоляция без БД. Verdict: PASS.
 Notes:
 Код не менялся; коммит только devlog.
+
+[2026-02-23] [BE-TEST-API-P1-001]
+Agent: BackendAgent
+Commit: 926abd1
+Summary:
+- Добавлены тесты 403 tenant_scope_required (TenantEscape) для check-jobs: enqueue (POST companies/2/streams/1/check-jobs), list (GET companies/2/streams/1/check-jobs), get (GET companies/2/check-jobs/1) при пользователе company_id=1. По образцу streams и check-results; mock store и роутер с auth.
+Notes:
+Закрывает P1 из RV-BE-TEST-API-HANDLERS-001. После коммита — scripts/devlog_notify.ps1.
