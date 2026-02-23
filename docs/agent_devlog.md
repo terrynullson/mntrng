@@ -192,4 +192,13 @@ Summary:
 - Страница /login: flat, микроанимации auth-card и error (120–360 ms easeOut); скрипт npm run screenshot:login.
 - Скриншот: screenshots/login/20260223065518.png, score 9.
 Notes:
-FE-LOGIN-001 готов. Роутинг: ReviewAgent.
+Модуль закрыт. ReviewAgent RV-LOGIN-001: PASS.
+
+[2026-02-23] [register]
+Agent: FrontendAgent
+Commit: 1d54bc8 (polish+script), 18daa03 (screenshot)
+Summary:
+- Страница /register: flat, микроанимации auth-card, form, pending-card и error (120–360 ms easeOut); скрипт npm run screenshot:register.
+- Скриншот: screenshots/register/20260223072330.png, score 9.
+Notes:
+FE-REGISTER-001 готов. Роутинг: ReviewAgent.
