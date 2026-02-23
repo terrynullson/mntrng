@@ -400,3 +400,10 @@ Summary:
 - Тип AiIncident в lib/api/types.ts; tenant scope через существующий auth/scope.
 Notes:
 Скриншот секции: npm run screenshot:stream-detail при поднятых API и frontend (screenshots/stream-detail/).
+
+[2026-02-22] [RV-FE-AI-INCIDENT-UI-001]
+Agent: ReviewAgent
+Summary:
+- P0-ревью FE-AI-INCIDENT-UI-001: блок «AI incident» на /streams/[streamId], GET .../ai-incident при job_id, tenant scope через auth, skeleton/empty/error, flat UI. Verdict: PASS.
+Notes:
+Код не менялся; коммит только devlog.
