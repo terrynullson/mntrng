@@ -431,3 +431,10 @@ Summary:
 - Tenant scope через auth/scope, skeleton/empty/error сохранены. Плеер flat, admin-first.
 Notes:
 Скриншот: npm run screenshot:stream-detail при API + frontend (screenshots/stream-detail/).
+
+[2026-02-22] [RV-FE-PLAYER-B3-001]
+Agent: ReviewAgent
+Summary:
+- P0-ревью FE-PLAYER-B3-001: страница /streams/[streamId] — HLS player (единый вид/контролы), dropdown переключения потоков, метаданные (название, id, проект, активность, статус/проверки, AI incident), flat, skeleton/empty/error, tenant scope, без изменения бизнес-логики. Verdict: PASS.
+Notes:
+P1: обновить REPORT/скриншот stream-detail с проверкой «Switch stream». Код не менялся; коммит только devlog.
