@@ -5,3 +5,10 @@ web/.next/
 .env.*
 !.env.example
 .devlog_mood.txt
+
+# Документация и конфиг агентов (не пушить на GitHub)
+.cursor/
+PROMPTS/
+
+# Локальные бинарники
+*.exe
