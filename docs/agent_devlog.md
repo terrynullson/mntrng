@@ -357,7 +357,7 @@ Notes:
 
 [2026-02-23] [BE-AI-INCIDENT-001]
 Agent: BackendAgent
-Commit: (см. коммит после этой записи)
+Commit: 6124a18
 Summary:
 - Реализован вызов AI по событию WARN/FAIL по контракту docs/ai_incident_contract.md (ADR-0012, B6). После persist check_result при статусе WARN или FAIL Worker передаёт в AI-клиент метрики проверки (checks) и путь к скриншоту (screenshot_path), получает cause и summary.
 - Результат сохраняется в БД: таблица ai_incident_results (миграция 0006), привязка по job_id/company_id/stream_id; INSERT ... ON CONFLICT (job_id) DO UPDATE.
@@ -376,7 +376,7 @@ Notes:
 
 [2026-02-23] [BE-AI-INCIDENT-API-001]
 Agent: BackendAgent
-Commit: (см. коммит после этой записи)
+Commit: 6124a18
 Summary:
 - Добавлен GET endpoint для чтения результата AI по проверке: GET /api/v1/companies/{company_id}/streams/{stream_id}/check-jobs/{job_id}/ai-incident. Ответ 200 { cause, summary } или 404.
 - Tenant-scoped по company_id и stream_id; tenant guard через существующий middleware. Только чтение; API не вызывает AI.
@@ -425,7 +425,7 @@ P1: поиск по таблице не реализован. Код не мен
 
 [2026-02-23] [FE-PLAYER-B3-001]
 Agent: FrontendAgent
-Commit: (см. коммит после этой записи)
+Commit: 6124a18
 Summary:
 - Страница детали потока (/streams/[streamId]) приведена к B3: кастомизированный HLS player (единый вид и контролы), аккуратный вывод метаданных (название, id, проект, активность, atomic checks, AI incident) без перегруза экрана, добавлен dropdown для переключения потоков в рамках текущей компании.
 - Tenant scope через auth/scope, skeleton/empty/error сохранены. Плеер flat, admin-first.
@@ -501,7 +501,7 @@ Notes:
 
 [2026-02-23] [docs-devlog-agents-notify]
 Agent: MasterAgent
-Commit: (см. коммит после этой записи)
+Commit: 6124a18
 Summary:
 - Правила обновлены: после коммита агенты обязаны запускать scripts/devlog_notify.ps1 (из корня репо), чтобы сообщение ушло в Telegram DevLog. Обновлены: .cursor/rules/project.mdc, docs/agents_and_responsibilities.md, .cursor/agents (backend, frontend, review, master).
 Notes:
@@ -509,7 +509,7 @@ Notes:
 
 [2026-02-23] [devnotify-mood]
 Agent: MasterAgent
-Commit: (см. коммит после этой записи)
+Commit: 6124a18
 Summary:
 - cmd/devnotify: при -readSummaryFromGit поле «Настроение» выбирается случайно из списка коротких эмоциональных фраз вместо фиксированного «Коммит прошел».
 Notes:
@@ -517,7 +517,7 @@ Notes:
 
 [2026-02-23] [devlog-mood-free]
 Agent: MasterAgent
-Commit: (см. коммит после этой записи)
+Commit: 6124a18
 Summary:
 - Настроение в Telegram DevLog — как в рабочем чате: агент может записать одну строку (свободный текст) в .devlog_mood.txt в корне репо перед запуском devlog_notify.ps1; скрипт подхватит её в «Настроение» и удалит файл. Файл в .gitignore. Обновлены: scripts/devlog_notify.ps1, .gitignore, project.mdc, agents_and_responsibilities, инструкции агентов.
 Notes:
@@ -604,7 +604,7 @@ Notes:
 
 [2026-02-23] [FE-FIX-UI-SCREENSHOTS-001]
 Agent: FrontendAgent
-Commit: (см. коммит после этой записи)
+Commit: 6124a18
 Summary:
 - Устранена возможность показа ошибки Next.js «Module not found: next/dist/pages/_app»: добавлен app/global-error.tsx (кастомная страница ошибки без зависимости от Pages Router). Login и Register приведены к единому стилю: явные background/color для .public-root и .auth-page, min-height и font-size для полей формы, тёмная тема для disabled полей. Переключатель темы (Dark) уже в едином стиле (AppButton). Пересняты скриншоты login и register.
 Notes:
@@ -616,11 +616,3 @@ Summary:
 - P0-ревью FE-SCREENSHOTS-ALL-001: скрипт screenshot:all в package.json и screenshot-all.mjs (порядок: settings…overview, login, register), обновлённые скриншоты и REPORT для login/register, документация в screenshot_automation.md. Verdict: PASS.
 Notes:
 Код не менялся; коммит только devlog.
-
-[2026-02-23] [FE-FIX-UI-SCREENSHOTS-001]
-Agent: FrontendAgent
-Commit: (см. коммит после этой записи)
-Summary:
-- Устранена возможность показа ошибки Next.js «Module not found: next/dist/pages/_app»: добавлен app/global-error.tsx (кастомная страница ошибки без зависимости от Pages Router). Login и Register приведены к единому стилю: явные background/color для .public-root и .auth-page, min-height и font-size для полей формы, тёмная тема для disabled полей. Переключатель темы (Dark) уже в едином стиле (AppButton). Пересняты скриншоты login и register.
-Notes:
-Скриншоты: screenshots/login/<timestamp>.png, screenshots/register/<timestamp>.png.
