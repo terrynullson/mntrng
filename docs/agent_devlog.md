@@ -468,3 +468,11 @@ Summary:
 - В README добавлен раздел «Реализованные возможности» после «Frontend»: HLS-мониторинг (Worker, проверки, статусы), потоки/проекты, админка (users, requests), Telegram (alerts, delivery settings, DevLog), аналитика (состояния, тренды, FAIL/WARN), плеер HLS (просмотр, тёмная тема), AI по инцидентам (WARN/FAIL). Только README.
 Notes:
 Соответствие текущему состоянию по devlog и architecture_master.
+
+[2026-02-23] [BE-TEST-AI-INCIDENT-001]
+Agent: BackendAgent
+Commit: 0f661ea
+Summary:
+- Добавлены тесты для GET .../check-jobs/{job_id}/ai-incident: 200 (есть запись — cause, summary), 404 (нет записи), 401 (без токена), 403 (tenant escape). Стиль как в middleware_auth_test: mock store (mockAIIncidentStore), handler в изоляции для 200/404, роутер с auth для 401/403.
+Notes:
+internal/http/api/handlers_ai_incident_test.go; go test ./... проходит.
