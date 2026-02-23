@@ -327,3 +327,12 @@ Summary:
 - Tenant: company_id в запросах api_* репозиториев; ListCompanies и admin ListUsers — исключения по архитектуре (companies / super_admin). API: ffmpeg/ffprobe только в worker. UI: скриншоты по всем модулям в screenshots/{module}/, score 9 в devlog.
 Notes:
 Вердикт PASS. Закоммитить только эту запись в agent_devlog при отсутствии других изменений.
+
+[2026-02-23] [be-worker-hls-001]
+Agent: BackendAgent
+Commit: (после коммита подставить hash)
+Summary:
+- Проверен полный цикл HLS Worker: enqueue (API) → check_jobs (PostgreSQL) → Worker claim → processJob (все 7 проверок) → persist check_result (status + checks) → alert_state → finalize. Tenant scope везде (company_id в repo).
+- Все атомарные проверки реализованы и пишутся в checks: playlist, freshness, segments, declared_bitrate, effective_bitrate, freeze, blackframe (+ *_details где нужно). Агрегация FAIL > WARN > OK (checks.AggregateStatuses). Изменений кода не потребовалось.
+Notes:
+Тесты internal/service/worker проходят. Redis в контракте не используется для очереди — только PostgreSQL check_jobs.
