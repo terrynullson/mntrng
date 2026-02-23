@@ -568,3 +568,11 @@ Summary:
 - P0-ревью состояния кодовой базы: tenant scoping (company_id в API/Worker, unscoped только companies), API≠Worker (ffmpeg/ffprobe/AI только в Worker), скриншоты UI (10 модулей с REPORT), логи без секретов. Verdict: PASS.
 Notes:
 Правки не вносились; коммит только devlog.
+
+[2026-02-23] [FE-MVP-PROD-001]
+Agent: FrontendAgent
+Commit: (см. коммит после этой записи)
+Summary:
+- MVP 100%: обход основных страниц (Streams, Stream detail/player, Analytics, Settings, Admin Users/Requests, Login/Register, Overview) — везде skeleton, empty, error states; критичных багов и «белых» экранов не выявлено. Production build (npm run build в web/) успешен. README: дополнение про NEXT_PUBLIC_API_BASE_URL для production-сборки. Бизнес-логика и контракты API не менялись.
+Notes:
+Post-commit: scripts/devlog_notify.ps1 (хук .githooks/post-commit).

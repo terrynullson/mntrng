@@ -12,7 +12,7 @@
 
 ## Frontend (сборка и запуск)
 
-Из каталога `web/`: `npm install` — установка зависимостей; `npm run dev` — режим разработки (dev-сервер с hot reload); `npm run build` — продакшен-сборка. После сборки запуск: `npm run start`.
+Из каталога `web/`: `npm install` — установка зависимостей; `npm run dev` — режим разработки (dev-сервер с hot reload); `npm run build` — продакшен-сборка. После сборки запуск: `npm run start`. Для production-сборки задайте `NEXT_PUBLIC_API_BASE_URL` (URL API с точки зрения браузера) перед `npm run build`.
 
 ## Реализованные возможности
 
