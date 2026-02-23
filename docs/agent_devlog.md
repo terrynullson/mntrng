@@ -453,3 +453,10 @@ Summary:
 - Плеер: HLS-плеер на странице потока обёрнут в контейнер с aspect-ratio 16/9, кнопка Fullscreen для области плеера; hls.js сохранён. Дизайн: типографика (page-title 1.25rem, font-weight 600), отступы и карточки (panel 20px, player/status-card 14px, radius 14px) в рамках flat по ui_style_guide. Тёмная тема: переключатель Light/Dark в topbar и на публичных страницах (login/register), темы через CSS-переменные (data-theme=dark), сохранение в localStorage, синхронизация с системной темой при первом заходе.
 Notes:
 Скриншоты светлой и тёмной темы: npm run screenshot:stream-detail (сохраняет <timestamp>.png и <timestamp>-dark.png при наличии API и frontend).
+
+[2026-02-22] [RV-FE-PLAYER-DESIGN-001]
+Agent: ReviewAgent
+Summary:
+- P0-ревью FE-PLAYER-DESIGN-001: плеер 16/9, Fullscreen по контейнеру, hls.js; flat и типографика/отступы по гайду; тёмная тема через CSS-переменные, переключатель в topbar и на публичных страницах. Verdict: PASS.
+Notes:
+Код не менялся; коммит только devlog.
