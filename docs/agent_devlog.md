@@ -415,3 +415,10 @@ Summary:
 - Analytics (/analytics) приведена к B4: состояния, тренды (таблица по времени), инциденты/частота FAIL/WARN (summary cards + заголовок «Status summary (FAIL/WARN frequency)»). Таблицы, фильтры (поток, период from/to, статус) по API check-results. Добавлена колонка Declared bitrate. Skeleton, empty, error; flat, admin-first.
 Notes:
 Скриншот: npm run screenshot:analytics при API + frontend (screenshots/analytics/).
+
+[2026-02-22] [RV-FE-ANALYTICS-B4-001]
+Agent: ReviewAgent
+Summary:
+- P0-ревью FE-ANALYTICS-B4-001: Analytics — состояния, тренды, частота FAIL/WARN, таблица, фильтры (поток, период, статус), skeleton/empty/error, flat, tenant scope. Screenshot Score 9. Verdict: PASS.
+Notes:
+P1: поиск по таблице не реализован. Код не менялся; коммит только devlog.
