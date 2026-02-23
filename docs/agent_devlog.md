@@ -254,3 +254,11 @@ Summary:
 - README: раздел «Документация» со ссылками на api_contract, schema, telegram_alerts_contract, retention_cleanup, ai_incident_contract, decisions, screenshot_automation; отсылка к DevLog/retention/telegram в .env.example.
 Notes:
 Только правки README.
+
+[2026-02-23] [be-readme-mig-001]
+Agent: BackendAgent
+Commit: 01e291f
+Summary:
+- README: в блок Apply migrations добавлена миграция 0005_indexes_admin_and_lists.up.sql.
+Notes:
+Список миграций 0001–0005 актуален.
