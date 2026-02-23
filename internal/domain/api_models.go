@@ -120,6 +120,12 @@ type CheckResultListResponse struct {
 	NextCursor *string       `json:"next_cursor"`
 }
 
+// AIIncidentResponse is the read-only API response for AI incident analysis (cause/summary) per check job.
+type AIIncidentResponse struct {
+	Cause   string `json:"cause"`
+	Summary string `json:"summary"`
+}
+
 type TelegramDeliverySettings struct {
 	IsEnabled     bool      `json:"is_enabled"`
 	ChatID        string    `json:"chat_id"`

@@ -659,6 +659,21 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 - `200` -> `Check result`.
 - Errors: `401`, `403`, `404`, `500`.
 
+### `GET /companies/{company_id}/streams/{stream_id}/check-jobs/{job_id}/ai-incident`
+
+- Purpose: get AI incident analysis (cause and summary) for a check job. Tenant-scoped by `company_id` and `stream_id`. Read-only; API does not invoke AI.
+- `200`:
+
+```json
+{
+  "cause": "string",
+  "summary": "string"
+}
+```
+
+- `404` when no AI incident result exists for that job (e.g. job was OK or AI was unavailable).
+- Errors: `401`, `403`, `404`, `500`.
+
 ## 5.8 Telegram delivery settings (tenant-scoped)
 
 All endpoints in this section are tenant-scoped by route `company_id`. Access: `company_admin` or `super_admin` only (viewer forbidden).

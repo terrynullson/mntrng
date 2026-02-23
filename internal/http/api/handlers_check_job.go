@@ -69,3 +69,18 @@ func (s *Server) handleListCheckJobs(w http.ResponseWriter, r *http.Request, com
 		log.Printf("list check jobs response encode error: %v", err)
 	}
 }
+
+func (s *Server) handleGetAIIncident(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64, jobID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	item, err := s.aiIncidentService.Get(ctx, companyID, streamID, jobID)
+	if err != nil {
+		writeServiceError(w, r, "get ai incident", err)
+		return
+	}
+
+	if err := WriteJSON(w, http.StatusOK, item); err != nil {
+		log.Printf("get ai incident response encode error: %v", err)
+	}
+}

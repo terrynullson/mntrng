@@ -6,19 +6,21 @@ import (
 )
 
 const (
-	projectCollectionPath           = "projects"
-	projectItemPrefix               = "projects/"
-	streamCollectionPath           = "streams"
-	streamItemPrefix                = "streams/"
-	checkJobsCollectionPath         = "check-jobs"
-	checkJobsItemPrefix             = "check-jobs/"
-	checkResultsCollectionPath      = "check-results"
-	checkResultsItemPrefix          = "check-results/"
-	telegramDeliverySettingsPath    = "telegram-delivery-settings"
+	projectCollectionPath        = "projects"
+	projectItemPrefix            = "projects/"
+	streamCollectionPath        = "streams"
+	streamItemPrefix             = "streams/"
+	checkJobsCollectionPath      = "check-jobs"
+	checkJobsItemPrefix          = "check-jobs/"
+	checkResultsCollectionPath   = "check-results"
+	checkResultsItemPrefix       = "check-results/"
+	telegramDeliverySettingsPath = "telegram-delivery-settings"
+	aiIncidentPathSuffix         = "ai-incident"
 )
 
 type companyHandler func(http.ResponseWriter, *http.Request, int64)
 type companyResourceHandler func(http.ResponseWriter, *http.Request, int64, int64)
+type streamCompanyResourceHandler func(http.ResponseWriter, *http.Request, int64, int64, int64)
 type adminResourceHandler func(http.ResponseWriter, *http.Request, int64)
 
 type RouterHandlers struct {
@@ -50,6 +52,7 @@ type RouterHandlers struct {
 	HandleGetCheckResult      companyResourceHandler
 	HandleListCheckResults    companyResourceHandler
 	HandleGetCheckResultByJob companyResourceHandler
+	HandleGetAIIncident       streamCompanyResourceHandler
 
 	HandleGetTelegramDeliverySettings  companyHandler
 	HandlePatchTelegramDeliverySettings companyHandler
@@ -341,6 +344,19 @@ func routeCompanyStreamPath(w http.ResponseWriter, r *http.Request, handlers Rou
 	}
 	if len(streamParts) == 2 && streamParts[1] == checkJobsCollectionPath {
 		routeStreamCheckJobsCollection(w, r, handlers, companyID, streamID)
+		return true
+	}
+	if len(streamParts) == 4 && streamParts[1] == checkJobsCollectionPath && streamParts[3] == aiIncidentPathSuffix {
+		jobID, err := parsePositiveID(streamParts[2])
+		if err != nil {
+			WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid job_id", map[string]interface{}{"path": r.URL.Path})
+			return true
+		}
+		if r.Method == http.MethodGet {
+			handlers.HandleGetAIIncident(w, r, companyID, streamID, jobID)
+		} else {
+			WriteMethodNotAllowed(w, r, http.MethodGet)
+		}
 		return true
 	}
 	if len(streamParts) == 2 && streamParts[1] == checkResultsCollectionPath {

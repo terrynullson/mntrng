@@ -31,6 +31,7 @@ type enqueueCheckJobRequest = domain.EnqueueCheckJobRequest
 type enqueueCheckJobResponse = domain.EnqueueCheckJobResponse
 type checkResult = domain.CheckResult
 type checkResultListResponse = domain.CheckResultListResponse
+type aiIncidentResponse = domain.AIIncidentResponse
 type authTokensResponse = domain.AuthTokensResponse
 type authUser = domain.AuthUser
 type loginRequest = domain.LoginRequest
@@ -50,6 +51,7 @@ type Server struct {
 	streamService            *serviceapi.StreamService
 	checkJobService          *serviceapi.CheckJobService
 	checkResultService       *serviceapi.CheckResultService
+	aiIncidentService        *serviceapi.AIIncidentService
 	telegramSettingsService   *serviceapi.TelegramSettingsService
 	authService              *serviceapi.AuthService
 	registrationService      *serviceapi.RegistrationService
@@ -76,6 +78,7 @@ func NewServer(db *sql.DB) *Server {
 		streamService:      serviceapi.NewStreamService(postgres.NewAPIStreamRepo(db)),
 		checkJobService:    serviceapi.NewCheckJobService(postgres.NewAPICheckJobRepo(db)),
 		checkResultService:     serviceapi.NewCheckResultService(postgres.NewAPICheckResultRepo(db)),
+		aiIncidentService:  serviceapi.NewAIIncidentService(postgres.NewAPIAIIncidentRepo(db)),
 		telegramSettingsService: serviceapi.NewTelegramSettingsService(postgres.NewAPITelegramSettingsRepo(db)),
 		authService: serviceapi.NewAuthService(authRepo, serviceapi.AuthConfig{
 			AccessTTL:          time.Duration(config.GetInt("AUTH_ACCESS_TTL_MIN", 15)) * time.Minute,
@@ -113,6 +116,7 @@ func (s *Server) RouterHandlers() RouterHandlers {
 		HandleGetCheckResult:      s.handleGetCheckResult,
 		HandleListCheckResults:    s.handleListCheckResults,
 		HandleGetCheckResultByJob: s.handleGetCheckResultByJob,
+		HandleGetAIIncident:       s.handleGetAIIncident,
 		HandleGetTelegramDeliverySettings:  s.handleGetTelegramDeliverySettings,
 		HandlePatchTelegramDeliverySettings: s.handlePatchTelegramDeliverySettings,
 

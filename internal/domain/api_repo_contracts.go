@@ -42,6 +42,8 @@ var (
 
 	ErrTelegramDeliverySettingsNotFound    = errors.New("telegram_delivery_settings_not_found")
 	ErrTelegramDeliverySettingsInvalidInput = errors.New("telegram_delivery_settings_invalid_input")
+
+	ErrAIIncidentNotFound = errors.New("ai_incident_not_found")
 )
 
 type StreamListFilter struct {

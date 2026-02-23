@@ -373,3 +373,13 @@ Summary:
 - P0-ревью BE-AI-INCIDENT-001: tenant (ai_incident_results, SaveAIIncidentResult по company_id/stream_id), API не вызывает AI (только Worker), секреты не в логах, соответствие ai_incident_contract и ADR-0012. Вердикт PASS.
 Notes:
 Правки не вносились; коммит только devlog.
+
+[2026-02-23] [BE-AI-INCIDENT-API-001]
+Agent: BackendAgent
+Commit: (см. коммит после этой записи)
+Summary:
+- Добавлен GET endpoint для чтения результата AI по проверке: GET /api/v1/companies/{company_id}/streams/{stream_id}/check-jobs/{job_id}/ai-incident. Ответ 200 { cause, summary } или 404.
+- Tenant-scoped по company_id и stream_id; tenant guard через существующий middleware. Только чтение; API не вызывает AI.
+- Реализация: internal/domain (AIIncidentResponse, ErrAIIncidentNotFound), internal/repo/postgres (APIAIIncidentRepo.GetByCompanyStreamJob), internal/service/api (AIIncidentService.Get), handler + роут в internal/http/api. Контракт обновлён в docs/api_contract.md.
+Notes:
+Данные читаются из таблицы ai_incident_results (миграция 0006).
