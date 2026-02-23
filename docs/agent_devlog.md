@@ -483,3 +483,10 @@ Summary:
 - P0-ревью коммита f40fedd (BE-TEST-AI-INCIDENT-001): тесты GET ai-incident — 200, 404, 401, 403; mock store; tenant scope (403 tenant_scope_required). Вердикт: PASS.
 Notes:
 Код не менялся; коммит только devlog.
+
+[2026-02-22] [RV-P0-STATE-003]
+Agent: ReviewAgent
+Summary:
+- P0-ревью состояния кодовой базы: tenant scoping (company_id в API/Worker, unscoped только companies), API≠Worker (ffmpeg/ffprobe/AI только в Worker), скриншоты UI (10 модулей с REPORT), логи без секретов. Verdict: PASS.
+Notes:
+Правки не вносились; коммит только devlog.
