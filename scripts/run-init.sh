@@ -8,7 +8,8 @@ fi
 for f in /migrations/0001_baseline_schema.up.sql \
          /migrations/0002_telegram_delivery_settings.up.sql \
          /migrations/0003_preserve_company_audit_history.up.sql \
-         /migrations/0004_auth_and_registration.up.sql; do
+         /migrations/0004_auth_and_registration.up.sql \
+         /migrations/0005_indexes_admin_and_lists.up.sql; do
   echo "Applying $(basename "$f")..."
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f" || true
 done
