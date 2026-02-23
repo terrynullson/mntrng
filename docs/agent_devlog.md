@@ -196,9 +196,28 @@ Notes:
 
 [2026-02-23] [register]
 Agent: FrontendAgent
-Commit: 1d54bc8 (polish+script), 18daa03 (screenshot)
+Commit: 1d54bc8 (polish+script), 18daa03 + коммит пересъёмки (screenshot 20260223075110)
 Summary:
-- Страница /register: flat, микроанимации auth-card, form, pending-card и error (120–360 ms easeOut); скрипт npm run screenshot:register.
-- Скриншот: screenshots/register/20260223072330.png, score 9.
+- Страница /register: flat, микроанимации auth-card, form, pending-card и error (120–360 ms easeOut); скрипт npm run screenshot:register (ожидание h1 перед снимком).
+- Скриншот: screenshots/register/20260223075110.png, score 9.
 Notes:
-FE-REGISTER-001 готов. Роутинг: ReviewAgent.
+Модуль закрыт. ReviewAgent RV-REGISTER-002: PASS.
+
+[2026-02-23] [p0-backend-worker]
+Agent: ReviewAgent
+Commit: N/A
+Summary:
+- P0-аудит backend/worker (RV-P0-BACKEND-001): вердикт PASS. Tenant scope, API≠Worker, идемпотентность, таймауты, миграции, отсутствие секретов в логах проверены.
+- P0 issues: нет. P1 зафиксированы (индексы, поведение ListUsers для super_admin).
+Notes:
+Аудит завершён. Дальнейшие JOB по плану — на усмотрение MasterAgent.
+
+[2026-02-22] [be-p1-001]
+Agent: BackendAgent
+Commit: 688df8e
+Summary:
+- Закрыты P1 из RV-P0-BACKEND-001: миграция 0005_indexes_admin_and_lists (idx_users_company_id_created_at, idx_check_results_company_stream_created, idx_streams_company_project).
+- В docs/api_contract.md зафиксировано поведение GET /admin/users: без company_id — cross-company, с company_id — только эта компания (super_admin only).
+- docs/schema.md обновлён: порядок миграций и описание индексов 0005.
+Notes:
+P0-поведение не менялось. Миграции воспроизводимы.
