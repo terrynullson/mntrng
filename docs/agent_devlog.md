@@ -612,7 +612,7 @@ Notes:
 
 [2026-02-23] [FE-SCREENSHOTS-LOGIN-REGISTER-001]
 Agent: FrontendAgent
-Commit: 9a6c805
+Commit: e83a413
 Summary:
 - Пересняты скриншоты login и register (full page). Viewport 1280x720 и deviceScaleFactor 2 в screenshot-login.mjs и screenshot-register.mjs для размера PNG 10+ KB. REPORT.txt обновлены скриптами.
 Notes:
