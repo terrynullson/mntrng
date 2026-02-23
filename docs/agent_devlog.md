@@ -383,3 +383,11 @@ Summary:
 - Реализация: internal/domain (AIIncidentResponse, ErrAIIncidentNotFound), internal/repo/postgres (APIAIIncidentRepo.GetByCompanyStreamJob), internal/service/api (AIIncidentService.Get), handler + роут в internal/http/api. Контракт обновлён в docs/api_contract.md.
 Notes:
 Данные читаются из таблицы ai_incident_results (миграция 0006).
+
+[2026-02-23] [rv-be-ai-incident-api-001]
+Agent: ReviewAgent
+Commit: N/A
+Summary:
+- P0-ревью BE-AI-INCIDENT-API-001: tenant (endpoint companies/.../streams/.../check-jobs/.../ai-incident, выборка WHERE company_id, stream_id, job_id), только чтение, API не вызывает AI, соответствие api_contract. Вердикт PASS.
+Notes:
+Правки не вносились; коммит только devlog.
