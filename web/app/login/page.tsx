@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
@@ -63,7 +64,12 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <section className="auth-card">
+      <motion.section
+        className="auth-card"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.28, ease: "easeOut" }}
+      >
         <h1>Login</h1>
         <p>Sign in to access secure admin routes.</p>
 
@@ -91,7 +97,16 @@ export default function LoginPage() {
             />
           </label>
 
-          {error ? <p className="state state-error">{error}</p> : null}
+          {error ? (
+            <motion.p
+              className="state state-error"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              {error}
+            </motion.p>
+          ) : null}
 
           <AppButton type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Signing in..." : "Login"}
@@ -101,7 +116,7 @@ export default function LoginPage() {
         <p className="auth-secondary">
           No account? <Link href="/register">Create registration request</Link>
         </p>
-      </section>
+      </motion.section>
     </div>
   );
 }

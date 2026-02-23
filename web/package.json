@@ -12,7 +12,8 @@
     "screenshot:admin-requests": "node scripts/screenshot-admin-requests.mjs",
     "screenshot:admin-users": "node scripts/screenshot-admin-users.mjs",
     "screenshot:companies": "node scripts/screenshot-companies.mjs",
-    "screenshot:overview": "node scripts/screenshot-overview.mjs"
+    "screenshot:overview": "node scripts/screenshot-overview.mjs",
+    "screenshot:login": "node scripts/screenshot-login.mjs"
   },
   "dependencies": {
     "framer-motion": "11.3.19",
