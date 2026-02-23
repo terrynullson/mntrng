@@ -294,3 +294,11 @@ Summary:
 - Проверка согласованности миграций (RV-MIG-001): run-init.sh, README (Apply migrations), docs/schema.md (apply и rollback) — везде 0001–0005, порядок совпадает, откат обратный. Вердикт PASS.
 Notes:
 Пропусков и расхождений нет.
+
+[2026-02-23] [be-readme-devlog-001]
+Agent: BackendAgent
+Commit: 76befd1
+Summary:
+- README: в раздел «Документация» добавлена ссылка на docs/agent_devlog.md.
+Notes:
+Только правки README.
