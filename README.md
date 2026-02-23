@@ -10,6 +10,10 @@
 - `redis` (Redis)
 - `frontend` (Next.js + TypeScript)
 
+## Frontend (сборка и запуск)
+
+Из каталога `web/`: `npm install` — установка зависимостей; `npm run dev` — режим разработки (dev-сервер с hot reload); `npm run build` — продакшен-сборка. После сборки запуск: `npm run start`.
+
 ## Документация
 
 - [docs/api_contract.md](docs/api_contract.md) — контракт REST API (эндпоинты, форматы, коды ошибок, tenant scope).
