@@ -448,7 +448,7 @@ Notes:
 
 [2026-02-23] [FE-PLAYER-DESIGN-001]
 Agent: FrontendAgent
-Commit: (см. коммит после этой записи)
+Commit: b6fa83f
 Summary:
 - Плеер: HLS-плеер на странице потока обёрнут в контейнер с aspect-ratio 16/9, кнопка Fullscreen для области плеера; hls.js сохранён. Дизайн: типографика (page-title 1.25rem, font-weight 600), отступы и карточки (panel 20px, player/status-card 14px, radius 14px) в рамках flat по ui_style_guide. Тёмная тема: переключатель Light/Dark в topbar и на публичных страницах (login/register), темы через CSS-переменные (data-theme=dark), сохранение в localStorage, синхронизация с системной темой при первом заходе.
 Notes:
