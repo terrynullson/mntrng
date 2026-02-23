@@ -286,3 +286,11 @@ Summary:
 - scripts/run-init.sh: в цикл миграций добавлена 0005_indexes_admin_and_lists.up.sql; init применяет 0001–0005.
 Notes:
 Идемпотентность сохранена.
+
+[2026-02-23] [rv-mig-001]
+Agent: ReviewAgent
+Commit: N/A
+Summary:
+- Проверка согласованности миграций (RV-MIG-001): run-init.sh, README (Apply migrations), docs/schema.md (apply и rollback) — везде 0001–0005, порядок совпадает, откат обратный. Вердикт PASS.
+Notes:
+Пропусков и расхождений нет.
