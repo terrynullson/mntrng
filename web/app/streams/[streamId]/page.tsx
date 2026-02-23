@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { AppButton } from "@/components/ui/app-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -67,6 +68,7 @@ export default function StreamDetailsPageV2() {
   const [fallbackURL, setFallbackURL] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const playerWrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!accessToken || !scopeCompanyId || !streamID) {
@@ -368,13 +370,28 @@ export default function StreamDetailsPageV2() {
               {stream.is_active ? "true" : "false"}
             </p>
 
-            <video
-              ref={videoRef}
-              className="stream-player"
-              controls
-              playsInline
-              muted
-            />
+            <div ref={playerWrapRef} className="stream-player-wrap">
+              <video
+                ref={videoRef}
+                className="stream-player"
+                controls
+                playsInline
+                muted
+              />
+              <AppButton
+                type="button"
+                variant="secondary"
+                className="stream-player-fullscreen-btn"
+                onClick={() => {
+                  const el = playerWrapRef.current;
+                  if (el?.requestFullscreen) {
+                    el.requestFullscreen();
+                  }
+                }}
+              >
+                Fullscreen
+              </AppButton>
+            </div>
 
             {playerError ? (
               <motion.div

@@ -127,6 +127,17 @@ async function main() {
     await page.screenshot({ path: screenshotPath, fullPage: true });
     log("Screenshot saved: " + screenshotPath);
 
+    const darkPath = path.join(SCREENSHOTS_DIR, `${timestamp}-dark.png`);
+    let darkRelative = "N/A";
+    const darkBtn = page.locator('button:has-text("Dark")');
+    if ((await darkBtn.count()) > 0) {
+      await darkBtn.click();
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: darkPath, fullPage: true });
+      darkRelative = path.relative(ROOT_DIR, darkPath);
+      log("Dark theme screenshot saved: " + darkPath);
+    }
+
     let score = 9;
     if (!hasTitle) score = 7;
     if (!hasBackLink) score = Math.min(score, 8);
@@ -134,9 +145,10 @@ async function main() {
 
     const reportLines = [
       "FE-STREAM-DETAIL-001 REPORT",
-      "Screenshot: " + path.relative(ROOT_DIR, screenshotPath),
+      "Screenshot (light): " + path.relative(ROOT_DIR, screenshotPath),
+      "Screenshot (dark): " + darkRelative,
       "Score: " + score,
-      "Checks: authorized Stream Player, Back to streams, stream card or empty, Latest Status or No check results.",
+      "Checks: authorized Stream Player, Back to streams, stream card or empty, Latest Status or No check results, theme toggle.",
     ];
     const reportContent = reportLines.join("\n") + "\n";
     await writeFile(REPORT_PATH, reportContent);

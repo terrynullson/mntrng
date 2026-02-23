@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppButton } from "@/components/ui/app-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
+import { ThemeToggleButton } from "@/components/theme/theme-toggle-button";
 import type { Role } from "@/lib/api/types";
 
 const PUBLIC_ROUTES = new Set(["/login", "/register"]);
@@ -116,7 +117,14 @@ export function ProtectedShell({ children }: PropsWithChildren) {
   };
 
   if (isPublicRoute) {
-    return <div className="public-root">{children}</div>;
+    return (
+      <div className="public-root">
+        <div className="public-theme-toggle">
+          <ThemeToggleButton />
+        </div>
+        {children}
+      </div>
+    );
   }
 
   if (!isReady || !isAuthenticated || !user) {
@@ -172,6 +180,7 @@ export function ProtectedShell({ children }: PropsWithChildren) {
           </div>
 
           <div className="secure-topbar-right">
+            <ThemeToggleButton />
             {user.role === "super_admin" ? (
               <label className="company-switcher" htmlFor="active-company-switcher">
                 <span>Company scope</span>
