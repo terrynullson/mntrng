@@ -628,7 +628,7 @@ Notes:
 
 [2026-02-24] [FE-LOGIN-GLASS-001]
 Agent: FrontendAgent
-Commit: (в коммите)
+Commit: 18c967c
 Summary:
 - Login/Register переведены в glassmorphism: анимированный градиентный фон через .public-root и auth-gradient, стеклянная auth-card с backdrop-filter и fallback без blur; обновлены скриншоты login и register (Score 9).
 Notes:
