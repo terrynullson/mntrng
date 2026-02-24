@@ -671,7 +671,7 @@ go test ./... проходит; API ≠ Worker не затронуты.
 
 [2026-02-24] [MS1-SENSE-CONTROL-001]
 Agent: UniversalAgent (Full-Stack Delivery)
-Commit: 758356c
+Commit: a288b63
 Summary:
 - Миграции 0007: stream_favorites (user_id, stream_id, is_pinned, sort_order), incidents (company_id, stream_id, status, severity, started_at, last_event_at, resolved_at, fail_reason, sample_screenshot_path, last_check_id).
 - Worker: интеграция инцидентов в пайплайн проверок — создание/обновление/закрытие по результату OK/WARN/FAIL, audit log при open/resolve.
