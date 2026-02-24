@@ -6,4 +6,7 @@ declare module "framer-motion" {
   export const motion: any;
   /** Returns true if user prefers reduced motion (e.g. prefers-reduced-motion: reduce). */
   export function useReducedMotion(): boolean | null;
+  /** Wrapper for exit animations. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  export const AnimatePresence: any;
 }

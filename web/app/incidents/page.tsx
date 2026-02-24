@@ -28,6 +28,7 @@ export default function IncidentsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [searchApplied, setSearchApplied] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("");
   const [page, setPage] = useState(0);
@@ -45,7 +46,7 @@ export default function IncidentsPage() {
       const params = new URLSearchParams();
       if (statusFilter) params.set("status", statusFilter);
       if (severityFilter) params.set("severity", severityFilter);
-      if (search.trim()) params.set("q", search.trim());
+      if (searchApplied.trim()) params.set("q", searchApplied.trim());
       params.set("page", String(page));
       params.set("page_size", String(pageSize));
 
@@ -64,13 +65,16 @@ export default function IncidentsPage() {
 
   useEffect(() => {
     void loadIncidents();
-  }, [accessToken, scopeCompanyId, statusFilter, severityFilter, page]);
+  }, [accessToken, scopeCompanyId, statusFilter, severityFilter, page, searchApplied]);
 
   useEffect(() => {
-    if (!search.trim()) return;
-    const t = setTimeout(() => void loadIncidents(), 300);
+    if (search.trim() === searchApplied.trim()) return;
+    const t = setTimeout(() => {
+      setSearchApplied(search);
+      setPage(0);
+    }, 300);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, searchApplied]);
 
   return (
     <section className="panel">
@@ -98,10 +102,12 @@ export default function IncidentsPage() {
               <span>Поиск</span>
               <input
                 id="incidents-search"
+                type="search"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e: { target: { value: string } }) => setSearch(e.target.value)}
                 placeholder="Название потока или причина"
                 disabled={isLoading}
+                aria-label="Поиск по названию потока или причине"
               />
             </label>
             <label className="form-field" htmlFor="incidents-status">
@@ -109,11 +115,12 @@ export default function IncidentsPage() {
               <select
                 id="incidents-status"
                 value={statusFilter}
-                onChange={(e) => {
+                onChange={(e: { target: { value: string } }) => {
                   setStatusFilter(e.target.value as StatusFilter);
                   setPage(0);
                 }}
                 disabled={isLoading}
+                aria-label="Фильтр по статусу инцидента"
               >
                 <option value="">Все</option>
                 <option value="open">Открыт</option>
@@ -125,11 +132,12 @@ export default function IncidentsPage() {
               <select
                 id="incidents-severity"
                 value={severityFilter}
-                onChange={(e) => {
+                onChange={(e: { target: { value: string } }) => {
                   setSeverityFilter(e.target.value as SeverityFilter);
                   setPage(0);
                 }}
                 disabled={isLoading}
+                aria-label="Фильтр по серьёзности"
               >
                 <option value="">Все</option>
                 <option value="warn">WARN</option>
@@ -154,6 +162,7 @@ export default function IncidentsPage() {
                   setStatusFilter("open");
                   setPage(0);
                 }}
+                aria-pressed={statusFilter === "open"}
               >
                 <span className="summary-label">Открытые</span>
               </button>
@@ -164,6 +173,7 @@ export default function IncidentsPage() {
                   setStatusFilter("resolved");
                   setPage(0);
                 }}
+                aria-pressed={statusFilter === "resolved"}
               >
                 <span className="summary-label">Закрытые</span>
               </button>
@@ -174,6 +184,7 @@ export default function IncidentsPage() {
                   setSeverityFilter("warn");
                   setPage(0);
                 }}
+                aria-pressed={severityFilter === "warn"}
               >
                 <span className="summary-label">WARN</span>
               </button>
@@ -184,6 +195,7 @@ export default function IncidentsPage() {
                   setSeverityFilter("fail");
                   setPage(0);
                 }}
+                aria-pressed={severityFilter === "fail"}
               >
                 <span className="summary-label">FAIL</span>
               </button>
@@ -245,7 +257,7 @@ export default function IncidentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.items.map((inc: Incident) => (
+                  {data.items.map((inc) => (
                     <tr key={inc.id}>
                       <td>{inc.id}</td>
                       <td>

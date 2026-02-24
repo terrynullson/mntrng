@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import type { ReactNode } from "react";
 import {
-  type PropsWithChildren,
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState
 } from "react";
 
@@ -63,7 +65,7 @@ function isPublicPath(pathname: string): boolean {
 
 function resolvePageTitle(pathname: string): string {
   const match = PATH_LABELS.find((item) => item.pattern.test(pathname));
-  return match?.title ?? "Admin";
+  return match?.title ?? "Панель";
 }
 
 function isActiveRoute(pathname: string, href: string): boolean {
@@ -73,7 +75,7 @@ function isActiveRoute(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function ProtectedShell({ children }: PropsWithChildren) {
+export function ProtectedShell({ children }: { children?: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -89,8 +91,23 @@ export function ProtectedShell({ children }: PropsWithChildren) {
 
   const [isNavCollapsed, setIsNavCollapsed] = useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   const isPublicRoute = isPublicPath(pathname);
+
+  const closeUserMenu = useCallback(() => setIsUserMenuOpen(false), []);
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      const el = userMenuRef.current;
+      if (el && !el.contains(event.target as Node)) {
+        closeUserMenu();
+      }
+    };
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [isUserMenuOpen, closeUserMenu]);
 
   useEffect(() => {
     if (!isReady) {
@@ -128,7 +145,8 @@ export function ProtectedShell({ children }: PropsWithChildren) {
           <ThemeToggleButton />
         </div>
         <AnimatedGradientBackground />
-        {children}
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any — совместимость shim react и @types/react */}
+        {children as any}
       </div>
     );
   }
@@ -153,7 +171,7 @@ export function ProtectedShell({ children }: PropsWithChildren) {
           {!isNavCollapsed ? <h1>Admin v2</h1> : <h1>A2</h1>}
         </div>
 
-        <nav className="secure-nav" aria-label="Main navigation">
+        <nav className="secure-nav" aria-label="Основная навигация">
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -175,13 +193,13 @@ export function ProtectedShell({ children }: PropsWithChildren) {
               variant="ghost"
               className="burger-button"
               onClick={() => setIsNavCollapsed((previous) => !previous)}
-              aria-label="Toggle sidebar"
+              aria-label={isNavCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}
             >
-              {isNavCollapsed ? "Expand" : "Collapse"}
+              {isNavCollapsed ? "Развернуть" : "Свернуть"}
             </AppButton>
             <div>
               <p className="secure-page-title">{pageTitle}</p>
-              <p className="secure-page-note">Role: {user.role}</p>
+              <p className="secure-page-note">Роль: {user.role}</p>
             </div>
           </div>
 
@@ -189,17 +207,18 @@ export function ProtectedShell({ children }: PropsWithChildren) {
             <ThemeToggleButton />
             {user.role === "super_admin" ? (
               <label className="company-switcher" htmlFor="active-company-switcher">
-                <span>Company scope</span>
+                <span>Компания</span>
                 <select
                   id="active-company-switcher"
                   value={activeCompanyId ?? ""}
-                  onChange={(event) => {
+                  onChange={(event: { target: { value: string } }) => {
                     const value = Number.parseInt(event.target.value, 10);
                     setActiveCompanyId(Number.isFinite(value) ? value : null);
                   }}
+                  aria-label="Выбор компании (контекст)"
                 >
                   {companies.length === 0 ? (
-                    <option value="">No companies</option>
+                    <option value="">Нет компаний</option>
                   ) : null}
                   {companies.map((company) => (
                     <option key={company.id} value={company.id}>
@@ -210,13 +229,15 @@ export function ProtectedShell({ children }: PropsWithChildren) {
               </label>
             ) : null}
 
-            <div className="user-menu-root">
+            <div className="user-menu-root" ref={userMenuRef}>
               <AppButton
                 type="button"
                 variant="secondary"
                 className="user-menu-trigger"
                 onClick={() => setIsUserMenuOpen((previous) => !previous)}
                 aria-expanded={isUserMenuOpen}
+                aria-haspopup="true"
+                aria-controls="user-menu-panel"
               >
                 {user.login}
               </AppButton>
@@ -224,15 +245,17 @@ export function ProtectedShell({ children }: PropsWithChildren) {
               <AnimatePresence>
                 {isUserMenuOpen ? (
                   <motion.div
+                    id="user-menu-panel"
                     className="user-menu-panel"
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.16, ease: "easeOut" }}
+                    role="menu"
                   >
                     <p>{user.email}</p>
                     <AppButton type="button" variant="danger" onClick={handleLogout}>
-                      Logout
+                      Выход
                     </AppButton>
                   </motion.div>
                 ) : null}
@@ -241,7 +264,8 @@ export function ProtectedShell({ children }: PropsWithChildren) {
           </div>
         </header>
 
-        <main className="secure-content">{children}</main>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any — совместимость shim react и @types/react */}
+        <main className="secure-content">{children as any}</main>
       </div>
     </div>
   );

@@ -3,6 +3,13 @@
  * After successful npm install, @types/react from node_modules will be used.
  */
 declare module "react" {
+  export interface ReactPortal {
+    key: string | null;
+    children?: ReactNode;
+    type: unknown;
+    props: unknown;
+  }
+
   export type ReactNode =
     | string
     | number
@@ -10,12 +17,14 @@ declare module "react" {
     | null
     | undefined
     | ReactElement
+    | ReactPortal
     | ReactNode[];
 
   interface ReactElement {
     type: unknown;
     props: unknown;
     key: string | null;
+    children?: ReactNode;
   }
 
   export interface SyntheticEvent<T = Element> {
@@ -47,6 +56,11 @@ declare module "react" {
   export function useCallback<T>(fn: T, deps: unknown[]): T;
 
   export function useMemo<T>(factory: () => T, deps: unknown[]): T;
+
+  export function useRef<T>(initialValue: T | null): { current: T | null };
+  export function useRef<T>(initialValue: T): { current: T };
+
+  export type PropsWithChildren<P = unknown> = P & { children?: ReactNode };
 
   export interface ComponentType<P = unknown> {
     (props: P): ReactElement | null;

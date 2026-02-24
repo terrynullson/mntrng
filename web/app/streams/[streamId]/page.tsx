@@ -226,7 +226,7 @@ export default function StreamDetailsPageV2() {
 
         if (!HlsCtor.isSupported()) {
           setFallbackURL(stream.url);
-          setPlayerError("Native HLS is unavailable in this browser.");
+          setPlayerError("HLS в этом браузере недоступен.");
           return;
         }
 
@@ -236,7 +236,7 @@ export default function StreamDetailsPageV2() {
       } catch {
         if (!disposed) {
           setFallbackURL(stream.url);
-          setPlayerError("Failed to initialize hls.js fallback.");
+          setPlayerError("Не удалось инициализировать HLS (hls.js).");
         }
       }
     };
@@ -282,28 +282,29 @@ export default function StreamDetailsPageV2() {
   return (
     <section className="panel">
       <header className="page-header compact">
-        <h2 className="page-title">Stream Player</h2>
+        <h2 className="page-title">Плеер потока</h2>
         <p className="page-note">
           <Link className="stream-link" href="/streams">
-            Back to streams
+            К списку потоков
           </Link>
         </p>
         {scopeCompanyId ? (
           <div className="page-note">
             <label className="form-field" htmlFor="stream-switcher">
-              <span>Switch stream</span>
+              <span>Переключить поток</span>
               <select
                 id="stream-switcher"
                 value={streamID ?? ""}
-                onChange={(event) => {
+                onChange={(event: { target: { value: string } }) => {
                   const targetId = event.target.value;
                   if (targetId && targetId !== streamID) {
                     router.push(`/streams/${targetId}`);
                   }
                 }}
                 disabled={isLoadingStreams || companyStreams.length === 0}
+                aria-label="Выбор потока для просмотра"
               >
-                <option value="">Select stream</option>
+                <option value="">Выберите поток</option>
                 {companyStreams.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name} ({item.id})
@@ -321,7 +322,7 @@ export default function StreamDetailsPageV2() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.24, ease: "easeOut" }}
         >
-          <StatePanel>Select company scope in topbar to open stream details.</StatePanel>
+          <StatePanel>Выберите компанию в шапке, чтобы открыть детали потока.</StatePanel>
         </motion.div>
       ) : null}
 
@@ -366,8 +367,8 @@ export default function StreamDetailsPageV2() {
           <article className="player-card">
             <h3 className="section-title">{stream.name}</h3>
             <p className="section-meta">
-              Stream #{stream.id} | Project #{stream.project_id} | Active: {" "}
-              {stream.is_active ? "true" : "false"}
+              Поток #{stream.id} | Проект #{stream.project_id} | Активен:{" "}
+              {stream.is_active ? "да" : "нет"}
             </p>
 
             <div ref={playerWrapRef} className="stream-player-wrap">
@@ -377,6 +378,7 @@ export default function StreamDetailsPageV2() {
                 controls
                 playsInline
                 muted
+                aria-label="Воспроизведение потока"
               />
               <AppButton
                 type="button"
@@ -388,8 +390,9 @@ export default function StreamDetailsPageV2() {
                     el.requestFullscreen();
                   }
                 }}
+                aria-label="На весь экран"
               >
-                Fullscreen
+                На весь экран
               </AppButton>
             </div>
 
@@ -403,7 +406,7 @@ export default function StreamDetailsPageV2() {
                   {playerError}{" "}
                   {fallbackURL ? (
                     <a href={fallbackURL} target="_blank" rel="noreferrer">
-                      Open stream URL
+                      Открыть URL потока
                     </a>
                   ) : null}
                 </StatePanel>
@@ -412,7 +415,7 @@ export default function StreamDetailsPageV2() {
           </article>
 
           <article className="status-card">
-            <h3 className="section-title">Latest Status</h3>
+            <h3 className="section-title">Последний статус</h3>
 
             {!latestResult ? (
               <motion.div
@@ -420,15 +423,15 @@ export default function StreamDetailsPageV2() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.24, ease: "easeOut" }}
               >
-                <StatePanel>No check results available yet.</StatePanel>
+                <StatePanel>Результатов проверки пока нет.</StatePanel>
               </motion.div>
             ) : (
               <>
                 <p className="status-row">
-                  Status: <StatusBadge status={latestResult.status} />
+                  Статус: <StatusBadge status={latestResult.status} />
                 </p>
                 <p className="status-row">
-                  Last check at: {formatTimestamp(latestResult.created_at)}
+                  Проверка: {formatTimestamp(latestResult.created_at)}
                 </p>
 
                 {atomicRows.length > 0 ? (
@@ -438,12 +441,12 @@ export default function StreamDetailsPageV2() {
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.24, ease: "easeOut" }}
                   >
-                    <h4 className="section-title section-title-small">Atomic checks</h4>
+                    <h4 className="section-title section-title-small">Атомарные проверки</h4>
                     <table>
                       <thead>
                         <tr>
-                          <th>Check</th>
-                          <th>Status</th>
+                          <th>Проверка</th>
+                          <th>Статус</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -464,7 +467,7 @@ export default function StreamDetailsPageV2() {
           </article>
 
           <article className="status-card">
-            <h3 className="section-title">AI incident</h3>
+            <h3 className="section-title">Инцидент ИИ</h3>
             {aiIncidentLoading ? (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -489,10 +492,10 @@ export default function StreamDetailsPageV2() {
                 transition={{ duration: 0.24, ease: "easeOut" }}
               >
                 <p className="section-meta">
-                  <strong>Cause:</strong> {aiIncident.cause}
+                  <strong>Причина:</strong> {aiIncident.cause}
                 </p>
                 <p className="section-meta">
-                  <strong>Summary:</strong> {aiIncident.summary}
+                  <strong>Кратко:</strong> {aiIncident.summary}
                 </p>
               </motion.div>
             ) : (
@@ -501,7 +504,7 @@ export default function StreamDetailsPageV2() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.24, ease: "easeOut" }}
               >
-                <StatePanel>No AI incident analysis for this check.</StatePanel>
+                <StatePanel>Нет анализа инцидента ИИ для этой проверки.</StatePanel>
               </motion.div>
             )}
           </article>
@@ -515,7 +518,7 @@ export default function StreamDetailsPageV2() {
           transition={{ duration: 0.24, ease: "easeOut" }}
           style={{ marginTop: "12px" }}
         >
-          <StatePanel>Stream not found or not accessible.</StatePanel>
+          <StatePanel>Поток не найден или недоступен.</StatePanel>
         </motion.div>
       ) : null}
     </section>
