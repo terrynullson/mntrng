@@ -12,6 +12,7 @@ import (
 	"github.com/example/hls-monitoring-platform/internal/config"
 	httpapi "github.com/example/hls-monitoring-platform/internal/http/api"
 	"github.com/example/hls-monitoring-platform/internal/ratelimit"
+	"github.com/example/hls-monitoring-platform/internal/telemetry"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -52,6 +53,15 @@ func main() {
 	} else {
 		limiter = ratelimit.NewInMemLimiter(authPerMin)
 	}
+
+	if err := telemetry.InitTracer(context.Background()); err != nil {
+		log.Printf("telemetry init (optional): %v", err)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = telemetry.Shutdown(shutdownCtx)
+	}()
 
 	server := httpapi.NewHTTPServer(":"+port, db, limiter)
 

@@ -21,36 +21,40 @@ const PUBLIC_ROUTES = new Set(["/login", "/register"]);
 
 const NAV_ITEMS_BY_ROLE: Record<Role, Array<{ href: string; label: string }>> = {
   super_admin: [
-    { href: "/", label: "Overview" },
-    { href: "/streams", label: "Streams" },
-    { href: "/analytics", label: "Analytics" },
-    { href: "/admin/users", label: "Users" },
-    { href: "/companies", label: "Companies" },
-    { href: "/admin/requests", label: "Requests" },
-    { href: "/settings", label: "Settings" }
+    { href: "/", label: "Обзор" },
+    { href: "/streams", label: "Потоки" },
+    { href: "/incidents", label: "Инциденты" },
+    { href: "/analytics", label: "Аналитика" },
+    { href: "/admin/users", label: "Пользователи" },
+    { href: "/companies", label: "Компании" },
+    { href: "/admin/requests", label: "Заявки" },
+    { href: "/settings", label: "Настройки" }
   ],
   company_admin: [
-    { href: "/", label: "Overview" },
-    { href: "/streams", label: "Streams" },
-    { href: "/analytics", label: "Analytics" },
-    { href: "/settings", label: "Settings" }
+    { href: "/", label: "Обзор" },
+    { href: "/streams", label: "Потоки" },
+    { href: "/incidents", label: "Инциденты" },
+    { href: "/analytics", label: "Аналитика" },
+    { href: "/settings", label: "Настройки" }
   ],
   viewer: [
-    { href: "/", label: "Overview" },
-    { href: "/streams", label: "Streams" },
-    { href: "/analytics", label: "Analytics" }
+    { href: "/", label: "Обзор" },
+    { href: "/streams", label: "Потоки" },
+    { href: "/incidents", label: "Инциденты" },
+    { href: "/analytics", label: "Аналитика" }
   ]
 };
 
 const PATH_LABELS: Array<{ pattern: RegExp; title: string }> = [
-  { pattern: /^\/$/, title: "Overview" },
-  { pattern: /^\/streams$/, title: "Streams" },
-  { pattern: /^\/streams\/.+/, title: "Stream Details" },
-  { pattern: /^\/analytics$/, title: "Analytics" },
-  { pattern: /^\/settings$/, title: "Settings" },
-  { pattern: /^\/admin\/requests$/, title: "Registration Requests" },
-  { pattern: /^\/admin\/users$/, title: "Users" },
-  { pattern: /^\/companies$/, title: "Companies" }
+  { pattern: /^\/$/, title: "Обзор" },
+  { pattern: /^\/streams$/, title: "Потоки" },
+  { pattern: /^\/streams\/.+/, title: "Поток" },
+  { pattern: /^\/incidents$/, title: "Инциденты" },
+  { pattern: /^\/analytics$/, title: "Аналитика" },
+  { pattern: /^\/settings$/, title: "Настройки" },
+  { pattern: /^\/admin\/requests$/, title: "Заявки на регистрацию" },
+  { pattern: /^\/admin\/users$/, title: "Пользователи" },
+  { pattern: /^\/companies$/, title: "Компании" }
 ];
 
 function isPublicPath(pathname: string): boolean {

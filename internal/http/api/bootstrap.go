@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/ratelimit"
+	"github.com/example/hls-monitoring-platform/internal/telemetry"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func NewHTTPServer(addr string, db *sql.DB, limiter ratelimit.Limiter) *http.Server {
@@ -15,6 +17,9 @@ func NewHTTPServer(addr string, db *sql.DB, limiter ratelimit.Limiter) *http.Ser
 	handler = corsMiddleware(handler)
 	if limiter != nil {
 		handler = rateLimitMiddleware(limiter)(handler)
+	}
+	if telemetry.Enabled() {
+		handler = otelhttp.NewHandler(handler, "api")
 	}
 
 	return &http.Server{

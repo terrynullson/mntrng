@@ -44,6 +44,17 @@ var (
 	ErrTelegramDeliverySettingsInvalidInput = errors.New("telegram_delivery_settings_invalid_input")
 
 	ErrAIIncidentNotFound = errors.New("ai_incident_not_found")
+
+	ErrStreamFavoriteNotFound = errors.New("stream_favorite_not_found")
+	ErrIncidentNotFound        = errors.New("incident_not_found")
+)
+
+// IncidentStatus / Severity
+const (
+	IncidentStatusOpen     = "open"
+	IncidentStatusResolved = "resolved"
+	IncidentSeverityWarn   = "warn"
+	IncidentSeverityFail   = "fail"
 )
 
 type StreamListFilter struct {
@@ -67,4 +78,13 @@ type CheckResultListFilter struct {
 	Status *string
 	From   *time.Time
 	To     *time.Time
+}
+
+type IncidentListFilter struct {
+	Status   *string
+	Severity *string
+	StreamID *int64
+	Q        string // search in stream name / fail_reason
+	Page     int
+	PageSize int
 }

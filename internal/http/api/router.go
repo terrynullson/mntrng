@@ -57,6 +57,14 @@ type RouterHandlers struct {
 	HandleGetCheckResultByJob companyResourceHandler
 	HandleGetAIIncident       streamCompanyResourceHandler
 
+	HandleListStreamFavorites  companyHandler
+	HandleAddStreamFavorite    companyResourceHandler
+	HandleRemoveStreamFavorite companyResourceHandler
+	HandleAddStreamPin         companyResourceHandler
+	HandleRemoveStreamPin      companyResourceHandler
+	HandleListIncidents        companyHandler
+	HandleGetIncident          companyResourceHandler
+
 	HandleGetTelegramDeliverySettings  companyHandler
 	HandlePatchTelegramDeliverySettings companyHandler
 
@@ -153,6 +161,40 @@ func routeCompanyByID(w http.ResponseWriter, r *http.Request, handlers RouterHan
 	}
 	if pathRemainder == telegramDeliverySettingsPath {
 		routeTelegramDeliverySettings(w, r, handlers, companyID)
+		return
+	}
+	if pathRemainder == "incidents" {
+		if r.Method == http.MethodGet {
+			handlers.HandleListIncidents(w, r, companyID)
+		} else {
+			WriteMethodNotAllowed(w, r, http.MethodGet)
+		}
+		return
+	}
+	if strings.HasPrefix(pathRemainder, "incidents/") {
+		incidentPath := strings.TrimPrefix(pathRemainder, "incidents/")
+		if incidentPath == "" || strings.Contains(incidentPath, "/") {
+			writeRouterPathNotFound(w, r)
+			return
+		}
+		incidentID, err := parsePositiveID(incidentPath)
+		if err != nil {
+			WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid incident_id", map[string]interface{}{"path": r.URL.Path})
+			return
+		}
+		if r.Method == http.MethodGet {
+			handlers.HandleGetIncident(w, r, companyID, incidentID)
+		} else {
+			WriteMethodNotAllowed(w, r, http.MethodGet)
+		}
+		return
+	}
+	if pathRemainder == "streams/favorites" {
+		if r.Method == http.MethodGet {
+			handlers.HandleListStreamFavorites(w, r, companyID)
+		} else {
+			WriteMethodNotAllowed(w, r, http.MethodGet)
+		}
 		return
 	}
 	if routeCompanyProjectPath(w, r, handlers, companyID, pathRemainder) {
@@ -345,6 +387,28 @@ func routeCompanyStreamPath(w http.ResponseWriter, r *http.Request, handlers Rou
 	}
 	if len(streamParts) == 1 {
 		routeStreamItem(w, r, handlers, companyID, streamID)
+		return true
+	}
+	if len(streamParts) == 2 && streamParts[1] == "favorite" {
+		switch r.Method {
+		case http.MethodPost:
+			handlers.HandleAddStreamFavorite(w, r, companyID, streamID)
+		case http.MethodDelete:
+			handlers.HandleRemoveStreamFavorite(w, r, companyID, streamID)
+		default:
+			WriteMethodNotAllowed(w, r, http.MethodPost, http.MethodDelete)
+		}
+		return true
+	}
+	if len(streamParts) == 2 && streamParts[1] == "pin" {
+		switch r.Method {
+		case http.MethodPost:
+			handlers.HandleAddStreamPin(w, r, companyID, streamID)
+		case http.MethodDelete:
+			handlers.HandleRemoveStreamPin(w, r, companyID, streamID)
+		default:
+			WriteMethodNotAllowed(w, r, http.MethodPost, http.MethodDelete)
+		}
 		return true
 	}
 	if len(streamParts) == 2 && streamParts[1] == checkJobsCollectionPath {

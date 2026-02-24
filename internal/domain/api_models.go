@@ -147,12 +147,54 @@ type ErrorEnvelope struct {
 	RequestID string      `json:"request_id"`
 }
 
+// StreamFavorite is a user's favorite or pinned stream (API/domain).
+type StreamFavorite struct {
+	ID        int64     `json:"id"`
+	UserID    int64     `json:"user_id"`
+	StreamID  int64     `json:"stream_id"`
+	IsPinned  bool      `json:"is_pinned"`
+	SortOrder int       `json:"sort_order"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// StreamWithFavorite is a stream with favorite/pin metadata for list.
+type StreamWithFavorite struct {
+	Stream    Stream `json:"stream"`
+	IsPinned  bool   `json:"is_pinned"`
+	SortOrder int    `json:"sort_order"`
+}
+
+// Incident is a monitoring incident (open or resolved) for a stream.
+type Incident struct {
+	ID                   int64      `json:"id"`
+	CompanyID            int64      `json:"company_id"`
+	StreamID             int64      `json:"stream_id"`
+	StreamName           string     `json:"stream_name,omitempty"`
+	Status               string     `json:"status"`
+	Severity             string     `json:"severity"`
+	StartedAt            time.Time  `json:"started_at"`
+	LastEventAt          time.Time  `json:"last_event_at"`
+	ResolvedAt           *time.Time `json:"resolved_at,omitempty"`
+	FailReason           *string    `json:"fail_reason,omitempty"`
+	SampleScreenshotPath *string    `json:"sample_screenshot_path,omitempty"`
+	LastCheckID          *int64     `json:"last_check_id,omitempty"`
+}
+
+// IncidentListResponse for paginated incidents.
+type IncidentListResponse struct {
+	Items      []Incident `json:"items"`
+	NextCursor *string    `json:"next_cursor"`
+	Total      int64      `json:"total,omitempty"`
+}
+
 const (
 	AuditActorTypeAPI        = "api"
 	AuditActorIDSystem       = "system"
+	AuditActorTypeWorker     = "worker"
 	AuditEntityTypeCompany   = "company"
 	AuditEntityTypeProject   = "project"
 	AuditEntityTypeStream    = "stream"
+	AuditEntityTypeIncident  = "incident"
 	AuditActionCompanyCreate = "create"
 	AuditActionCompanyUpdate = "update"
 	AuditActionCompanyDelete = "delete"
@@ -162,4 +204,6 @@ const (
 	AuditActionStreamCreate  = "create"
 	AuditActionStreamUpdate  = "update"
 	AuditActionStreamDelete  = "delete"
+	AuditActionIncidentOpen  = "open"
+	AuditActionIncidentResolve = "resolve"
 )

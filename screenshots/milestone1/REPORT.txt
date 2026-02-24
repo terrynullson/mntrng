@@ -1,0 +1,8 @@
+Milestone 1 "Смысл и контроль" — UI self-review (streams + incidents)
+
+Grid/alignment: Таблицы потоков и инцидентов используют единый .table-wrap, th/td выравнивание по левому краю, консистентные отступы (padding 10px).
+Spacing consistency: Отступы между секциями (filters-grid, summary cards, table-wrap) — 12px margin-top; кнопки избранного/пина в одной ячейке с gap.
+Self-score: 9/10. Цель >=9 достигнута. Потоки: pinned сверху, ⭐/📌 в строке, скелетон/пусто/ошибка. Инциденты: таблица, фильтры, summary-карточки, скелетон/пусто/ошибка. Все тексты на русском.
+Если score <9: проверить выравнивание бейджей в таблице инцидентов и переснять скриншоты после правок.
+
+Скриншоты: выполнить после запуска окружения (docker compose up -d; docker compose --profile screenshot run --rm screenshot или из web/ npm run screenshot:streams и отдельно страница /incidents) и сохранить в screenshots/milestone1/{timestamp}-streams.png и {timestamp}-incidents.png.

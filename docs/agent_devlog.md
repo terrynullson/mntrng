@@ -668,3 +668,15 @@ Summary:
 - docs/api_contract.md: описан GET /api/v1/ready; health оставлен как liveness.
 Notes:
 go test ./... проходит; API ≠ Worker не затронуты.
+
+[2026-02-24] [MS1-SENSE-CONTROL-001]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: 758356c
+Summary:
+- Миграции 0007: stream_favorites (user_id, stream_id, is_pinned, sort_order), incidents (company_id, stream_id, status, severity, started_at, last_event_at, resolved_at, fail_reason, sample_screenshot_path, last_check_id).
+- Worker: интеграция инцидентов в пайплайн проверок — создание/обновление/закрытие по результату OK/WARN/FAIL, audit log при open/resolve.
+- API: favorites/pins (POST/DELETE favorite, pin; GET streams/favorites), incidents (GET list + by id), tenant-scope и RBAC.
+- Observability: /metrics (promhttp), OTel tracer (OTEL_EXPORTER_OTLP_ENDPOINT), otelhttp для API.
+- UI: потоки — ⭐/📌, pinned сверху, русские тексты, skeleton/empty/error; страница инциденты — таблица, фильтры, summary-карточки.
+Notes:
+Backend тесты проходят; frontend build в среде с блокировкой node (npm ci EPERM) не выполнялся — на CI/контейнере ожидается успех. Скриншоты milestone1 — по инструкции в REPORT.txt.

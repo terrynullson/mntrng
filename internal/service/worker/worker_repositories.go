@@ -46,6 +46,13 @@ type AIIncidentRepository interface {
 	SaveAIIncidentResult(ctx context.Context, jobID int64, companyID int64, streamID int64, cause string, summary string) error
 }
 
+type IncidentRepository interface {
+	GetOpenByStream(ctx context.Context, companyID int64, streamID int64) (incidentID int64, ok bool, err error)
+	Create(ctx context.Context, companyID int64, streamID int64, severity string, failReason string, sampleScreenshotPath *string, lastCheckID *int64) (incidentID int64, err error)
+	UpdateOpen(ctx context.Context, incidentID int64, companyID int64, severity string, failReason string, sampleScreenshotPath *string, lastCheckID *int64) error
+	Resolve(ctx context.Context, incidentID int64, companyID int64, streamID int64) error
+}
+
 type Repositories struct {
 	JobRepo              JobRepository
 	StreamRepo           StreamRepository
@@ -54,4 +61,5 @@ type Repositories struct {
 	TelegramSettingsRepo TelegramSettingsRepository
 	RetentionRepo        RetentionRepository
 	AIIncidentRepo       AIIncidentRepository
+	IncidentRepo         IncidentRepository
 }

@@ -46,6 +46,7 @@ type worker struct {
 	telegramSettingsRepo      TelegramSettingsRepository
 	retentionRepo             RetentionRepository
 	aiIncidentRepo            AIIncidentRepository
+	incidentRepo              IncidentRepository
 	incidentAnalyzer          ai.Analyzer
 	retentionTTL              time.Duration
 	retentionCleanupBatchSize int
@@ -90,6 +91,7 @@ func NewWorker(cfg Config, repos Repositories) *worker {
 		telegramSettingsRepo:      repos.TelegramSettingsRepo,
 		retentionRepo:             repos.RetentionRepo,
 		aiIncidentRepo:            repos.AIIncidentRepo,
+		incidentRepo:              repos.IncidentRepo,
 		incidentAnalyzer:          cfg.IncidentAnalyzer,
 		retentionTTL:              cfg.RetentionTTL,
 		retentionCleanupBatchSize: cfg.RetentionCleanupBatchSize,

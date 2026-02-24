@@ -169,3 +169,30 @@ export type TelegramDeliverySettingsPatch = {
   chat_id?: string;
   send_recovered?: boolean;
 };
+
+export type StreamWithFavorite = {
+  stream: Stream;
+  is_pinned: boolean;
+  sort_order: number;
+};
+
+export type Incident = {
+  id: number;
+  company_id: number;
+  stream_id: number;
+  stream_name?: string;
+  status: "open" | "resolved";
+  severity: "warn" | "fail";
+  started_at: string;
+  last_event_at: string;
+  resolved_at?: string | null;
+  fail_reason?: string | null;
+  sample_screenshot_path?: string | null;
+  last_check_id?: number | null;
+};
+
+export type IncidentListResponse = {
+  items: Incident[];
+  next_cursor?: string | null;
+  total: number;
+};

@@ -133,6 +133,7 @@ func main() {
 	)
 
 	workerRepo := postgresrepo.NewWorkerRepo(db)
+	incidentRepo := postgresrepo.NewWorkerIncidentRepo(db)
 	w := workerservice.NewWorker(
 		workerConfig,
 		workerservice.Repositories{
@@ -142,7 +143,8 @@ func main() {
 			AlertStateRepo:       workerRepo,
 			TelegramSettingsRepo: workerRepo,
 			RetentionRepo:        workerRepo,
-			AIIncidentRepo:        workerRepo,
+			AIIncidentRepo:       workerRepo,
+			IncidentRepo:         incidentRepo,
 		},
 	)
 	app := workerservice.NewApp(

@@ -53,9 +53,11 @@ type Server struct {
 	checkJobService          *serviceapi.CheckJobService
 	checkResultService       *serviceapi.CheckResultService
 	aiIncidentService        *serviceapi.AIIncidentService
+	streamFavoriteService     *serviceapi.StreamFavoriteService
+	incidentService           *serviceapi.IncidentService
 	telegramSettingsService   *serviceapi.TelegramSettingsService
 	authService              *serviceapi.AuthService
-	registrationService      *serviceapi.RegistrationService
+	registrationService       *serviceapi.RegistrationService
 }
 
 func NewServer(db *sql.DB) *Server {
@@ -80,7 +82,9 @@ func NewServer(db *sql.DB) *Server {
 		streamService:      serviceapi.NewStreamService(postgres.NewAPIStreamRepo(db)),
 		checkJobService:    serviceapi.NewCheckJobService(postgres.NewAPICheckJobRepo(db)),
 		checkResultService:     serviceapi.NewCheckResultService(postgres.NewAPICheckResultRepo(db)),
-		aiIncidentService:  serviceapi.NewAIIncidentService(postgres.NewAPIAIIncidentRepo(db)),
+		aiIncidentService:      serviceapi.NewAIIncidentService(postgres.NewAPIAIIncidentRepo(db)),
+		streamFavoriteService:  serviceapi.NewStreamFavoriteService(postgres.NewAPIStreamFavoriteRepo(db)),
+		incidentService:        serviceapi.NewIncidentService(postgres.NewAPIIncidentRepo(db)),
 		telegramSettingsService: serviceapi.NewTelegramSettingsService(postgres.NewAPITelegramSettingsRepo(db)),
 		authService: serviceapi.NewAuthService(authRepo, serviceapi.AuthConfig{
 			AccessTTL:          time.Duration(config.GetInt("AUTH_ACCESS_TTL_MIN", 15)) * time.Minute,
@@ -120,6 +124,13 @@ func (s *Server) RouterHandlers() RouterHandlers {
 		HandleListCheckResults:    s.handleListCheckResults,
 		HandleGetCheckResultByJob: s.handleGetCheckResultByJob,
 		HandleGetAIIncident:       s.handleGetAIIncident,
+		HandleListStreamFavorites: s.handleListStreamFavorites,
+		HandleAddStreamFavorite:   s.handleAddStreamFavorite,
+		HandleRemoveStreamFavorite: s.handleRemoveStreamFavorite,
+		HandleAddStreamPin:        s.handleAddStreamPin,
+		HandleRemoveStreamPin:     s.handleRemoveStreamPin,
+		HandleListIncidents:        s.handleListIncidents,
+		HandleGetIncident:         s.handleGetIncident,
 		HandleGetTelegramDeliverySettings:  s.handleGetTelegramDeliverySettings,
 		HandlePatchTelegramDeliverySettings: s.handlePatchTelegramDeliverySettings,
 

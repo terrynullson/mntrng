@@ -16,7 +16,8 @@ import type {
   CheckStatus,
   EnqueueCheckJobResponse,
   Project,
-  Stream
+  Stream,
+  StreamWithFavorite
 } from "@/lib/api/types";
 
 type IsActiveFilter = "all" | "true" | "false";
@@ -54,6 +55,7 @@ export default function StreamsPage() {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [streams, setStreams] = useState<Stream[]>([]);
+  const [favorites, setFavorites] = useState<StreamWithFavorite[]>([]);
   const [latestStatusMap, setLatestStatusMap] = useState<LatestStatusMap>({});
 
   const [projectId, setProjectId] = useState<string>("");
@@ -66,6 +68,7 @@ export default function StreamsPage() {
   const [runCheckError, setRunCheckError] = useState<string | null>(null);
   const [runCheckSuccess, setRunCheckSuccess] = useState<string | null>(null);
   const [busyStreamID, setBusyStreamID] = useState<number | null>(null);
+  const [busyFavoriteStreamID, setBusyFavoriteStreamID] = useState<number | null>(null);
 
   const loadStreams = async () => {
     if (!accessToken || !scopeCompanyId) {
@@ -105,6 +108,16 @@ export default function StreamsPage() {
         ? streamResponse.items
         : [];
       setStreams(loadedStreams);
+
+      try {
+        const favResponse = await apiRequest<{ items: StreamWithFavorite[] }>(
+          `/companies/${scopeCompanyId}/streams/favorites`,
+          { accessToken }
+        );
+        setFavorites(Array.isArray(favResponse.items) ? favResponse.items : []);
+      } catch {
+        setFavorites([]);
+      }
 
       const checks = await Promise.all(
         loadedStreams.map(async (stream) => {
@@ -150,10 +163,24 @@ export default function StreamsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, scopeCompanyId, projectId, isActiveFilter]);
 
+  const favoriteMap = useMemo(() => {
+    const map = new Map<
+      number,
+      { isPinned: boolean; sortOrder: number }
+    >();
+    favorites.forEach((fav) => {
+      map.set(fav.stream.id, {
+        isPinned: fav.is_pinned,
+        sortOrder: fav.sort_order
+      });
+    });
+    return map;
+  }, [favorites]);
+
   const filteredStreams = useMemo(() => {
     const needle = search.trim().toLowerCase();
 
-    return streams.filter((stream) => {
+    const filtered = streams.filter((stream) => {
       const streamStatus = latestStatusMap[stream.id]?.status;
 
       if (statusFilter !== "all" && streamStatus !== statusFilter) {
@@ -170,7 +197,73 @@ export default function StreamsPage() {
         String(stream.project_id).includes(needle)
       );
     });
-  }, [latestStatusMap, search, statusFilter, streams]);
+
+    return [...filtered].sort((a, b) => {
+      const favA = favoriteMap.get(a.id);
+      const favB = favoriteMap.get(b.id);
+      const pinnedA = favA?.isPinned ?? false;
+      const pinnedB = favB?.isPinned ?? false;
+      if (pinnedA && !pinnedB) return -1;
+      if (!pinnedA && pinnedB) return 1;
+      if (pinnedA && pinnedB) {
+        return (favA?.sortOrder ?? 0) - (favB?.sortOrder ?? 0);
+      }
+      const favOnlyA = favA != null;
+      const favOnlyB = favB != null;
+      if (favOnlyA && !favOnlyB) return -1;
+      if (!favOnlyA && favOnlyB) return 1;
+      return a.id - b.id;
+    });
+  }, [latestStatusMap, search, statusFilter, streams, favoriteMap]);
+
+  const handleToggleFavorite = async (stream: Stream) => {
+    if (!accessToken || !scopeCompanyId) return;
+    const isFav = favoriteMap.has(stream.id);
+    setBusyFavoriteStreamID(stream.id);
+    try {
+      if (isFav) {
+        await apiRequest(
+          `/companies/${scopeCompanyId}/streams/${stream.id}/favorite`,
+          { method: "DELETE", accessToken }
+        );
+      } else {
+        await apiRequest(
+          `/companies/${scopeCompanyId}/streams/${stream.id}/favorite`,
+          { method: "POST", accessToken }
+        );
+      }
+      void loadStreams();
+    } catch {
+      setError(toErrorMessage(new Error("Не удалось изменить избранное")));
+    } finally {
+      setBusyFavoriteStreamID(null);
+    }
+  };
+
+  const handleTogglePin = async (stream: Stream) => {
+    if (!accessToken || !scopeCompanyId) return;
+    const fav = favoriteMap.get(stream.id);
+    const isPinned = fav?.isPinned ?? false;
+    setBusyFavoriteStreamID(stream.id);
+    try {
+      if (isPinned) {
+        await apiRequest(
+          `/companies/${scopeCompanyId}/streams/${stream.id}/pin`,
+          { method: "DELETE", accessToken }
+        );
+      } else {
+        await apiRequest(
+          `/companies/${scopeCompanyId}/streams/${stream.id}/pin`,
+          { method: "POST", accessToken, body: {} }
+        );
+      }
+      void loadStreams();
+    } catch {
+      setError(toErrorMessage(new Error("Не удалось изменить закрепление")));
+    } finally {
+      setBusyFavoriteStreamID(null);
+    }
+  };
 
   const handleRunCheck = async (stream: Stream) => {
     if (!accessToken || !scopeCompanyId || isViewer) {
@@ -204,9 +297,9 @@ export default function StreamsPage() {
   return (
     <section className="panel">
       <header className="page-header compact">
-        <h2 className="page-title">Streams</h2>
+        <h2 className="page-title">Потоки</h2>
         <p className="page-note">
-          Tenant-scoped stream list with status badges and manual check trigger.
+          Список потоков с статусами, избранное, закрепление и ручной запуск проверки.
         </p>
       </header>
 
@@ -217,32 +310,32 @@ export default function StreamsPage() {
           transition={{ duration: 0.24, ease: "easeOut" }}
         >
           <StatePanel>
-            Select company scope in topbar to load streams.
+            Выберите компанию в шапке, чтобы загрузить потоки.
           </StatePanel>
         </motion.div>
       ) : null}
 
       <div className="filters-grid streams-v2-filters">
         <label className="form-field" htmlFor="streams-search">
-          <span>Search</span>
+          <span>Поиск</span>
           <input
             id="streams-search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Name, stream id, project id"
+            placeholder="Название, ID потока или проекта"
             disabled={!scopeCompanyId || isLoading}
           />
         </label>
 
         <label className="form-field" htmlFor="streams-project-filter">
-          <span>Project</span>
+          <span>Проект</span>
           <select
             id="streams-project-filter"
             value={projectId}
             onChange={(event) => setProjectId(event.target.value)}
             disabled={!scopeCompanyId || isLoading}
           >
-            <option value="">All projects</option>
+            <option value="">Все проекты</option>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name} ({project.id})
@@ -252,7 +345,7 @@ export default function StreamsPage() {
         </label>
 
         <label className="form-field" htmlFor="streams-active-filter">
-          <span>Is active</span>
+          <span>Активен</span>
           <select
             id="streams-active-filter"
             value={isActiveFilter}
@@ -261,21 +354,21 @@ export default function StreamsPage() {
             }
             disabled={!scopeCompanyId || isLoading}
           >
-            <option value="all">All</option>
-            <option value="true">Active</option>
-            <option value="false">Inactive</option>
+            <option value="all">Все</option>
+            <option value="true">Активные</option>
+            <option value="false">Неактивные</option>
           </select>
         </label>
 
         <label className="form-field" htmlFor="streams-status-filter">
-          <span>Latest status</span>
+          <span>Статус</span>
           <select
             id="streams-status-filter"
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
             disabled={!scopeCompanyId || isLoading}
           >
-            <option value="all">All</option>
+            <option value="all">Все</option>
             <option value="OK">OK</option>
             <option value="WARN">WARN</option>
             <option value="FAIL">FAIL</option>
@@ -289,7 +382,7 @@ export default function StreamsPage() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.24, ease: "easeOut" }}
         >
-          <StatePanel>Viewer role is read-only. Run check actions are disabled.</StatePanel>
+          <StatePanel>Роль «Зритель» — только просмотр. Запуск проверок недоступен.</StatePanel>
         </motion.div>
       ) : null}
       {runCheckSuccess ? (
@@ -337,7 +430,7 @@ export default function StreamsPage() {
           transition={{ duration: 0.24, ease: "easeOut" }}
           style={{ marginTop: "12px" }}
         >
-          <StatePanel>No streams found for selected filters.</StatePanel>
+          <StatePanel>По выбранным фильтрам потоков не найдено.</StatePanel>
         </motion.div>
       ) : null}
 
@@ -352,25 +445,60 @@ export default function StreamsPage() {
           <table>
             <thead>
               <tr>
+                <th aria-label="Избранное и закрепление" />
                 <th>ID</th>
-                <th>Name</th>
-                <th>Project</th>
-                <th>Status</th>
-                <th>Last check</th>
-                <th>Is active</th>
-                <th>Updated at</th>
-                <th>Actions</th>
+                <th>Название</th>
+                <th>Проект</th>
+                <th>Статус</th>
+                <th>Последняя проверка</th>
+                <th>Активен</th>
+                <th>Обновлён</th>
+                <th>Действия</th>
               </tr>
             </thead>
             <tbody>
               {filteredStreams.map((stream) => {
                 const latestStatus = latestStatusMap[stream.id]?.status ?? null;
                 const lastCheckAt = latestStatusMap[stream.id]?.createdAt ?? null;
+                const fav = favoriteMap.get(stream.id);
+                const isPinned = fav?.isPinned ?? false;
+                const isFavorite = fav != null;
+                const busyFav = busyFavoriteStreamID === stream.id;
 
                 return (
-                  <tr key={stream.id}>
+                  <tr
+                    key={stream.id}
+                    className={isPinned ? "stream-row-pinned" : undefined}
+                  >
+                    <td className="fav-pin-cell">
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={() => void handleToggleFavorite(stream)}
+                        disabled={isViewer || busyFav}
+                        aria-pressed={isFavorite}
+                        aria-label={isFavorite ? "Убрать из избранного" : "В избранное"}
+                        title={isFavorite ? "Убрать из избранного" : "В избранное"}
+                      >
+                        ⭐
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={() => void handleTogglePin(stream)}
+                        disabled={isViewer || busyFav}
+                        aria-pressed={isPinned}
+                        aria-label={isPinned ? "Открепить" : "Закрепить"}
+                        title={isPinned ? "Открепить" : "Закрепить"}
+                      >
+                        📌
+                      </button>
+                    </td>
                     <td>{stream.id}</td>
                     <td>
+                      {isPinned ? (
+                        <span className="pin-indicator" aria-hidden>📌 </span>
+                      ) : null}
                       <Link className="stream-link" href={`/streams/${stream.id}`}>
                         {stream.name}
                       </Link>
@@ -380,11 +508,11 @@ export default function StreamsPage() {
                       {latestStatus ? (
                         <StatusBadge status={latestStatus} />
                       ) : (
-                        <span className="status-muted">No data</span>
+                        <span className="status-muted">Нет данных</span>
                       )}
                     </td>
                     <td>{formatTimestamp(lastCheckAt)}</td>
-                    <td>{stream.is_active ? "true" : "false"}</td>
+                    <td>{stream.is_active ? "Да" : "Нет"}</td>
                     <td>{formatTimestamp(stream.updated_at)}</td>
                     <td>
                       <AppButton
@@ -394,9 +522,9 @@ export default function StreamsPage() {
                         onClick={() => {
                           void handleRunCheck(stream);
                         }}
-                        aria-label={busyStreamID === stream.id ? "Queueing check" : `Run check for stream ${stream.name}`}
+                        aria-label={busyStreamID === stream.id ? "В очереди" : `Запустить проверку: ${stream.name}`}
                       >
-                        {busyStreamID === stream.id ? "Queueing..." : "Run check"}
+                        {busyStreamID === stream.id ? "В очереди…" : "Запустить проверку"}
                       </AppButton>
                     </td>
                   </tr>

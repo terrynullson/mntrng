@@ -20,6 +20,7 @@
 - Public endpoints:
   - `GET /api/v1/health`
   - `GET /api/v1/ready`
+  - `GET /api/v1/metrics` (Prometheus)
   - `POST /api/v1/auth/register`
   - `POST /api/v1/auth/login`
   - `POST /api/v1/auth/refresh`
@@ -576,6 +577,21 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 ### `DELETE /companies/{company_id}/streams/{stream_id}`
 
 - `204` no body.
+
+### Favorites and pins (tenant- and user-scoped)
+
+- `GET /companies/{company_id}/streams/favorites` — список избранных/закреплённых потоков текущего пользователя в компании. Pinned сверху. `200`: `{ "items": [ { "stream": Stream, "is_pinned": bool, "sort_order": int } ] }`.
+- `POST /companies/{company_id}/streams/{stream_id}/favorite` — добавить в избранное. `204`.
+- `DELETE /companies/{company_id}/streams/{stream_id}/favorite` — убрать из избранного. `204`.
+- `POST /companies/{company_id}/streams/{stream_id}/pin` — закрепить (body опционально `{ "sort_order": int }`). `204`.
+- `DELETE /companies/{company_id}/streams/{stream_id}/pin` — открепить. `204`.
+
+### Incidents (tenant-scoped, read-only list/detail)
+
+- `GET /companies/{company_id}/incidents` — список инцидентов. Query: `status` (open|resolved), `severity` (warn|fail), `stream_id`, `q` (поиск по имени потока/причине), `page`, `page_size`. `200`: `{ "items": [ Incident ], "next_cursor": string|null, "total": int }`.
+- `GET /companies/{company_id}/incidents/{incident_id}` — один инцидент. `200` -> Incident.
+
+Incident DTO: `id`, `company_id`, `stream_id`, `stream_name`, `status` (open|resolved), `severity` (warn|fail), `started_at`, `last_event_at`, `resolved_at`, `fail_reason`, `sample_screenshot_path`, `last_check_id`. Создание/закрытие инцидентов выполняет Worker по результатам проверок; audit log при открытии/закрытии.
 
 ## 5.6 Check jobs (enqueue, status, history)
 
