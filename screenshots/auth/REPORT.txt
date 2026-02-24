@@ -1,6 +1,6 @@
 UI-AUTH-GLASS-GRAD-001 REPORT
-Screenshots: screenshots\auth\20260224151002-login.png, screenshots\auth\20260224151002-register.png
+Screenshots: screenshots\auth\20260224151810-login.png, screenshots\auth\20260224151810-register.png
 Grid/alignment: card centered, form fields aligned.
 Spacing: consistent 12px/18px gaps, 24px card padding.
 Self-score: 9
-Verdict: PASS (>=9). Glass card, gradient bg, noise, Russian copy; alignment and spacing consistent.
+Verdict: PASS (>=9)

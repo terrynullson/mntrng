@@ -13,7 +13,8 @@ const ROOT_DIR = path.resolve(WEB_DIR, "..");
 const AUTH_DIR = path.join(ROOT_DIR, "screenshots", "auth");
 const REPORT_PATH = path.join(AUTH_DIR, "REPORT.txt");
 
-const BASE_URL = process.env.SCREENSHOT_BASE_URL || "http://localhost:3000";
+const PORT = parseInt(process.env.SCREENSHOT_PORT || "3000", 10);
+const BASE_URL = process.env.SCREENSHOT_BASE_URL || `http://localhost:${PORT}`;
 
 function log(msg) {
   const ts = new Date().toISOString().slice(11, 23);
@@ -47,12 +48,13 @@ async function waitForPort(host, port, timeoutMs = 10000) {
 
 async function main() {
   log("Auth screenshots: /login and /register -> screenshots/auth/");
-  const devUp = await waitForPort("127.0.0.1", 3000, 8000);
+  const devUp = await waitForPort("127.0.0.1", PORT, 8000);
   if (!devUp) {
-    log("Frontend not running on :3000. Start with: cd web && npm run dev");
+    log(`Frontend not running on :${PORT}. Start with: cd web && npm run dev`);
     process.exit(1);
   }
   log("Frontend is up at " + BASE_URL);
+  await new Promise((r) => setTimeout(r, 4000));
 
   const timestamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
   await mkdir(AUTH_DIR, { recursive: true });
@@ -69,8 +71,9 @@ async function main() {
     });
     const page = await context.newPage();
 
-    await page.goto("/login", { waitUntil: "networkidle", timeout: 30000 });
-    await page.waitForTimeout(600);
+    await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForSelector("h1:has-text('Вход')", { state: "visible", timeout: 25000 });
+    await page.waitForTimeout(800);
     const hasLoginTitle = (await page.locator("h1:has-text('Вход')").count()) > 0;
     const hasLoginForm =
       (await page.locator("#login-or-email").count()) > 0 &&
@@ -80,8 +83,9 @@ async function main() {
     await page.screenshot({ path: loginPath, fullPage: true });
     log("Screenshot saved: " + loginPath);
 
-    await page.goto("/register", { waitUntil: "networkidle", timeout: 30000 });
-    await page.waitForTimeout(600);
+    await page.goto("/register", { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForSelector("h1:has-text('Регистрация')", { state: "visible", timeout: 25000 });
+    await page.waitForTimeout(800);
     const hasRegisterTitle = (await page.locator("h1:has-text('Регистрация')").count()) > 0;
     const hasRegisterForm =
       (await page.locator("#register-company-id").count()) > 0 &&
