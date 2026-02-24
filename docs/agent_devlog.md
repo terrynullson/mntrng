@@ -704,7 +704,7 @@ Notes:
 
 [2026-02-24] [MS3L-SCREENSHOT-DIAG-001]
 Agent: UniversalAgent (Full-Stack Delivery)
-Commit: pending
+Commit: 18fdfd4
 Summary:
 - Worker: при WARN/FAIL добавлена screenshot diagnostics без AI — захват кадров через ffmpeg в `/data/screenshots/incidents/{company}/{incident}`, rule-based диагнозы `BLACKFRAME|FREEZE|CAPTURE_FAIL|UNKNOWN`, запись в incident (`diag_code`, `diag_details`, `screenshot_taken_at`) и audit `incident_diagnostic_updated`.
 - Runtime/infra: `Dockerfile.worker` дополнен `ffmpeg` и `ca-certificates`; в `docker-compose.yml` добавлен shared volume `app_data` и монтирование `/data` в `api` + `worker`; миграция `0009` расширяет таблицу `incidents`.
