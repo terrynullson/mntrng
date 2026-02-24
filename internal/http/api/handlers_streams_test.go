@@ -102,6 +102,34 @@ func TestHandleCreateStream_404_ProjectMiss(t *testing.T) {
 	assertErrorCode(t, rec.Body.Bytes(), "not_found")
 }
 
+func TestHandleCreateStreamInCompany_201(t *testing.T) {
+	store := &mockStreamStore{
+		createResp: domain.Stream{ID: 9, CompanyID: 10, ProjectID: 1, Name: "New by company", URL: "https://c/d.m3u8", IsActive: true, CreatedAt: testTime, UpdatedAt: testTime},
+	}
+	srv := &Server{streamService: serviceapi.NewStreamService(store)}
+	body := []byte(`{"project_id":1,"name":"New by company","url":"https://c/d.m3u8","is_active":true}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/companies/10/streams", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	srv.handleCreateStreamInCompany(rec, req, 10)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHandleCreateStreamInCompany_400_MissingProjectID(t *testing.T) {
+	srv := &Server{streamService: serviceapi.NewStreamService(&mockStreamStore{})}
+	body := []byte(`{"name":"New by company","url":"https://c/d.m3u8","is_active":true}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/companies/10/streams", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	srv.handleCreateStreamInCompany(rec, req, 10)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d %s", rec.Code, rec.Body.String())
+	}
+	assertErrorCode(t, rec.Body.Bytes(), "validation_error")
+}
+
 func TestHandlePatchStream_200(t *testing.T) {
 	store := &mockStreamStore{
 		patchResp: domain.Stream{ID: 4, CompanyID: 10, ProjectID: 1, Name: "Updated", URL: "https://e/f.m3u8", IsActive: false, CreatedAt: testTime, UpdatedAt: testTime},

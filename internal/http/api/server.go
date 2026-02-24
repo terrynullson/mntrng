@@ -24,6 +24,7 @@ type patchProjectRequest = domain.PatchProjectRequest
 type stream = domain.Stream
 type streamListResponse = domain.StreamListResponse
 type createStreamRequest = domain.CreateStreamRequest
+type createCompanyStreamRequest = domain.CreateCompanyStreamRequest
 type patchStreamRequest = domain.PatchStreamRequest
 type checkJob = domain.CheckJob
 type checkJobListResponse = domain.CheckJobListResponse
@@ -46,18 +47,18 @@ type changeUserStatusRequest = domain.ChangeUserStatusRequest
 type adminUserListResponse = domain.AdminUserListResponse
 
 type Server struct {
-	db                       *sql.DB
-	companyService           *serviceapi.CompanyService
-	projectService           *serviceapi.ProjectService
-	streamService            *serviceapi.StreamService
-	checkJobService          *serviceapi.CheckJobService
-	checkResultService       *serviceapi.CheckResultService
-	aiIncidentService        *serviceapi.AIIncidentService
-	streamFavoriteService     *serviceapi.StreamFavoriteService
-	incidentService           *serviceapi.IncidentService
-	telegramSettingsService   *serviceapi.TelegramSettingsService
-	authService              *serviceapi.AuthService
-	registrationService       *serviceapi.RegistrationService
+	db                      *sql.DB
+	companyService          *serviceapi.CompanyService
+	projectService          *serviceapi.ProjectService
+	streamService           *serviceapi.StreamService
+	checkJobService         *serviceapi.CheckJobService
+	checkResultService      *serviceapi.CheckResultService
+	aiIncidentService       *serviceapi.AIIncidentService
+	streamFavoriteService   *serviceapi.StreamFavoriteService
+	incidentService         *serviceapi.IncidentService
+	telegramSettingsService *serviceapi.TelegramSettingsService
+	authService             *serviceapi.AuthService
+	registrationService     *serviceapi.RegistrationService
 }
 
 func NewServer(db *sql.DB) *Server {
@@ -76,15 +77,15 @@ func NewServer(db *sql.DB) *Server {
 	)
 
 	return &Server{
-		db:                 db,
-		companyService:     serviceapi.NewCompanyService(postgres.NewAPICompanyRepo(db)),
-		projectService:     serviceapi.NewProjectService(postgres.NewAPIProjectRepo(db)),
-		streamService:      serviceapi.NewStreamService(postgres.NewAPIStreamRepo(db)),
-		checkJobService:    serviceapi.NewCheckJobService(postgres.NewAPICheckJobRepo(db)),
-		checkResultService:     serviceapi.NewCheckResultService(postgres.NewAPICheckResultRepo(db)),
-		aiIncidentService:      serviceapi.NewAIIncidentService(postgres.NewAPIAIIncidentRepo(db)),
-		streamFavoriteService:  serviceapi.NewStreamFavoriteService(postgres.NewAPIStreamFavoriteRepo(db)),
-		incidentService:        serviceapi.NewIncidentService(postgres.NewAPIIncidentRepo(db)),
+		db:                      db,
+		companyService:          serviceapi.NewCompanyService(postgres.NewAPICompanyRepo(db)),
+		projectService:          serviceapi.NewProjectService(postgres.NewAPIProjectRepo(db)),
+		streamService:           serviceapi.NewStreamService(postgres.NewAPIStreamRepo(db)),
+		checkJobService:         serviceapi.NewCheckJobService(postgres.NewAPICheckJobRepo(db)),
+		checkResultService:      serviceapi.NewCheckResultService(postgres.NewAPICheckResultRepo(db)),
+		aiIncidentService:       serviceapi.NewAIIncidentService(postgres.NewAPIAIIncidentRepo(db)),
+		streamFavoriteService:   serviceapi.NewStreamFavoriteService(postgres.NewAPIStreamFavoriteRepo(db)),
+		incidentService:         serviceapi.NewIncidentService(postgres.NewAPIIncidentRepo(db)),
 		telegramSettingsService: serviceapi.NewTelegramSettingsService(postgres.NewAPITelegramSettingsRepo(db)),
 		authService: serviceapi.NewAuthService(authRepo, serviceapi.AuthConfig{
 			AccessTTL:          time.Duration(config.GetInt("AUTH_ACCESS_TTL_MIN", 15)) * time.Minute,
@@ -100,38 +101,40 @@ func (s *Server) RouterHandlers() RouterHandlers {
 	return RouterHandlers{
 		WrapWithAuth: s.authMiddleware,
 
-		HandleHealth:              s.handleHealth,
-		HandleReady:               s.handleReady,
-		HandleCreateCompany:       s.handleCreateCompany,
-		HandleListCompanies:       s.handleListCompanies,
-		HandleGetCompany:          s.handleGetCompany,
-		HandlePatchCompany:        s.handlePatchCompany,
-		HandleDeleteCompany:       s.handleDeleteCompany,
-		HandleCreateProject:       s.handleCreateProject,
-		HandleListProjects:        s.handleListProjects,
-		HandleGetProject:          s.handleGetProject,
-		HandlePatchProject:        s.handlePatchProject,
-		HandleDeleteProject:       s.handleDeleteProject,
-		HandleCreateStream:        s.handleCreateStream,
-		HandleListStreams:         s.handleListStreams,
-		HandleGetStream:           s.handleGetStream,
-		HandlePatchStream:         s.handlePatchStream,
-		HandleDeleteStream:        s.handleDeleteStream,
-		HandleEnqueueCheckJob:     s.handleEnqueueCheckJob,
-		HandleGetCheckJob:         s.handleGetCheckJob,
-		HandleListCheckJobs:       s.handleListCheckJobs,
-		HandleGetCheckResult:      s.handleGetCheckResult,
-		HandleListCheckResults:    s.handleListCheckResults,
-		HandleGetCheckResultByJob: s.handleGetCheckResultByJob,
-		HandleGetAIIncident:       s.handleGetAIIncident,
-		HandleListStreamFavorites: s.handleListStreamFavorites,
-		HandleAddStreamFavorite:   s.handleAddStreamFavorite,
-		HandleRemoveStreamFavorite: s.handleRemoveStreamFavorite,
-		HandleAddStreamPin:        s.handleAddStreamPin,
-		HandleRemoveStreamPin:     s.handleRemoveStreamPin,
-		HandleListIncidents:        s.handleListIncidents,
-		HandleGetIncident:         s.handleGetIncident,
-		HandleGetTelegramDeliverySettings:  s.handleGetTelegramDeliverySettings,
+		HandleHealth:                        s.handleHealth,
+		HandleReady:                         s.handleReady,
+		HandleCreateCompany:                 s.handleCreateCompany,
+		HandleListCompanies:                 s.handleListCompanies,
+		HandleGetCompany:                    s.handleGetCompany,
+		HandlePatchCompany:                  s.handlePatchCompany,
+		HandleDeleteCompany:                 s.handleDeleteCompany,
+		HandleCreateProject:                 s.handleCreateProject,
+		HandleListProjects:                  s.handleListProjects,
+		HandleGetProject:                    s.handleGetProject,
+		HandlePatchProject:                  s.handlePatchProject,
+		HandleDeleteProject:                 s.handleDeleteProject,
+		HandleCreateStream:                  s.handleCreateStream,
+		HandleCreateStreamInCompany:         s.handleCreateStreamInCompany,
+		HandleListStreams:                   s.handleListStreams,
+		HandleGetStream:                     s.handleGetStream,
+		HandlePatchStream:                   s.handlePatchStream,
+		HandleDeleteStream:                  s.handleDeleteStream,
+		HandleEnqueueCheckJob:               s.handleEnqueueCheckJob,
+		HandleTriggerStreamCheck:            s.handleTriggerStreamCheck,
+		HandleGetCheckJob:                   s.handleGetCheckJob,
+		HandleListCheckJobs:                 s.handleListCheckJobs,
+		HandleGetCheckResult:                s.handleGetCheckResult,
+		HandleListCheckResults:              s.handleListCheckResults,
+		HandleGetCheckResultByJob:           s.handleGetCheckResultByJob,
+		HandleGetAIIncident:                 s.handleGetAIIncident,
+		HandleListStreamFavorites:           s.handleListStreamFavorites,
+		HandleAddStreamFavorite:             s.handleAddStreamFavorite,
+		HandleRemoveStreamFavorite:          s.handleRemoveStreamFavorite,
+		HandleAddStreamPin:                  s.handleAddStreamPin,
+		HandleRemoveStreamPin:               s.handleRemoveStreamPin,
+		HandleListIncidents:                 s.handleListIncidents,
+		HandleGetIncident:                   s.handleGetIncident,
+		HandleGetTelegramDeliverySettings:   s.handleGetTelegramDeliverySettings,
 		HandlePatchTelegramDeliverySettings: s.handlePatchTelegramDeliverySettings,
 
 		HandleRegisterRequest:            s.handleRegisterRequest,

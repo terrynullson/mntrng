@@ -550,6 +550,23 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 - `201` -> `Stream`.
 - Errors: `400`, `401`, `403`, `404`, `409`, `500`.
 
+### `POST /companies/{company_id}/streams`
+
+- Purpose: create stream directly in company scope.
+- Body:
+
+```json
+{
+  "project_id": 101,
+  "name": "Primary HLS",
+  "url": "https://cdn.example.com/live/index.m3u8",
+  "is_active": true
+}
+```
+
+- `201` -> `Stream`.
+- Errors: `400`, `401`, `403`, `404`, `409`, `500`.
+
 ### `GET /companies/{company_id}/streams`
 
 - Query params: `project_id`, `is_active`, `limit`, `cursor`.
@@ -628,6 +645,14 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 ```
 
 - Errors: `400`, `401`, `403`, `404`, `409`, `500`.
+
+### `POST /companies/{company_id}/streams/{stream_id}/check`
+
+- Purpose: fast manual check trigger from operator UI.
+- Behavior: API only enqueues job in `check_jobs` with `planned_at=now`; execution is done by Worker.
+- Body: not required.
+- `202` -> same response envelope as `POST /check-jobs`.
+- Errors: `401`, `403`, `404`, `409`, `500`.
 
 ### `GET /companies/{company_id}/check-jobs/{job_id}`
 

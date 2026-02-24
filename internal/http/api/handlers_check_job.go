@@ -34,6 +34,25 @@ func (s *Server) handleEnqueueCheckJob(w http.ResponseWriter, r *http.Request, c
 	}
 }
 
+func (s *Server) handleTriggerStreamCheck(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	item, err := s.checkJobService.EnqueueCheckJob(ctx, serviceapi.EnqueueCheckJobInput{
+		CompanyID:    companyID,
+		StreamID:     streamID,
+		PlannedAtRaw: time.Now().UTC().Format(time.RFC3339),
+	})
+	if err != nil {
+		writeServiceError(w, r, "enqueue check job", err)
+		return
+	}
+
+	if err := WriteJSON(w, http.StatusAccepted, enqueueCheckJobResponse{Job: item}); err != nil {
+		log.Printf("enqueue check job response encode error: %v", err)
+	}
+}
+
 func (s *Server) handleGetCheckJob(w http.ResponseWriter, r *http.Request, companyID int64, jobID int64) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()

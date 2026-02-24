@@ -50,6 +50,26 @@ func TestHandleEnqueueCheckJob_404_StreamMiss(t *testing.T) {
 	assertErrorCode(t, rec.Body.Bytes(), "not_found")
 }
 
+func TestHandleTriggerStreamCheck_202(t *testing.T) {
+	store := &mockCheckJobStore{
+		enqueueResp: domain.CheckJob{ID: 103, CompanyID: 10, StreamID: 1, PlannedAt: testTime, Status: "queued", CreatedAt: testTime, StartedAt: nil, FinishedAt: nil, ErrorMessage: nil},
+	}
+	srv := &Server{checkJobService: serviceapi.NewCheckJobService(store)}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/companies/10/streams/1/check", nil)
+	rec := httptest.NewRecorder()
+	srv.handleTriggerStreamCheck(rec, req, 10, 1)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d %s", rec.Code, rec.Body.String())
+	}
+	var out domain.EnqueueCheckJobResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Job.ID != 103 {
+		t.Fatalf("unexpected job id: %d", out.Job.ID)
+	}
+}
+
 func TestHandleGetCheckJob_200(t *testing.T) {
 	store := &mockCheckJobStore{
 		getResp: domain.CheckJob{ID: 101, CompanyID: 10, StreamID: 1, PlannedAt: testTime, Status: "done", CreatedAt: testTime, StartedAt: &testTime, FinishedAt: &testTime, ErrorMessage: nil},

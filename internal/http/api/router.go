@@ -10,7 +10,7 @@ import (
 const (
 	projectCollectionPath        = "projects"
 	projectItemPrefix            = "projects/"
-	streamCollectionPath        = "streams"
+	streamCollectionPath         = "streams"
 	streamItemPrefix             = "streams/"
 	checkJobsCollectionPath      = "check-jobs"
 	checkJobsItemPrefix          = "check-jobs/"
@@ -43,13 +43,15 @@ type RouterHandlers struct {
 	HandlePatchProject  companyResourceHandler
 	HandleDeleteProject companyResourceHandler
 
-	HandleCreateStream companyResourceHandler
-	HandleListStreams  companyHandler
-	HandleGetStream    companyResourceHandler
-	HandlePatchStream  companyResourceHandler
-	HandleDeleteStream companyResourceHandler
+	HandleCreateStream          companyResourceHandler
+	HandleCreateStreamInCompany companyHandler
+	HandleListStreams           companyHandler
+	HandleGetStream             companyResourceHandler
+	HandlePatchStream           companyResourceHandler
+	HandleDeleteStream          companyResourceHandler
 
 	HandleEnqueueCheckJob     companyResourceHandler
+	HandleTriggerStreamCheck  companyResourceHandler
 	HandleGetCheckJob         companyResourceHandler
 	HandleListCheckJobs       companyResourceHandler
 	HandleGetCheckResult      companyResourceHandler
@@ -65,7 +67,7 @@ type RouterHandlers struct {
 	HandleListIncidents        companyHandler
 	HandleGetIncident          companyResourceHandler
 
-	HandleGetTelegramDeliverySettings  companyHandler
+	HandleGetTelegramDeliverySettings   companyHandler
 	HandlePatchTelegramDeliverySettings companyHandler
 
 	HandleRegisterRequest            http.HandlerFunc
@@ -303,8 +305,10 @@ func routeCompanyStreamCollection(w http.ResponseWriter, r *http.Request, handle
 	}
 	if r.Method == http.MethodGet {
 		handlers.HandleListStreams(w, r, companyID)
+	} else if r.Method == http.MethodPost {
+		handlers.HandleCreateStreamInCompany(w, r, companyID)
 	} else {
-		WriteMethodNotAllowed(w, r, http.MethodGet)
+		WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
 	}
 	return true
 }
@@ -413,6 +417,14 @@ func routeCompanyStreamPath(w http.ResponseWriter, r *http.Request, handlers Rou
 	}
 	if len(streamParts) == 2 && streamParts[1] == checkJobsCollectionPath {
 		routeStreamCheckJobsCollection(w, r, handlers, companyID, streamID)
+		return true
+	}
+	if len(streamParts) == 2 && streamParts[1] == "check" {
+		if r.Method == http.MethodPost {
+			handlers.HandleTriggerStreamCheck(w, r, companyID, streamID)
+		} else {
+			WriteMethodNotAllowed(w, r, http.MethodPost)
+		}
 		return true
 	}
 	if len(streamParts) == 4 && streamParts[1] == checkJobsCollectionPath && streamParts[3] == aiIncidentPathSuffix {

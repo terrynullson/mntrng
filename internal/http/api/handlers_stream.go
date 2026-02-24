@@ -36,6 +36,38 @@ func (s *Server) handleCreateStream(w http.ResponseWriter, r *http.Request, comp
 	}
 }
 
+func (s *Server) handleCreateStreamInCompany(w http.ResponseWriter, r *http.Request, companyID int64) {
+	var request createCompanyStreamRequest
+	if err := DecodeJSONBody(r, &request); err != nil {
+		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid request body", map[string]interface{}{"error": err.Error()})
+		return
+	}
+
+	if request.ProjectID <= 0 {
+		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "project_id must be positive", map[string]interface{}{"field": "project_id"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	item, err := s.streamService.CreateStream(ctx, serviceapi.CreateStreamInput{
+		CompanyID: companyID,
+		ProjectID: request.ProjectID,
+		Name:      request.Name,
+		URL:       request.URL,
+		IsActive:  request.IsActive,
+	})
+	if err != nil {
+		writeServiceError(w, r, "create stream", err)
+		return
+	}
+
+	if err := WriteJSON(w, http.StatusCreated, item); err != nil {
+		log.Printf("create stream response encode error: %v", err)
+	}
+}
+
 func (s *Server) handleListStreams(w http.ResponseWriter, r *http.Request, companyID int64) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()

@@ -73,6 +73,13 @@ type CreateStreamRequest struct {
 	IsActive *bool  `json:"is_active"`
 }
 
+type CreateCompanyStreamRequest struct {
+	ProjectID int64  `json:"project_id"`
+	Name      string `json:"name"`
+	URL       string `json:"url"`
+	IsActive  *bool  `json:"is_active"`
+}
+
 type PatchStreamRequest struct {
 	Name     *string `json:"name"`
 	URL      *string `json:"url"`
@@ -188,22 +195,22 @@ type IncidentListResponse struct {
 }
 
 const (
-	AuditActorTypeAPI        = "api"
-	AuditActorIDSystem       = "system"
-	AuditActorTypeWorker     = "worker"
-	AuditEntityTypeCompany   = "company"
-	AuditEntityTypeProject   = "project"
-	AuditEntityTypeStream    = "stream"
-	AuditEntityTypeIncident  = "incident"
-	AuditActionCompanyCreate = "create"
-	AuditActionCompanyUpdate = "update"
-	AuditActionCompanyDelete = "delete"
-	AuditActionProjectCreate = "create"
-	AuditActionProjectUpdate = "update"
-	AuditActionProjectDelete = "delete"
-	AuditActionStreamCreate  = "create"
-	AuditActionStreamUpdate  = "update"
-	AuditActionStreamDelete  = "delete"
-	AuditActionIncidentOpen  = "open"
+	AuditActorTypeAPI          = "api"
+	AuditActorIDSystem         = "system"
+	AuditActorTypeWorker       = "worker"
+	AuditEntityTypeCompany     = "company"
+	AuditEntityTypeProject     = "project"
+	AuditEntityTypeStream      = "stream"
+	AuditEntityTypeIncident    = "incident"
+	AuditActionCompanyCreate   = "create"
+	AuditActionCompanyUpdate   = "update"
+	AuditActionCompanyDelete   = "delete"
+	AuditActionProjectCreate   = "create"
+	AuditActionProjectUpdate   = "update"
+	AuditActionProjectDelete   = "delete"
+	AuditActionStreamCreate    = "create"
+	AuditActionStreamUpdate    = "update"
+	AuditActionStreamDelete    = "delete"
+	AuditActionIncidentOpen    = "open"
 	AuditActionIncidentResolve = "resolve"
 )
