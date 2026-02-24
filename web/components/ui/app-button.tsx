@@ -1,13 +1,15 @@
 "use client";
 
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
 
-type AppButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type AppButtonProps = HTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   children: ReactNode;
   isLoading?: boolean;
+  type?: "button" | "submit" | "reset";
+  disabled?: boolean;
 };
 
 export function AppButton({
@@ -37,7 +39,7 @@ export function AppButton({
       data-loading={isLoading ? "true" : undefined}
       className={`${variantClass} ${className}`.trim()}
     >
-      <span className="button-label">{children}</span>
+      <span className="button-label">{children as any}</span>
     </button>
   );
 }

@@ -13,7 +13,12 @@ import {
 } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { AnimatedGradientBackground } from "@/components/ui/AnimatedGradientBackground";
+import {
+  AnimatedGradientBackground as AnimatedGradientBackgroundSource
+} from "@/components/ui/AnimatedGradientBackground";
+
+/// eslint-disable-next-line @typescript-eslint/no-explicit-any — совместимость типов memo/ReactNode (shim и @types/react)
+const AnimatedGradientBackground = AnimatedGradientBackgroundSource as any;
 import { AppButton } from "@/components/ui/app-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { ThemeToggleButton } from "@/components/theme/theme-toggle-button";
@@ -23,7 +28,8 @@ const PUBLIC_ROUTES = new Set(["/login", "/register"]);
 
 const NAV_ITEMS_BY_ROLE: Record<Role, Array<{ href: string; label: string }>> = {
   super_admin: [
-    { href: "/", label: "Обзор" },
+    { href: "/", label: "Домашняя" },
+    { href: "/watch", label: "Смотреть" },
     { href: "/streams", label: "Потоки" },
     { href: "/incidents", label: "Инциденты" },
     { href: "/analytics", label: "Аналитика" },
@@ -33,14 +39,16 @@ const NAV_ITEMS_BY_ROLE: Record<Role, Array<{ href: string; label: string }>> = 
     { href: "/settings", label: "Настройки" }
   ],
   company_admin: [
-    { href: "/", label: "Обзор" },
+    { href: "/", label: "Домашняя" },
+    { href: "/watch", label: "Смотреть" },
     { href: "/streams", label: "Потоки" },
     { href: "/incidents", label: "Инциденты" },
     { href: "/analytics", label: "Аналитика" },
     { href: "/settings", label: "Настройки" }
   ],
   viewer: [
-    { href: "/", label: "Обзор" },
+    { href: "/", label: "Домашняя" },
+    { href: "/watch", label: "Смотреть" },
     { href: "/streams", label: "Потоки" },
     { href: "/incidents", label: "Инциденты" },
     { href: "/analytics", label: "Аналитика" }
@@ -48,7 +56,8 @@ const NAV_ITEMS_BY_ROLE: Record<Role, Array<{ href: string; label: string }>> = 
 };
 
 const PATH_LABELS: Array<{ pattern: RegExp; title: string }> = [
-  { pattern: /^\/$/, title: "Обзор" },
+  { pattern: /^\/$/, title: "Домашняя" },
+  { pattern: /^\/watch$/, title: "Смотреть" },
   { pattern: /^\/streams$/, title: "Потоки" },
   { pattern: /^\/streams\/.+/, title: "Поток" },
   { pattern: /^\/incidents$/, title: "Инциденты" },
@@ -145,7 +154,6 @@ export function ProtectedShell({ children }: { children?: ReactNode }) {
           <ThemeToggleButton />
         </div>
         <AnimatedGradientBackground />
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any — совместимость shim react и @types/react */}
         {children as any}
       </div>
     );
@@ -264,7 +272,6 @@ export function ProtectedShell({ children }: { children?: ReactNode }) {
           </div>
         </header>
 
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any — совместимость shim react и @types/react */}
         <main className="secure-content">{children as any}</main>
       </div>
     </div>

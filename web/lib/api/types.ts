@@ -110,6 +110,19 @@ export type Stream = {
   updated_at: string;
 };
 
+export type StreamCreateRequest = {
+  project_id: number;
+  name: string;
+  url: string;
+  is_active: boolean;
+};
+
+export type StreamPatchRequest = {
+  name?: string;
+  url?: string;
+  is_active?: boolean;
+};
+
 export type CheckJob = {
   id: number;
   company_id: number;

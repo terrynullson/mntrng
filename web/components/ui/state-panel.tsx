@@ -9,5 +9,9 @@ type StatePanelProps = {
 
 export function StatePanel({ kind = "info", children }: StatePanelProps) {
   const className = kind === "error" ? "state state-error" : "state state-info";
-  return <p className={className}>{children ?? null}</p>;
+  return (
+    <p className={className}>
+      {(children ?? null) as any}
+    </p>
+  );
 }

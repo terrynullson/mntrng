@@ -17,6 +17,8 @@ import type {
   EnqueueCheckJobResponse,
   Project,
   Stream,
+  StreamCreateRequest,
+  StreamPatchRequest,
   StreamWithFavorite
 } from "@/lib/api/types";
 
@@ -30,6 +32,8 @@ type LatestStatusMap = Record<
     createdAt: string | null;
   }
 >;
+
+const STORAGE_LAST_SECTION_KEY = "core.lastSection";
 
 function formatTimestamp(timestamp: string | null): string {
   if (!timestamp) {
@@ -67,8 +71,16 @@ export default function StreamsPage() {
   const [error, setError] = useState<string | null>(null);
   const [runCheckError, setRunCheckError] = useState<string | null>(null);
   const [runCheckSuccess, setRunCheckSuccess] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [busyStreamID, setBusyStreamID] = useState<number | null>(null);
   const [busyFavoriteStreamID, setBusyFavoriteStreamID] = useState<number | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingStream, setEditingStream] = useState<Stream | null>(null);
+  const [isFormSubmitting, setIsFormSubmitting] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [formURL, setFormURL] = useState("");
+  const [formProjectID, setFormProjectID] = useState<string>("");
+  const [formIsActive, setFormIsActive] = useState(true);
 
   const loadStreams = async () => {
     if (!accessToken || !scopeCompanyId) {
@@ -162,6 +174,13 @@ export default function StreamsPage() {
     // filters/scope should trigger reload
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, scopeCompanyId, projectId, isActiveFilter]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(STORAGE_LAST_SECTION_KEY, "/streams");
+  }, []);
 
   const favoriteMap = useMemo(() => {
     const map = new Map<
@@ -276,19 +295,114 @@ export default function StreamsPage() {
 
     try {
       const response = await apiRequest<EnqueueCheckJobResponse>(
-        `/companies/${scopeCompanyId}/streams/${stream.id}/check-jobs`,
+        `/companies/${scopeCompanyId}/streams/${stream.id}/check`,
         {
           method: "POST",
           accessToken,
-          body: {
-            planned_at: new Date().toISOString()
-          }
         }
       );
 
       setRunCheckSuccess(`Check job #${response.job.id} queued for stream #${stream.id}.`);
+      void loadStreams();
     } catch (runError) {
       setRunCheckError(toErrorMessage(runError));
+    } finally {
+      setBusyStreamID(null);
+    }
+  };
+
+  const openCreateDialog = () => {
+    setEditingStream(null);
+    setFormName("");
+    setFormURL("");
+    setFormProjectID(projectId || "");
+    setFormIsActive(true);
+    setFormError(null);
+    setIsFormOpen(true);
+  };
+
+  const openEditDialog = (stream: Stream) => {
+    setEditingStream(stream);
+    setFormName(stream.name);
+    setFormURL(stream.url);
+    setFormProjectID(String(stream.project_id));
+    setFormIsActive(stream.is_active);
+    setFormError(null);
+    setIsFormOpen(true);
+  };
+
+  const closeDialog = () => {
+    setIsFormOpen(false);
+    setEditingStream(null);
+    setFormError(null);
+  };
+
+  const handleSubmitStream = async () => {
+    if (!accessToken || !scopeCompanyId || isViewer) {
+      return;
+    }
+    const parsedProjectID = Number.parseInt(formProjectID, 10);
+    if (!Number.isFinite(parsedProjectID) || parsedProjectID <= 0) {
+      setFormError("Выберите проект.");
+      return;
+    }
+    if (!formName.trim() || !formURL.trim()) {
+      setFormError("Заполните название и URL m3u8.");
+      return;
+    }
+
+    setIsFormSubmitting(true);
+    setFormError(null);
+    try {
+      if (editingStream) {
+        const payload: StreamPatchRequest = {
+          name: formName.trim(),
+          url: formURL.trim(),
+          is_active: formIsActive
+        };
+        await apiRequest(`/companies/${scopeCompanyId}/streams/${editingStream.id}`, {
+          method: "PATCH",
+          accessToken,
+          body: payload
+        });
+      } else {
+        const payload: StreamCreateRequest = {
+          project_id: parsedProjectID,
+          name: formName.trim(),
+          url: formURL.trim(),
+          is_active: formIsActive
+        };
+        await apiRequest(`/companies/${scopeCompanyId}/streams`, {
+          method: "POST",
+          accessToken,
+          body: payload
+        });
+      }
+      closeDialog();
+      await loadStreams();
+    } catch (submitError) {
+      setFormError(toErrorMessage(submitError));
+    } finally {
+      setIsFormSubmitting(false);
+    }
+  };
+
+  const handleDeleteStream = async (stream: Stream) => {
+    if (!accessToken || !scopeCompanyId || isViewer) {
+      return;
+    }
+    if (!window.confirm(`Удалить поток «${stream.name}»?`)) {
+      return;
+    }
+    setBusyStreamID(stream.id);
+    try {
+      await apiRequest(`/companies/${scopeCompanyId}/streams/${stream.id}`, {
+        method: "DELETE",
+        accessToken
+      });
+      await loadStreams();
+    } catch (deleteError) {
+      setError(toErrorMessage(deleteError));
     } finally {
       setBusyStreamID(null);
     }
@@ -297,10 +411,19 @@ export default function StreamsPage() {
   return (
     <section className="panel">
       <header className="page-header compact">
-        <h2 className="page-title">Потоки</h2>
+        <h2 className="page-title">Мониторинг потоков</h2>
         <p className="page-note">
-          Список потоков с статусами, избранное, закрепление и ручной запуск проверки.
+          CRUD потоков, статусы, избранное/закрепление и ручной запуск проверки.
         </p>
+        <div style={{ marginTop: "8px" }}>
+          <AppButton
+            type="button"
+            disabled={isViewer || !scopeCompanyId}
+            onClick={openCreateDialog}
+          >
+            + Добавить поток
+          </AppButton>
+        </div>
       </header>
 
       {!scopeCompanyId ? (
@@ -430,7 +553,21 @@ export default function StreamsPage() {
           transition={{ duration: 0.24, ease: "easeOut" }}
           style={{ marginTop: "12px" }}
         >
-          <StatePanel>По выбранным фильтрам потоков не найдено.</StatePanel>
+          <StatePanel>
+            Потоков пока нет — добавь первый.
+            {!isViewer ? (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  className="linklike-button"
+                  onClick={openCreateDialog}
+                >
+                  Добавить поток
+                </button>
+              </>
+            ) : null}
+          </StatePanel>
         </motion.div>
       ) : null}
 
@@ -515,17 +652,40 @@ export default function StreamsPage() {
                     <td>{stream.is_active ? "Да" : "Нет"}</td>
                     <td>{formatTimestamp(stream.updated_at)}</td>
                     <td>
-                      <AppButton
-                        type="button"
-                        variant="secondary"
-                        disabled={isViewer || busyStreamID === stream.id}
-                        onClick={() => {
-                          void handleRunCheck(stream);
-                        }}
-                        aria-label={busyStreamID === stream.id ? "В очереди" : `Запустить проверку: ${stream.name}`}
-                      >
-                        {busyStreamID === stream.id ? "В очереди…" : "Запустить проверку"}
-                      </AppButton>
+                      <div className="stream-actions">
+                        <Link className="stream-link" href={`/watch?streamId=${stream.id}`}>
+                          Смотреть
+                        </Link>
+                        <AppButton
+                          type="button"
+                          variant="secondary"
+                          disabled={isViewer || busyStreamID === stream.id}
+                          onClick={() => {
+                            void handleRunCheck(stream);
+                          }}
+                          aria-label={busyStreamID === stream.id ? "В очереди" : `Запустить проверку: ${stream.name}`}
+                        >
+                          {busyStreamID === stream.id ? "В очереди…" : "Проверить сейчас"}
+                        </AppButton>
+                        <AppButton
+                          type="button"
+                          variant="secondary"
+                          disabled={isViewer}
+                          onClick={() => openEditDialog(stream)}
+                        >
+                          Редактировать
+                        </AppButton>
+                        <AppButton
+                          type="button"
+                          variant="danger"
+                          disabled={isViewer || busyStreamID === stream.id}
+                          onClick={() => {
+                            void handleDeleteStream(stream);
+                          }}
+                        >
+                          Удалить
+                        </AppButton>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -533,6 +693,78 @@ export default function StreamsPage() {
             </tbody>
           </table>
         </motion.div>
+      ) : null}
+
+      {isFormOpen ? (
+        <div className="overlay-backdrop" role="dialog" aria-modal="true">
+          <div className="overlay-card">
+            <h3>{editingStream ? "Редактировать поток" : "Добавить поток"}</h3>
+            <div className="overlay-grid">
+              <label className="form-field" htmlFor="stream-name">
+                <span>Название</span>
+                <input
+                  id="stream-name"
+                  value={formName}
+                  onChange={(event) => setFormName(event.target.value)}
+                  placeholder="Например: Main camera #1"
+                />
+              </label>
+              <label className="form-field" htmlFor="stream-url">
+                <span>URL m3u8</span>
+                <input
+                  id="stream-url"
+                  value={formURL}
+                  onChange={(event) => setFormURL(event.target.value)}
+                  placeholder="https://example.com/live.m3u8"
+                />
+              </label>
+              <label className="form-field" htmlFor="stream-project">
+                <span>Проект</span>
+                <select
+                  id="stream-project"
+                  value={formProjectID}
+                  onChange={(event) => setFormProjectID(event.target.value)}
+                >
+                  <option value="">Выберите проект</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name} ({project.id})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="form-field form-check" htmlFor="stream-active">
+                <input
+                  id="stream-active"
+                  type="checkbox"
+                  checked={formIsActive}
+                  onChange={(event) => setFormIsActive(event.target.checked)}
+                />
+                <span>Активный поток</span>
+              </label>
+            </div>
+            {formError ? <StatePanel kind="error">{formError}</StatePanel> : null}
+            <div className="overlay-actions">
+              <AppButton
+                type="button"
+                variant="secondary"
+                onClick={closeDialog}
+                disabled={isFormSubmitting}
+              >
+                Отмена
+              </AppButton>
+              <AppButton
+                type="button"
+                onClick={() => {
+                  void handleSubmitStream();
+                }}
+                disabled={isFormSubmitting}
+              >
+                {isFormSubmitting ? "Сохраняем…" : "Сохранить"}
+              </AppButton>
+            </div>
+          </div>
+        </div>
       ) : null}
     </section>
   );

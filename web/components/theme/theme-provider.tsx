@@ -10,6 +10,7 @@ import {
   useState
 } from "react";
 
+
 export type Theme = "light" | "dark";
 
 const STORAGE_KEY = "hls-admin-theme";
@@ -81,7 +82,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [theme, setTheme, toggleTheme]
   );
 
-  return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-  );
+  const Provider = ThemeContext.Provider as any;
+  return <Provider value={value}>{children}</Provider>;
 }
