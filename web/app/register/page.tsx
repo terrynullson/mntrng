@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { FormEvent, useState } from "react";
 
 import { AppButton } from "@/components/ui/app-button";
@@ -66,22 +65,12 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-page">
-      <motion.section
-        className="auth-card"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.28, ease: "easeOut" }}
-      >
+      <section className="auth-card">
         <h1>Registration Request</h1>
         <p>Create a pending request for super admin approval.</p>
 
         {pendingRequest ? (
-          <motion.div
-            className="pending-card"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
-          >
+          <div className="pending-card">
             <h2>Request submitted</h2>
             <p>
               Request #{pendingRequest.id} is in <strong>{pendingRequest.status}</strong>
@@ -93,15 +82,9 @@ export default function RegisterPage() {
                 Back to login
               </Link>
             </p>
-          </motion.div>
+          </div>
         ) : (
-          <motion.form
-            className="auth-form"
-            onSubmit={handleSubmit}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
+          <form className="auth-form" onSubmit={handleSubmit}>
             <label className="form-field" htmlFor="register-company-id">
               <span>Company ID</span>
               <input
@@ -166,26 +149,19 @@ export default function RegisterPage() {
             </label>
 
             {error ? (
-              <motion.p
-                className="state state-error"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-              >
-                {error}
-              </motion.p>
+              <p className="state state-error">{error}</p>
             ) : null}
 
             <AppButton type="submit" disabled={isSubmitting} aria-label="Submit registration request">
               {isSubmitting ? "Submitting..." : "Submit request"}
             </AppButton>
-          </motion.form>
+          </form>
         )}
 
         <p className="auth-secondary">
           Already approved? <Link href="/login" aria-label="Go to login">Login</Link>
         </p>
-      </motion.section>
+      </section>
     </div>
   );
 }

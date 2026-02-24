@@ -64,12 +64,7 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <motion.section
-        className="auth-card"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.28, ease: "easeOut" }}
-      >
+      <section className="auth-card">
         <h1>Login</h1>
         <p>Sign in to access secure admin routes.</p>
 
@@ -116,7 +111,7 @@ export default function LoginPage() {
         <p className="auth-secondary">
           No account? <Link href="/register" aria-label="Create registration request">Create registration request</Link>
         </p>
-      </motion.section>
+      </section>
     </div>
   );
 }
