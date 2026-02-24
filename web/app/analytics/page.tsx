@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -111,7 +110,7 @@ export default function AnalyticsPage() {
     return counts;
   }, [results]);
 
-  const handleApply = async (event: FormEvent<HTMLFormElement>) => {
+  const handleApply = async (event: { preventDefault: () => void }) => {
     event.preventDefault();
 
     if (!accessToken || !scopeCompanyId || !streamID) {
