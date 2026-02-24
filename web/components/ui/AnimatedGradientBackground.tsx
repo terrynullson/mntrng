@@ -18,6 +18,7 @@ function AnimatedGradientBackgroundComponent({
       <div className="auth-animated-blob auth-blob-2" />
       <div className="auth-animated-blob auth-blob-3" />
       <div className="auth-animated-blob auth-blob-4" />
+      <div className="auth-animated-blob auth-blob-5" />
 
       <svg
         className="auth-noise-layer"

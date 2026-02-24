@@ -14,6 +14,15 @@
   --warn: #b45309;
   --ok: #15803d;
   --shadow-soft: 0 6px 20px rgba(15, 23, 42, 0.06);
+  /* theme switcher (reference) */
+  --border-color-light: #1c2135;
+  --border-color-dark: #f0f0e8;
+  --sun-color: #fabc1c;
+  --moon-color: #fffdf2;
+  --day-bg-color: #0dbdf6;
+  --night-bg-color: #272a30;
+  --cloud-color: #fffdf2;
+  --star-color: #fffdf2;
 }
 
 [data-theme="dark"] {
@@ -121,6 +130,221 @@ textarea:focus-visible {
   z-index: 10;
 }
 
+/* Lightbulb theme toggle: https://toggles.dev/lightbulb — видна только иконка, без кнопки и hover */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.theme-toggle__lightbulb {
+  width: 1.5rem;
+  height: 1.5rem;
+  transform: rotate(180deg);
+}
+
+/* Светлая тема = лампочка «включена» (спираль и лучи видны), тёмная = «выключена» */
+.theme-toggle__lightbulb__coil,
+.theme-toggle__lightbulb__rays path {
+  stroke: currentColor;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+[data-theme="dark"] .theme-toggle__lightbulb__coil,
+[data-theme="dark"] .theme-toggle__lightbulb__rays path {
+  stroke-dashoffset: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle__lightbulb__coil,
+  .theme-toggle__lightbulb__rays path {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========== Previous theme switcher (dottereldesign / CodePen) — закомментирован ==========
+.theme-switcher-grid {
+  display: grid;
+  grid-template-columns: repeat(54, 1px);
+  grid-template-rows: repeat(24, 1px);
+  gap: 0;
+  position: relative;
+  width: 54px;
+  height: 24px;
+  background-color: var(--day-bg-color);
+  border-radius: 49px;
+  border: 1px solid var(--border-color-light);
+  cursor: pointer;
+  transition: background-color 0.8s ease, border-color 0.8s ease;
+  appearance: none;
+  padding: 0;
+}
+
+.theme-switcher-grid:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.theme-switcher-grid.night-theme {
+  background-color: var(--night-bg-color);
+  border-color: var(--border-color-dark);
+}
+
+.theme-switcher-grid .sun {
+  background-color: var(--sun-color);
+  grid-column: 3 / 23;
+  grid-row: 3 / 23;
+  border-radius: 50%;
+  transition: grid-column 0.8s ease, background-color 0.8s ease;
+  height: 20px;
+}
+
+.theme-switcher-grid.night-theme .sun {
+  grid-column: 33 / 53;
+  background-color: var(--moon-color);
+}
+
+.theme-switcher-grid .moon-overlay {
+  position: absolute;
+  border-radius: 50%;
+  transition: left 0.8s ease, background-color 0.8s ease;
+  z-index: 1;
+  background-color: var(--day-bg-color);
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+.theme-switcher-grid.night-theme .moon-overlay {
+  display: block;
+  left: calc(28 / 54 * 100%);
+  top: calc(4 / 24 * 100%);
+  width: 18px;
+  height: 18px;
+  background-color: var(--night-bg-color);
+}
+
+.theme-switcher-grid .cloud-ball {
+  background-color: var(--cloud-color);
+  border-radius: 50%;
+  width: 9px;
+  height: 9px;
+  position: absolute;
+  transition: all 0.8s ease;
+  z-index: 2;
+}
+
+.theme-switcher-grid .cloud-ball-left {
+  top: calc((8 / 24) * 100%);
+  left: calc((12 / 54) * 100%);
+}
+
+.theme-switcher-grid .cloud-ball-middle {
+  top: calc((8 / 24) * 100%);
+  left: calc((17 / 54) * 100%);
+}
+
+.theme-switcher-grid .cloud-ball-right {
+  top: calc((8 / 24) * 100%);
+  left: calc((22 / 54) * 100%);
+}
+
+.theme-switcher-grid .cloud-ball-top {
+  top: calc((6 / 24) * 100%);
+  left: calc((17 / 54) * 100%);
+}
+
+.theme-switcher-grid.night-theme .cloud-ball-left {
+  top: calc((16 / 24) * 100%);
+  left: calc((16 / 54) * 100%);
+  width: 2px;
+  height: 2px;
+}
+
+.theme-switcher-grid.night-theme .cloud-ball-middle {
+  top: calc((3 / 24) * 100%);
+  left: calc((22 / 54) * 100%);
+  width: 2px;
+  height: 2px;
+}
+
+.theme-switcher-grid.night-theme .cloud-ball-right {
+  top: calc((10 / 24) * 100%);
+  left: calc((29 / 54) * 100%);
+  width: 2px;
+  height: 2px;
+}
+
+.theme-switcher-grid.night-theme .cloud-ball-top {
+  top: calc((5 / 24) * 100%);
+  left: calc((34 / 54) * 100%);
+  width: 2px;
+  height: 2px;
+}
+
+.theme-switcher-grid .star {
+  background-color: var(--star-color);
+  width: 1px;
+  height: 1px;
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  border-radius: 50%;
+}
+
+.theme-switcher-grid .star-1 {
+  top: calc((7 / 24) * 100%);
+  left: calc((10 / 54) * 100%);
+}
+
+.theme-switcher-grid .star-2 {
+  top: calc((9 / 24) * 100%);
+  left: calc((16 / 54) * 100%);
+}
+
+.theme-switcher-grid .star-3 {
+  top: calc((13 / 24) * 100%);
+  left: calc((23 / 54) * 100%);
+}
+
+.theme-switcher-grid .star-4 {
+  top: calc((18 / 24) * 100%);
+  left: calc((29 / 54) * 100%);
+}
+
+.theme-switcher-grid.night-theme .star-1,
+.theme-switcher-grid.night-theme .star-2,
+.theme-switcher-grid.night-theme .star-3,
+.theme-switcher-grid.night-theme .star-4 {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-switcher-grid,
+  .theme-switcher-grid .sun,
+  .theme-switcher-grid .moon-overlay,
+  .theme-switcher-grid .cloud-ball,
+  .theme-switcher-grid .star {
+    transition-duration: 0.01ms !important;
+  }
+}
+========== end commented theme-switcher-grid ========== */
+
 .auth-page {
   position: relative;
   z-index: 1;
@@ -196,32 +420,42 @@ textarea:focus-visible {
 }
 
 .auth-blob-1 {
-  top: -10%;
-  left: -8%;
-  background: radial-gradient(circle at 30% 20%, #38bdf8, transparent 60%);
-  animation: auth-blob-move-1 32s ease-in-out infinite alternate;
+  top: -18%;
+  left: -18%;
+  background: radial-gradient(circle at 30% 20%, #0ea5e9, transparent 60%);
+  animation: auth-blob-move-1 16s ease-in-out infinite alternate;
 }
 
 .auth-blob-2 {
-  top: 10%;
-  right: -16%;
-  background: radial-gradient(circle at 70% 30%, #a855f7, transparent 55%);
-  animation: auth-blob-move-2 36s ease-in-out infinite alternate;
+  top: -10%;
+  right: -20%;
+  background: radial-gradient(circle at 70% 30%, #1d4ed8, transparent 55%);
+  animation: auth-blob-move-2 18s ease-in-out infinite alternate;
 }
 
 .auth-blob-3 {
-  bottom: -18%;
-  left: -10%;
-  background: radial-gradient(circle at 20% 80%, #22c55e, transparent 60%);
-  animation: auth-blob-move-3 40s ease-in-out infinite alternate;
+  bottom: -20%;
+  left: -18%;
+  background: radial-gradient(circle at 20% 80%, #2563eb, transparent 60%);
+  animation: auth-blob-move-3 20s ease-in-out infinite alternate;
 }
 
 .auth-blob-4 {
-  bottom: -12%;
-  right: -12%;
-  background: radial-gradient(circle at 80% 80%, #f97316, transparent 60%);
+  bottom: -18%;
+  right: -16%;
+  background: radial-gradient(circle at 80% 80%, #38bdf8, transparent 60%);
   opacity: 0.6;
-  animation: auth-blob-move-4 34s ease-in-out infinite alternate;
+  animation: auth-blob-move-4 17s ease-in-out infinite alternate;
+}
+
+.auth-blob-5 {
+  top: 50%;
+  left: 50%;
+  margin-left: -260px;
+  margin-top: -260px;
+  background: radial-gradient(circle at 50% 50%, #3b82f6, transparent 58%);
+  opacity: 0.7;
+  animation: auth-blob-move-5 14s ease-in-out infinite alternate;
 }
 
 .auth-noise-layer {
@@ -235,49 +469,61 @@ textarea:focus-visible {
 
 @keyframes auth-blob-move-1 {
   0% {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(-20%, -10%, 0) scale(1);
   }
   50% {
-    transform: translate3d(12%, 10%, 0) scale(1.08);
+    transform: translate3d(10%, 10%, 0) scale(1.14);
   }
   100% {
-    transform: translate3d(4%, 16%, 0) scale(1.02);
+    transform: translate3d(30%, 24%, 0) scale(1.06);
   }
 }
 
 @keyframes auth-blob-move-2 {
   0% {
-    transform: translate3d(0, 0, 0) scale(1.02);
+    transform: translate3d(22%, -12%, 0) scale(1.04);
   }
   50% {
-    transform: translate3d(-10%, 8%, 0) scale(1.12);
+    transform: translate3d(-6%, 12%, 0) scale(1.14);
   }
   100% {
-    transform: translate3d(-4%, -6%, 0) scale(1.04);
+    transform: translate3d(-26%, 26%, 0) scale(1.06);
   }
 }
 
 @keyframes auth-blob-move-3 {
   0% {
-    transform: translate3d(0, 0, 0) scale(1.04);
+    transform: translate3d(-24%, 18%, 0) scale(1.06);
   }
   50% {
-    transform: translate3d(8%, -10%, 0) scale(1.12);
+    transform: translate3d(8%, -6%, 0) scale(1.16);
   }
   100% {
-    transform: translate3d(-4%, -6%, 0) scale(1.05);
+    transform: translate3d(24%, -22%, 0) scale(1.08);
   }
 }
 
 @keyframes auth-blob-move-4 {
   0% {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(24%, 18%, 0) scale(1.02);
   }
   50% {
-    transform: translate3d(-8%, -6%, 0) scale(1.08);
+    transform: translate3d(-4%, -8%, 0) scale(1.12);
   }
   100% {
-    transform: translate3d(6%, 4%, 0) scale(1.02);
+    transform: translate3d(-24%, 10%, 0) scale(1.04);
+  }
+}
+
+@keyframes auth-blob-move-5 {
+  0% {
+    transform: translate3d(-8%, 6%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(10%, -10%, 0) scale(1.1);
+  }
+  100% {
+    transform: translate3d(4%, 12%, 0) scale(1.04);
   }
 }
 
