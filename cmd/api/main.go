@@ -12,18 +12,12 @@ import (
 	"github.com/example/hls-monitoring-platform/internal/config"
 	httpapi "github.com/example/hls-monitoring-platform/internal/http/api"
 	"github.com/example/hls-monitoring-platform/internal/ratelimit"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
 )
 
 const apiShutdownTimeout = 15 * time.Second
 
 func main() {
-	prometheus.MustRegister(
-		prometheus.NewGoCollector(),
-		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{Namespace: "hls_api"}),
-	)
-
 	port := config.GetString("API_PORT", "8080")
 	databaseURL := config.GetString("DATABASE_URL", "")
 	if databaseURL == "" {
