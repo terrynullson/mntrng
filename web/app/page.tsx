@@ -1,21 +1,23 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { AppButton } from "@/components/ui/app-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 
 export default function OverviewPage() {
+  const router = useRouter();
   const { user, isReady } = useAuth();
 
   return (
     <section className="panel">
       <header className="page-header">
-        <h2 className="page-title">Overview</h2>
+        <h2 className="page-title">Главное меню</h2>
         <p className="page-note">
-          Secure Admin UI v2. Tenant scope is derived from authenticated context.
+          Выберите раздел платформы после входа в систему.
         </p>
       </header>
 
@@ -45,41 +47,26 @@ export default function OverviewPage() {
           style={{ marginTop: "12px" }}
         >
           <motion.article
-            className="overview-card"
+            className="overview-card landing-primary-card"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.24, ease: "easeOut", delay: 0.05 }}
           >
-            <h3>Account</h3>
+            <h3>МОНИТОРИНГ HLS</h3>
             <p>
-              {user.login} ({user.email})
+              Панель мониторинга HLS-потоков, их статусов и ручного запуска
+              проверок.
             </p>
-            <p>Role: {user.role}</p>
-            <p>Status: {user.status}</p>
-          </motion.article>
-
-          <motion.article
-            className="overview-card"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.24, ease: "easeOut", delay: 0.1 }}
-          >
-            <h3>Quick navigation</h3>
-            <p>
-              <Link className="stream-link" href="/streams">
-                Streams
-              </Link>
-            </p>
-            <p>
-              <Link className="stream-link" href="/analytics">
-                Analytics
-              </Link>
-            </p>
-            <p>
-              <Link className="stream-link" href="/settings">
-                Settings
-              </Link>
-            </p>
+            <AppButton
+              type="button"
+              className="landing-primary-button"
+              aria-label="Открыть мониторинг HLS"
+              onClick={() => {
+                router.push("/streams");
+              }}
+            >
+              МОНИТОРИНГ HLS
+            </AppButton>
           </motion.article>
         </motion.div>
       )}

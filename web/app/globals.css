@@ -108,79 +108,28 @@ textarea:focus-visible {
   justify-content: center;
   padding: 24px;
   position: relative;
-  overflow: hidden;
-  background: radial-gradient(circle at top left, #e0f2fe 0, transparent 45%),
-    radial-gradient(circle at bottom right, #ccfbf1 0, transparent 50%),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
-}
-
-.public-root::before {
-  content: "";
-  position: absolute;
-  inset: -40%;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.36), transparent 55%),
-    radial-gradient(circle at 100% 100%, rgba(45, 212, 191, 0.36), transparent 55%),
-    radial-gradient(circle at 0% 100%, rgba(129, 140, 248, 0.32), transparent 55%);
-  opacity: 0.95;
-  background-size: 160% 160%;
-  animation: auth-gradient 26s ease-in-out infinite;
-  filter: blur(40px);
-  transform: translate3d(0, 0, 0);
-  pointer-events: none;
-  z-index: 0;
-}
-
-[data-theme="dark"] .public-root {
-  background: radial-gradient(circle at top left, #020617 0, transparent 45%),
-    radial-gradient(circle at bottom right, #020617 0, transparent 50%),
-    var(--bg);
-}
-
-[data-theme="dark"] .public-root::before {
-  background:
-    radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.42), transparent 55%),
-    radial-gradient(circle at 100% 100%, rgba(45, 212, 191, 0.42), transparent 55%),
-    radial-gradient(circle at 0% 100%, rgba(129, 140, 248, 0.38), transparent 55%);
 }
 
 .public-theme-toggle {
   position: absolute;
   top: 16px;
   right: 16px;
-  z-index: 2;
 }
 
 .auth-page {
   width: min(520px, 100%);
-  position: relative;
-  z-index: 1;
-  background: transparent;
+  background: var(--bg);
   color: var(--text);
 }
 
 .auth-card {
-  border-radius: 20px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
   padding: 24px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
-  backdrop-filter: blur(22px) saturate(1.2);
-  -webkit-backdrop-filter: blur(22px) saturate(1.2);
-}
-
-[data-theme="dark"] .auth-card {
-  border-color: rgba(148, 163, 184, 0.7);
-  background: rgba(15, 23, 42, 0.78);
-}
-
-@supports not (backdrop-filter: blur(12px)) {
-  .auth-card {
-    background: var(--surface);
-    border-color: var(--border);
-    box-shadow: var(--shadow-soft);
-  }
+  box-shadow: var(--shadow-soft);
 }
 
 .auth-card h1 {
@@ -866,21 +815,6 @@ tbody tr:last-child td {
   }
   to {
     background-position: -100% 0;
-  }
-}
-
-@keyframes auth-gradient {
-  0% {
-    transform: translate3d(0, 0, 0);
-    opacity: 0.9;
-  }
-  50% {
-    transform: translate3d(-6%, -4%, 0);
-    opacity: 1;
-  }
-  100% {
-    transform: translate3d(0, 0, 0);
-    opacity: 0.9;
   }
 }
 
