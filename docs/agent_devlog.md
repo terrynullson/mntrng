@@ -626,6 +626,15 @@ Summary:
 Notes:
 Сборка и скриншоты ок. Только UI/доступность.
 
+[2026-02-24] [UI-AUTH-GLASS-GRAD-001] (fix BLOCK)
+Agent: AuthUXAgent
+Commit: c73d200
+Summary:
+- Пересъёмка скриншотов auth: скрипт ждёт появления h1 «Вход»/«Регистрация»; поддержка SCREENSHOT_PORT/SCREENSHOT_BASE_URL; удалены PNG с 404.
+- Новые файлы: 20260224151810-login.png, 20260224151810-register.png; обновлён screenshot_automation.md.
+Notes:
+ReviewAgent BLOCK из-за 404 на старых скриншотах; переснято при frontend на :3004.
+
 [2026-02-24] [UI-AUTH-GLASS-GRAD-001]
 Agent: AuthUXAgent
 Commit: 2aa2a0f
