@@ -18,6 +18,19 @@ declare module "react" {
     key: string | null;
   }
 
+  export interface SyntheticEvent<T = Element> {
+    target: T;
+    currentTarget: T;
+    preventDefault(): void;
+    stopPropagation(): void;
+  }
+
+  export interface FormEvent<T = Element> extends SyntheticEvent<T> {}
+
+  export interface ChangeEvent<T = Element> extends SyntheticEvent<T> {
+    target: T & { value: string; valueAsNumber?: number };
+  }
+
   export interface Context<T> {
     Provider: ComponentType<{ value: T; children?: ReactNode }>;
     Consumer: unknown;
@@ -37,5 +50,13 @@ declare module "react" {
 
   export interface ComponentType<P = unknown> {
     (props: P): ReactElement | null;
+  }
+}
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: Record<string, unknown>;
+    }
   }
 }

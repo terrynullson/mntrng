@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FormEvent, useEffect, useState } from "react";
+import type { ChangeEvent } from "react";
+import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppButton } from "@/components/ui/app-button";
@@ -152,7 +153,7 @@ export default function AdminUsersPage() {
     setStatusDrafts(nextStatusDrafts);
   }, [items]);
 
-  const applyFilters = (event: FormEvent<HTMLFormElement>) => {
+  const applyFilters = (event: { preventDefault: () => void }) => {
     event.preventDefault();
 
     const parsedLimit = Number.parseInt(limitDraft, 10);
@@ -303,7 +304,7 @@ export default function AdminUsersPage() {
             <select
               id="users-company-filter"
               value={companyFilterDraft}
-              onChange={(event) => setCompanyFilterDraft(event.target.value)}
+              onChange={(event: ChangeEvent<HTMLSelectElement>) => setCompanyFilterDraft(event.target.value)}
               disabled={isLoading}
             >
               <option value="">All companies</option>
@@ -320,7 +321,7 @@ export default function AdminUsersPage() {
             <select
               id="users-role-filter"
               value={roleFilterDraft}
-              onChange={(event) => setRoleFilterDraft(event.target.value as RoleFilter)}
+              onChange={(event: ChangeEvent<HTMLSelectElement>) => setRoleFilterDraft(event.target.value as RoleFilter)}
               disabled={isLoading}
             >
               <option value="all">All roles</option>
@@ -335,7 +336,7 @@ export default function AdminUsersPage() {
             <select
               id="users-status-filter"
               value={statusFilterDraft}
-              onChange={(event) =>
+              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                 setStatusFilterDraft(event.target.value as StatusFilter)
               }
               disabled={isLoading}
@@ -354,7 +355,7 @@ export default function AdminUsersPage() {
               min={1}
               max={200}
               value={limitDraft}
-              onChange={(event) => setLimitDraft(event.target.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setLimitDraft(event.target.value)}
               disabled={isLoading}
             />
           </label>
@@ -472,7 +473,7 @@ export default function AdminUsersPage() {
                             <select
                               aria-label={`Role for user ${item.id}`}
                               value={roleValue}
-                              onChange={(event) =>
+                              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                                 setRoleDrafts((previous) => ({
                                   ...previous,
                                   [item.id]: asEditableRole(event.target.value)
@@ -491,7 +492,7 @@ export default function AdminUsersPage() {
                               type="number"
                               min={1}
                               value={companyValue}
-                              onChange={(event) =>
+                              onChange={(event: ChangeEvent<HTMLInputElement>) =>
                                 setCompanyDrafts((previous) => ({
                                   ...previous,
                                   [item.id]: event.target.value
@@ -523,7 +524,7 @@ export default function AdminUsersPage() {
                             <select
                               aria-label={`Status for user ${item.id}`}
                               value={statusValue}
-                              onChange={(event) =>
+                              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                                 setStatusDrafts((previous) => ({
                                   ...previous,
                                   [item.id]: event.target.value as UserStatus
