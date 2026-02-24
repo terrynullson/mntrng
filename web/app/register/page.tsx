@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 
 import { AppButton } from "@/components/ui/app-button";
 import { apiRequest, toErrorMessage } from "@/lib/api/client";
@@ -28,7 +28,7 @@ export default function RegisterPage() {
 
   const prefersReducedMotion = useReducedMotion();
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: { preventDefault: () => void }) => {
     event.preventDefault();
 
     const parsedCompanyID = Number.parseInt(companyID, 10);

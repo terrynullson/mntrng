@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppButton } from "@/components/ui/app-button";
@@ -39,7 +39,7 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, isReady, router]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: { preventDefault: () => void }) => {
     event.preventDefault();
 
     if (!loginOrEmail.trim() || !password) {

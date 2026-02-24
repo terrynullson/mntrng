@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppButton } from "@/components/ui/app-button";
@@ -102,7 +102,7 @@ export default function SettingsPage() {
   }, [canManageTelegram, scopeCompanyId, accessToken, loadTelegramSettings]);
 
   const handleTelegramSettingsSubmit = async (
-    event: FormEvent<HTMLFormElement>
+    event: { preventDefault: () => void }
   ) => {
     event.preventDefault();
     if (!accessToken || !scopeCompanyId) return;
@@ -137,7 +137,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleLink = async (event: FormEvent<HTMLFormElement>) => {
+  const handleLink = async (event: { preventDefault: () => void }) => {
     event.preventDefault();
 
     if (!accessToken) {
