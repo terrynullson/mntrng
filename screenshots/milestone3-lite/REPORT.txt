@@ -1,0 +1,12 @@
+MS3L-SCREENSHOT-DIAG-001
+STATUS: BLOCKED
+DATE: 2026-02-24
+
+Что сделано:
+- Реализована backend+worker+UI логика screenshot diagnostics для инцидентов.
+- Добавлены новые поля инцидента (diag_code/diag_details/screenshot_taken_at).
+- Добавлен API endpoint выдачи JPEG скриншота инцидента.
+
+Блокер:
+- Docker engine недоступен в текущем окружении (pipe dockerDesktopLinuxEngine не найден),
+  поэтому автоматические UI-скриншоты не сняты в этом запуске агента.

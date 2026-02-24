@@ -51,6 +51,8 @@ services:
         condition: service_healthy
     ports:
       - "${API_PORT:-8080}:${API_PORT:-8080}"
+    volumes:
+      - app_data:/data
 
   worker:
     build:
@@ -65,6 +67,8 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+    volumes:
+      - app_data:/data
 
   frontend:
     build:
@@ -102,3 +106,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  app_data:

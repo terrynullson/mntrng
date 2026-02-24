@@ -202,18 +202,22 @@ type StreamWithFavorite struct {
 
 // Incident is a monitoring incident (open or resolved) for a stream.
 type Incident struct {
-	ID                   int64      `json:"id"`
-	CompanyID            int64      `json:"company_id"`
-	StreamID             int64      `json:"stream_id"`
-	StreamName           string     `json:"stream_name,omitempty"`
-	Status               string     `json:"status"`
-	Severity             string     `json:"severity"`
-	StartedAt            time.Time  `json:"started_at"`
-	LastEventAt          time.Time  `json:"last_event_at"`
-	ResolvedAt           *time.Time `json:"resolved_at,omitempty"`
-	FailReason           *string    `json:"fail_reason,omitempty"`
-	SampleScreenshotPath *string    `json:"sample_screenshot_path,omitempty"`
-	LastCheckID          *int64     `json:"last_check_id,omitempty"`
+	ID                   int64           `json:"id"`
+	CompanyID            int64           `json:"company_id"`
+	StreamID             int64           `json:"stream_id"`
+	StreamName           string          `json:"stream_name,omitempty"`
+	Status               string          `json:"status"`
+	Severity             string          `json:"severity"`
+	StartedAt            time.Time       `json:"started_at"`
+	LastEventAt          time.Time       `json:"last_event_at"`
+	ResolvedAt           *time.Time      `json:"resolved_at,omitempty"`
+	FailReason           *string         `json:"fail_reason,omitempty"`
+	SampleScreenshotPath *string         `json:"sample_screenshot_path,omitempty"`
+	HasScreenshot        bool            `json:"has_screenshot"`
+	ScreenshotTakenAt    *time.Time      `json:"screenshot_taken_at,omitempty"`
+	DiagCode             *string         `json:"diag_code,omitempty"`
+	DiagDetails          json.RawMessage `json:"diag_details,omitempty"`
+	LastCheckID          *int64          `json:"last_check_id,omitempty"`
 }
 
 // IncidentListResponse for paginated incidents.
@@ -224,26 +228,27 @@ type IncidentListResponse struct {
 }
 
 const (
-	AuditActorTypeAPI               = "api"
-	AuditActorIDSystem              = "system"
-	AuditActorTypeWorker            = "worker"
-	AuditEntityTypeCompany          = "company"
-	AuditEntityTypeProject          = "project"
-	AuditEntityTypeStream           = "stream"
-	AuditEntityTypeEmbedWhitelist   = "embed_whitelist"
-	AuditEntityTypeIncident         = "incident"
-	AuditActionCompanyCreate        = "create"
-	AuditActionCompanyUpdate        = "update"
-	AuditActionCompanyDelete        = "delete"
-	AuditActionProjectCreate        = "create"
-	AuditActionProjectUpdate        = "update"
-	AuditActionProjectDelete        = "delete"
-	AuditActionStreamCreate         = "create"
-	AuditActionStreamUpdate         = "update"
-	AuditActionStreamDelete         = "delete"
-	AuditActionEmbedWhitelistAdd    = "add"
-	AuditActionEmbedWhitelistRemove = "remove"
-	AuditActionEmbedWhitelistToggle = "toggle"
-	AuditActionIncidentOpen         = "open"
-	AuditActionIncidentResolve      = "resolve"
+	AuditActorTypeAPI                    = "api"
+	AuditActorIDSystem                   = "system"
+	AuditActorTypeWorker                 = "worker"
+	AuditEntityTypeCompany               = "company"
+	AuditEntityTypeProject               = "project"
+	AuditEntityTypeStream                = "stream"
+	AuditEntityTypeEmbedWhitelist        = "embed_whitelist"
+	AuditEntityTypeIncident              = "incident"
+	AuditActionCompanyCreate             = "create"
+	AuditActionCompanyUpdate             = "update"
+	AuditActionCompanyDelete             = "delete"
+	AuditActionProjectCreate             = "create"
+	AuditActionProjectUpdate             = "update"
+	AuditActionProjectDelete             = "delete"
+	AuditActionStreamCreate              = "create"
+	AuditActionStreamUpdate              = "update"
+	AuditActionStreamDelete              = "delete"
+	AuditActionEmbedWhitelistAdd         = "add"
+	AuditActionEmbedWhitelistRemove      = "remove"
+	AuditActionEmbedWhitelistToggle      = "toggle"
+	AuditActionIncidentOpen              = "open"
+	AuditActionIncidentResolve           = "resolve"
+	AuditActionIncidentDiagnosticUpdated = "incident_diagnostic_updated"
 )

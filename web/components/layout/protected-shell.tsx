@@ -61,6 +61,7 @@ const PATH_LABELS: Array<{ pattern: RegExp; title: string }> = [
   { pattern: /^\/streams$/, title: "Потоки" },
   { pattern: /^\/streams\/.+/, title: "Поток" },
   { pattern: /^\/incidents$/, title: "Инциденты" },
+  { pattern: /^\/incidents\/.+/, title: "Инцидент" },
   { pattern: /^\/analytics$/, title: "Аналитика" },
   { pattern: /^\/settings$/, title: "Настройки" },
   { pattern: /^\/admin\/requests$/, title: "Заявки на регистрацию" },
@@ -98,7 +99,6 @@ export function ProtectedShell({ children }: { children?: ReactNode }) {
     logout
   } = useAuth();
 
-  const [isNavCollapsed, setIsNavCollapsed] = useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -169,14 +169,10 @@ export function ProtectedShell({ children }: { children?: ReactNode }) {
 
   return (
     <div className="secure-shell">
-      <motion.aside
-        className="secure-sidebar"
-        animate={{ width: isNavCollapsed ? 78 : 248 }}
-        transition={{ duration: 0.22, ease: "easeOut" }}
-      >
+      <aside className="secure-sidebar">
         <div className="secure-brand">
           <p className="secure-brand-kicker">HLS Monitoring</p>
-          {!isNavCollapsed ? <h1>Admin v2</h1> : <h1>A2</h1>}
+          <h1>Admin v2</h1>
         </div>
 
         <nav className="secure-nav" aria-label="Основная навигация">
@@ -187,24 +183,15 @@ export function ProtectedShell({ children }: { children?: ReactNode }) {
               className={isActiveRoute(pathname, item.href) ? "is-active" : ""}
               title={item.label}
             >
-              {isNavCollapsed ? item.label.slice(0, 1) : item.label}
+              {item.label}
             </Link>
           ))}
         </nav>
-      </motion.aside>
+      </aside>
 
       <div className="secure-main">
         <header className="secure-topbar">
           <div className="secure-topbar-left">
-            <AppButton
-              type="button"
-              variant="ghost"
-              className="burger-button"
-              onClick={() => setIsNavCollapsed((previous) => !previous)}
-              aria-label={isNavCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}
-            >
-              {isNavCollapsed ? "Развернуть" : "Свернуть"}
-            </AppButton>
             <div>
               <p className="secure-page-title">{pageTitle}</p>
               <p className="secure-page-note">Роль: {user.role}</p>

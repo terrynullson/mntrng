@@ -344,11 +344,7 @@ export default function StreamsPage() {
     if (!accessToken || !scopeCompanyId || isViewer) {
       return;
     }
-    const parsedProjectID = Number.parseInt(formProjectID, 10);
-    if (!Number.isFinite(parsedProjectID) || parsedProjectID <= 0) {
-      setFormError("Выберите проект.");
-      return;
-    }
+    let parsedProjectID = Number.parseInt(formProjectID, 10);
     if (!formName.trim() || !formSourceURL.trim()) {
       setFormError("Заполните название и URL источника.");
       return;
@@ -370,6 +366,27 @@ export default function StreamsPage() {
           body: payload
         });
       } else {
+        if (!Number.isFinite(parsedProjectID) || parsedProjectID <= 0) {
+          const existingCommonProject = projects.find(
+            (project) => project.name.trim().toLowerCase() === "общий"
+          );
+          let fallbackProject: Project;
+          if (existingCommonProject) {
+            fallbackProject = existingCommonProject;
+          } else {
+            fallbackProject = await apiRequest<Project>(
+              `/companies/${scopeCompanyId}/projects`,
+              {
+                method: "POST",
+                accessToken,
+                body: { name: "Общий" }
+              }
+            );
+          }
+          parsedProjectID = fallbackProject.id;
+          setProjects((prev) => [fallbackProject, ...prev.filter((project) => project.id !== fallbackProject.id)]);
+          setFormProjectID(String(fallbackProject.id));
+        }
         const payload: StreamCreateRequest = {
           project_id: parsedProjectID,
           name: formName.trim(),
@@ -743,7 +760,7 @@ export default function StreamsPage() {
                   value={formProjectID}
                   onChange={(event) => setFormProjectID(event.target.value)}
                 >
-                  <option value="">Выберите проект</option>
+                  <option value="">Авто: создать/выбрать «Общий»</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id}>
                       {project.name} ({project.id})

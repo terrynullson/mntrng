@@ -1581,6 +1581,22 @@ tbody tr:last-child td {
   align-items: end;
 }
 
+.incident-diag-json {
+  margin: 0;
+  white-space: pre-wrap;
+  background: rgba(9, 14, 35, 0.7);
+  border: 1px solid rgba(123, 150, 255, 0.2);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.incident-screenshot {
+  width: 100%;
+  max-width: 640px;
+  border-radius: 10px;
+  border: 1px solid rgba(123, 150, 255, 0.2);
+}
+
 @media (max-width: 1080px) {
   .filters-grid,
   .streams-v2-filters,

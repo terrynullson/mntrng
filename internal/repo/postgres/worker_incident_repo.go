@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -20,22 +21,66 @@ func NewWorkerIncidentRepo(db *sql.DB) *WorkerIncidentRepo {
 }
 
 // GetOpenByStream returns the open incident id for the stream in tenant scope, or false.
-func (r *WorkerIncidentRepo) GetOpenByStream(ctx context.Context, companyID int64, streamID int64) (incidentID int64, ok bool, err error) {
+func (r *WorkerIncidentRepo) GetOpenByStream(ctx context.Context, companyID int64, streamID int64) (incident domain.Incident, ok bool, err error) {
+	var diagCode sql.NullString
+	var diagDetails []byte
+	var resolvedAt sql.NullTime
+	var failReason sql.NullString
+	var screenshotPath sql.NullString
+	var screenshotTakenAt sql.NullTime
 	err = r.db.QueryRowContext(
 		ctx,
-		`SELECT id FROM incidents
+		`SELECT id, company_id, stream_id, status, severity, started_at, last_event_at, resolved_at,
+                fail_reason, sample_screenshot_path, screenshot_taken_at, diag_code, COALESCE(diag_details, '{}'::jsonb)
+         FROM incidents
          WHERE company_id = $1 AND stream_id = $2 AND status = $3`,
 		companyID,
 		streamID,
 		domain.IncidentStatusOpen,
-	).Scan(&incidentID)
+	).Scan(
+		&incident.ID,
+		&incident.CompanyID,
+		&incident.StreamID,
+		&incident.Status,
+		&incident.Severity,
+		&incident.StartedAt,
+		&incident.LastEventAt,
+		&resolvedAt,
+		&failReason,
+		&screenshotPath,
+		&screenshotTakenAt,
+		&diagCode,
+		&diagDetails,
+	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return 0, false, nil
+			return domain.Incident{}, false, nil
 		}
-		return 0, false, err
+		return domain.Incident{}, false, err
 	}
-	return incidentID, true, nil
+	if resolvedAt.Valid {
+		incident.ResolvedAt = &resolvedAt.Time
+	}
+	if failReason.Valid {
+		incident.FailReason = &failReason.String
+	}
+	if screenshotPath.Valid {
+		incident.SampleScreenshotPath = &screenshotPath.String
+	}
+	if screenshotTakenAt.Valid {
+		incident.ScreenshotTakenAt = &screenshotTakenAt.Time
+	}
+	if diagCode.Valid {
+		code := diagCode.String
+		incident.DiagCode = &code
+	}
+	if len(diagDetails) > 0 {
+		incident.DiagDetails = json.RawMessage(diagDetails)
+	}
+	if incident.SampleScreenshotPath != nil && *incident.SampleScreenshotPath != "" {
+		incident.HasScreenshot = true
+	}
+	return incident, true, nil
 }
 
 // Create creates a new open incident and writes audit log.
@@ -51,8 +96,8 @@ func (r *WorkerIncidentRepo) Create(
 	now := time.Now().UTC()
 	err = r.db.QueryRowContext(
 		ctx,
-		`INSERT INTO incidents (company_id, stream_id, status, severity, started_at, last_event_at, fail_reason, sample_screenshot_path, last_check_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		`INSERT INTO incidents (company_id, stream_id, status, severity, started_at, last_event_at, fail_reason, sample_screenshot_path, screenshot_taken_at, diag_code, diag_details, last_check_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL, NULL, NULL, $9)
          RETURNING id`,
 		companyID,
 		streamID,
@@ -157,6 +202,60 @@ func (r *WorkerIncidentRepo) Resolve(ctx context.Context, incidentID int64, comp
 		incidentID,
 		domain.AuditActionIncidentResolve,
 		map[string]interface{}{"stream_id": streamID},
+	)
+}
+
+func (r *WorkerIncidentRepo) UpdateDiagnostic(
+	ctx context.Context,
+	incidentID int64,
+	companyID int64,
+	streamID int64,
+	sampleScreenshotPath *string,
+	screenshotTakenAt time.Time,
+	diagCode string,
+	diagDetails map[string]interface{},
+) error {
+	payload, err := json.Marshal(diagDetails)
+	if err != nil {
+		return err
+	}
+	result, err := r.db.ExecContext(
+		ctx,
+		`UPDATE incidents
+         SET sample_screenshot_path = COALESCE($1, sample_screenshot_path),
+             screenshot_taken_at = $2,
+             diag_code = $3,
+             diag_details = $4::jsonb
+         WHERE id = $5 AND company_id = $6`,
+		nullStringPtr(sampleScreenshotPath),
+		screenshotTakenAt.UTC(),
+		diagCode,
+		string(payload),
+		incidentID,
+		companyID,
+	)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return domain.ErrIncidentNotFound
+	}
+	return InsertAuditLog(
+		ctx,
+		r.db,
+		companyID,
+		domain.AuditActorTypeWorker,
+		domain.AuditActorIDSystem,
+		domain.AuditEntityTypeIncident,
+		incidentID,
+		domain.AuditActionIncidentDiagnosticUpdated,
+		map[string]interface{}{
+			"stream_id":        streamID,
+			"diag_code":        diagCode,
+			"screenshot_path":  sampleScreenshotPath,
+			"screenshot_taken": screenshotTakenAt.UTC().Format(time.RFC3339),
+		},
 	)
 }
 

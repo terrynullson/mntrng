@@ -136,6 +136,7 @@ func (s *Server) RouterHandlers() RouterHandlers {
 		HandleRemoveStreamPin:               s.handleRemoveStreamPin,
 		HandleListIncidents:                 s.handleListIncidents,
 		HandleGetIncident:                   s.handleGetIncident,
+		HandleGetIncidentScreenshot:         s.handleGetIncidentScreenshot,
 		HandleGetTelegramDeliverySettings:   s.handleGetTelegramDeliverySettings,
 		HandlePatchTelegramDeliverySettings: s.handlePatchTelegramDeliverySettings,
 		HandleListEmbedWhitelist:            s.handleListEmbedWhitelist,

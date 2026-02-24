@@ -214,6 +214,10 @@ export type Incident = {
   resolved_at?: string | null;
   fail_reason?: string | null;
   sample_screenshot_path?: string | null;
+  has_screenshot?: boolean;
+  screenshot_taken_at?: string | null;
+  diag_code?: "BLACKFRAME" | "FREEZE" | "CAPTURE_FAIL" | "UNKNOWN" | null;
+  diag_details?: Record<string, unknown> | null;
   last_check_id?: number | null;
 };
 

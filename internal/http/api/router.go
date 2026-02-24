@@ -61,13 +61,14 @@ type RouterHandlers struct {
 	HandleGetCheckResultByJob companyResourceHandler
 	HandleGetAIIncident       streamCompanyResourceHandler
 
-	HandleListStreamFavorites  companyHandler
-	HandleAddStreamFavorite    companyResourceHandler
-	HandleRemoveStreamFavorite companyResourceHandler
-	HandleAddStreamPin         companyResourceHandler
-	HandleRemoveStreamPin      companyResourceHandler
-	HandleListIncidents        companyHandler
-	HandleGetIncident          companyResourceHandler
+	HandleListStreamFavorites   companyHandler
+	HandleAddStreamFavorite     companyResourceHandler
+	HandleRemoveStreamFavorite  companyResourceHandler
+	HandleAddStreamPin          companyResourceHandler
+	HandleRemoveStreamPin       companyResourceHandler
+	HandleListIncidents         companyHandler
+	HandleGetIncident           companyResourceHandler
+	HandleGetIncidentScreenshot companyResourceHandler
 
 	HandleGetTelegramDeliverySettings   companyHandler
 	HandlePatchTelegramDeliverySettings companyHandler
@@ -213,19 +214,24 @@ func routeCompanyByID(w http.ResponseWriter, r *http.Request, handlers RouterHan
 	}
 	if strings.HasPrefix(pathRemainder, "incidents/") {
 		incidentPath := strings.TrimPrefix(pathRemainder, "incidents/")
-		if incidentPath == "" || strings.Contains(incidentPath, "/") {
+		if incidentPath == "" {
 			writeRouterPathNotFound(w, r)
 			return
 		}
-		incidentID, err := parsePositiveID(incidentPath)
+		incidentParts := strings.Split(incidentPath, "/")
+		incidentID, err := parsePositiveID(incidentParts[0])
 		if err != nil {
 			WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid incident_id", map[string]interface{}{"path": r.URL.Path})
 			return
 		}
-		if r.Method == http.MethodGet {
+		if len(incidentParts) == 1 && r.Method == http.MethodGet {
 			handlers.HandleGetIncident(w, r, companyID, incidentID)
-		} else {
+		} else if len(incidentParts) == 2 && incidentParts[1] == "screenshot" && r.Method == http.MethodGet {
+			handlers.HandleGetIncidentScreenshot(w, r, companyID, incidentID)
+		} else if len(incidentParts) <= 2 {
 			WriteMethodNotAllowed(w, r, http.MethodGet)
+		} else {
+			writeRouterPathNotFound(w, r)
 		}
 		return
 	}

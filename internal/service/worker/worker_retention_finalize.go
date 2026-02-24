@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -33,6 +34,12 @@ func (w *worker) RunRetentionCleanup(ctx context.Context) error {
 			deletedFiles,
 			errorsCount,
 		)
+	}
+	removedFiles, removedDirs, err := w.cleanupIncidentScreenshotFiles(cutoff)
+	if err != nil {
+		log.Printf("worker retention cleanup incidents err=%v", err)
+	} else {
+		log.Printf("worker retention cleanup incidents: removed_files=%d removed_dirs=%d cutoff=%s", removedFiles, removedDirs, cutoff.Format(time.RFC3339))
 	}
 	return nil
 }
@@ -117,6 +124,58 @@ func removeScreenshotFile(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+func (w *worker) cleanupIncidentScreenshotFiles(cutoff time.Time) (int, int, error) {
+	root := filepath.Join(w.dataDir, "screenshots", "incidents")
+	if _, err := os.Stat(root); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return 0, 0, nil
+		}
+		return 0, 0, err
+	}
+
+	removedFiles := 0
+	removedDirs := 0
+	var dirs []string
+	walkErr := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			dirs = append(dirs, path)
+			return nil
+		}
+		info, statErr := d.Info()
+		if statErr != nil {
+			return nil
+		}
+		if info.ModTime().UTC().Before(cutoff) {
+			if rmErr := os.Remove(path); rmErr == nil || errors.Is(rmErr, os.ErrNotExist) {
+				removedFiles++
+			}
+		}
+		return nil
+	})
+	if walkErr != nil {
+		return removedFiles, removedDirs, walkErr
+	}
+	for i := len(dirs) - 1; i >= 0; i-- {
+		dir := dirs[i]
+		if dir == root {
+			continue
+		}
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		if len(entries) == 0 {
+			if rmErr := os.Remove(dir); rmErr == nil || errors.Is(rmErr, os.ErrNotExist) {
+				removedDirs++
+			}
+		}
+	}
+	return removedFiles, removedDirs, nil
 }
 
 func (w *worker) finalizeWithRetry(ctx context.Context, job claimedJob, status string, errorMessage string) error {

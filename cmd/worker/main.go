@@ -40,6 +40,11 @@ func main() {
 	telegramRetryMax := config.IntAtLeast(config.GetInt("TELEGRAM_SEND_RETRY_MAX", 2), 0)
 	telegramRetryBackoff := time.Duration(config.IntAtLeast(config.GetInt("TELEGRAM_SEND_RETRY_BACKOFF_MS", 500), 1)) * time.Millisecond
 	telegramBotTokenDefault := config.GetString("TELEGRAM_BOT_TOKEN_DEFAULT", "")
+	dataDir := config.GetString("APP_DATA_DIR", "/data")
+	incidentScreenshotInterval := time.Duration(config.IntAtLeast(config.GetInt("INCIDENT_SCREENSHOT_INTERVAL_MIN", 10), 1)) * time.Minute
+	diagnosticCaptureTimeout := time.Duration(config.IntInRange(config.GetInt("DIAG_CAPTURE_TIMEOUT_SEC", 6), 3, 15)) * time.Second
+	diagnosticFreezeInterval := time.Duration(config.IntInRange(config.GetInt("DIAG_FREEZE_INTERVAL_SEC", 2), 1, 10)) * time.Second
+	diagnosticFreezeDiffThreshold := config.FloatInRange(config.GetFloat("DIAG_FREEZE_DIFF_THRESHOLD", 0.01), 0.0001, 1)
 	if freshnessFail < freshnessWarn {
 		freshnessFail = freshnessWarn
 	}
@@ -75,36 +80,41 @@ func main() {
 	incidentAnalyzer := &ai.LogAnalyzer{Inner: ai.NewStubAnalyzer()}
 
 	workerConfig := workerservice.Config{
-		PollInterval:              pollInterval,
-		RetentionTTL:              retentionTTL,
-		RetentionCleanupInterval:  retentionCleanupInterval,
-		RetentionCleanupBatchSize: retentionCleanupBatchSize,
-		JobTimeout:                jobTimeout,
-		PlaylistTimeout:           playlistTimeout,
-		SegmentTimeout:            segmentTimeout,
-		SegmentsSampleCount:       segmentsSampleCount,
-		FreshnessWarn:             freshnessWarn,
-		FreshnessFail:             freshnessFail,
-		FreezeWarn:                freezeWarn,
-		FreezeFail:                freezeFail,
-		BlackframeWarnRatio:       blackframeWarnRatio,
-		BlackframeFailRatio:       blackframeFailRatio,
-		EffectiveWarnRatio:        effectiveWarnRatio,
-		EffectiveFailRatio:        effectiveFailRatio,
-		AlertFailStreak:           alertFailStreak,
-		AlertCooldown:             alertCooldown,
-		AlertSendRecovered:        alertSendRecovered,
-		TelegramHTTPTimeout:       telegramHTTPTimeout,
-		TelegramRetryMax:          telegramRetryMax,
-		TelegramRetryBackoff:      telegramRetryBackoff,
-		TelegramBotTokenDefault:   telegramBotTokenDefault,
-		RetryMax:                  retryMax,
-		RetryBackoff:              retryBackoff,
-		IncidentAnalyzer:          incidentAnalyzer,
+		PollInterval:                  pollInterval,
+		RetentionTTL:                  retentionTTL,
+		RetentionCleanupInterval:      retentionCleanupInterval,
+		RetentionCleanupBatchSize:     retentionCleanupBatchSize,
+		JobTimeout:                    jobTimeout,
+		PlaylistTimeout:               playlistTimeout,
+		SegmentTimeout:                segmentTimeout,
+		SegmentsSampleCount:           segmentsSampleCount,
+		FreshnessWarn:                 freshnessWarn,
+		FreshnessFail:                 freshnessFail,
+		FreezeWarn:                    freezeWarn,
+		FreezeFail:                    freezeFail,
+		BlackframeWarnRatio:           blackframeWarnRatio,
+		BlackframeFailRatio:           blackframeFailRatio,
+		EffectiveWarnRatio:            effectiveWarnRatio,
+		EffectiveFailRatio:            effectiveFailRatio,
+		AlertFailStreak:               alertFailStreak,
+		AlertCooldown:                 alertCooldown,
+		AlertSendRecovered:            alertSendRecovered,
+		TelegramHTTPTimeout:           telegramHTTPTimeout,
+		TelegramRetryMax:              telegramRetryMax,
+		TelegramRetryBackoff:          telegramRetryBackoff,
+		TelegramBotTokenDefault:       telegramBotTokenDefault,
+		RetryMax:                      retryMax,
+		RetryBackoff:                  retryBackoff,
+		IncidentAnalyzer:              incidentAnalyzer,
+		DataDir:                       dataDir,
+		IncidentScreenshotInterval:    incidentScreenshotInterval,
+		DiagnosticCaptureTimeout:      diagnosticCaptureTimeout,
+		DiagnosticFreezeInterval:      diagnosticFreezeInterval,
+		DiagnosticFreezeDiffThreshold: diagnosticFreezeDiffThreshold,
 	}
 
 	log.Printf(
-		"worker skeleton started: poll_interval=%s, retention_ttl=%s, retention_cleanup_interval=%s, retention_cleanup_batch_size=%d, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, blackframe_warn_ratio=%.2f, blackframe_fail_ratio=%.2f, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, alert_fail_streak=%d, alert_cooldown=%s, alert_send_recovered=%t, telegram_http_timeout=%s, telegram_retry_max=%d, telegram_retry_backoff=%s, telegram_default_token_set=%t, retry_max=%d, retry_backoff=%s",
+		"worker skeleton started: poll_interval=%s, retention_ttl=%s, retention_cleanup_interval=%s, retention_cleanup_batch_size=%d, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, blackframe_warn_ratio=%.2f, blackframe_fail_ratio=%.2f, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, alert_fail_streak=%d, alert_cooldown=%s, alert_send_recovered=%t, telegram_http_timeout=%s, telegram_retry_max=%d, telegram_retry_backoff=%s, telegram_default_token_set=%t, retry_max=%d, retry_backoff=%s, data_dir=%s, incident_screenshot_interval=%s, diag_capture_timeout=%s, diag_freeze_interval=%s, diag_freeze_diff_threshold=%.4f",
 		workerConfig.PollInterval,
 		workerConfig.RetentionTTL,
 		workerConfig.RetentionCleanupInterval,
@@ -130,6 +140,11 @@ func main() {
 		workerConfig.TelegramBotTokenDefault != "",
 		workerConfig.RetryMax,
 		workerConfig.RetryBackoff,
+		workerConfig.DataDir,
+		workerConfig.IncidentScreenshotInterval,
+		workerConfig.DiagnosticCaptureTimeout,
+		workerConfig.DiagnosticFreezeInterval,
+		workerConfig.DiagnosticFreezeDiffThreshold,
 	)
 
 	workerRepo := postgresrepo.NewWorkerRepo(db)

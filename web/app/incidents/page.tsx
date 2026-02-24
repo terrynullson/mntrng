@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { SkeletonBlock } from "@/components/ui/skeleton";
@@ -20,6 +20,21 @@ function formatTimestamp(ts: string | null | undefined): string {
   return Number.isNaN(d.getTime()) ? ts : d.toLocaleString();
 }
 
+function diagLabel(code: Incident["diag_code"]): string {
+  switch (code) {
+    case "BLACKFRAME":
+      return "Чёрный экран";
+    case "FREEZE":
+      return "Фриз";
+    case "CAPTURE_FAIL":
+      return "Не удалось получить кадр";
+    case "UNKNOWN":
+      return "Неизвестно";
+    default:
+      return "—";
+  }
+}
+
 export default function IncidentsPage() {
   const { user, accessToken, activeCompanyId } = useAuth();
   const scopeCompanyId = resolveCompanyScope(user, activeCompanyId);
@@ -34,7 +49,7 @@ export default function IncidentsPage() {
   const [page, setPage] = useState(0);
   const pageSize = 20;
 
-  const loadIncidents = async () => {
+  const loadIncidents = useCallback(async () => {
     if (!accessToken || !scopeCompanyId) {
       setData(null);
       setIsLoading(false);
@@ -61,11 +76,11 @@ export default function IncidentsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [accessToken, scopeCompanyId, statusFilter, severityFilter, searchApplied, page]);
 
   useEffect(() => {
     void loadIncidents();
-  }, [accessToken, scopeCompanyId, statusFilter, severityFilter, page, searchApplied]);
+  }, [loadIncidents]);
 
   useEffect(() => {
     if (search.trim() === searchApplied.trim()) return;
@@ -249,11 +264,13 @@ export default function IncidentsPage() {
                     <th>ID</th>
                     <th>Статус</th>
                     <th>Серьёзность</th>
+                    <th>Диагноз</th>
                     <th>Поток</th>
                     <th>Начало</th>
                     <th>Последнее событие</th>
                     <th>Закрыт</th>
                     <th>Причина</th>
+                    <th>Действие</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -283,6 +300,9 @@ export default function IncidentsPage() {
                         </span>
                       </td>
                       <td>
+                        <span className="incident-badge">{diagLabel(inc.diag_code)}</span>
+                      </td>
+                      <td>
                         <Link
                           className="stream-link"
                           href={`/streams/${inc.stream_id}`}
@@ -294,6 +314,11 @@ export default function IncidentsPage() {
                       <td>{formatTimestamp(inc.last_event_at)}</td>
                       <td>{formatTimestamp(inc.resolved_at)}</td>
                       <td>{inc.fail_reason ?? "—"}</td>
+                      <td>
+                        <Link className="stream-link" href={`/incidents/${inc.id}`}>
+                          Открыть
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

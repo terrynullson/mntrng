@@ -76,7 +76,7 @@ func (r *APIIncidentRepo) List(
 	listQuery := fmt.Sprintf(
 		`SELECT i.id, i.company_id, i.stream_id, s.name,
                 i.status, i.severity, i.started_at, i.last_event_at, i.resolved_at,
-                i.fail_reason, i.sample_screenshot_path, i.last_check_id
+                i.fail_reason, i.sample_screenshot_path, i.last_check_id, i.screenshot_taken_at, i.diag_code, COALESCE(i.diag_details, '{}'::jsonb)
          %s
          ORDER BY i.last_event_at DESC
          LIMIT $%d OFFSET $%d`,
@@ -96,6 +96,9 @@ func (r *APIIncidentRepo) List(
 		var resolvedAt sql.NullTime
 		var failReason, screenshotPath sql.NullString
 		var lastCheckID sql.NullInt64
+		var screenshotTakenAt sql.NullTime
+		var diagCode sql.NullString
+		var diagDetails []byte
 		if err := rows.Scan(
 			&inc.ID,
 			&inc.CompanyID,
@@ -109,6 +112,9 @@ func (r *APIIncidentRepo) List(
 			&failReason,
 			&screenshotPath,
 			&lastCheckID,
+			&screenshotTakenAt,
+			&diagCode,
+			&diagDetails,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -120,9 +126,19 @@ func (r *APIIncidentRepo) List(
 		}
 		if screenshotPath.Valid {
 			inc.SampleScreenshotPath = &screenshotPath.String
+			inc.HasScreenshot = strings.TrimSpace(screenshotPath.String) != ""
 		}
 		if lastCheckID.Valid {
 			inc.LastCheckID = &lastCheckID.Int64
+		}
+		if screenshotTakenAt.Valid {
+			inc.ScreenshotTakenAt = &screenshotTakenAt.Time
+		}
+		if diagCode.Valid {
+			inc.DiagCode = &diagCode.String
+		}
+		if len(diagDetails) > 0 {
+			inc.DiagDetails = diagDetails
 		}
 		items = append(items, inc)
 	}
@@ -138,11 +154,14 @@ func (r *APIIncidentRepo) GetByID(ctx context.Context, companyID int64, incident
 	var resolvedAt sql.NullTime
 	var failReason, screenshotPath sql.NullString
 	var lastCheckID sql.NullInt64
+	var screenshotTakenAt sql.NullTime
+	var diagCode sql.NullString
+	var diagDetails []byte
 	err := r.db.QueryRowContext(
 		ctx,
 		`SELECT i.id, i.company_id, i.stream_id, s.name,
                 i.status, i.severity, i.started_at, i.last_event_at, i.resolved_at,
-                i.fail_reason, i.sample_screenshot_path, i.last_check_id
+                i.fail_reason, i.sample_screenshot_path, i.last_check_id, i.screenshot_taken_at, i.diag_code, COALESCE(i.diag_details, '{}'::jsonb)
          FROM incidents i
          JOIN streams s ON s.id = i.stream_id AND s.company_id = i.company_id
          WHERE i.company_id = $1 AND i.id = $2`,
@@ -161,6 +180,9 @@ func (r *APIIncidentRepo) GetByID(ctx context.Context, companyID int64, incident
 		&failReason,
 		&screenshotPath,
 		&lastCheckID,
+		&screenshotTakenAt,
+		&diagCode,
+		&diagDetails,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -176,9 +198,19 @@ func (r *APIIncidentRepo) GetByID(ctx context.Context, companyID int64, incident
 	}
 	if screenshotPath.Valid {
 		inc.SampleScreenshotPath = &screenshotPath.String
+		inc.HasScreenshot = strings.TrimSpace(screenshotPath.String) != ""
 	}
 	if lastCheckID.Valid {
 		inc.LastCheckID = &lastCheckID.Int64
+	}
+	if screenshotTakenAt.Valid {
+		inc.ScreenshotTakenAt = &screenshotTakenAt.Time
+	}
+	if diagCode.Valid {
+		inc.DiagCode = &diagCode.String
+	}
+	if len(diagDetails) > 0 {
+		inc.DiagDetails = diagDetails
 	}
 	return inc, nil
 }

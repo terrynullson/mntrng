@@ -701,3 +701,14 @@ Summary:
 - CSP: в `web/middleware.ts` для `/watch` добавлен `Content-Security-Policy` с `frame-src 'self'` + динамически разрешённые домены из tenant whitelist.
 Notes:
 `go test ./...` PASS, `web npm run build` PASS (есть существующий warning в `app/incidents/page.tsx`). Скриншоты milestone2 заблокированы окружением (Docker engine недоступен), см. `screenshots/milestone2/REPORT.txt`.
+
+[2026-02-24] [MS3L-SCREENSHOT-DIAG-001]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- Worker: при WARN/FAIL добавлена screenshot diagnostics без AI — захват кадров через ffmpeg в `/data/screenshots/incidents/{company}/{incident}`, rule-based диагнозы `BLACKFRAME|FREEZE|CAPTURE_FAIL|UNKNOWN`, запись в incident (`diag_code`, `diag_details`, `screenshot_taken_at`) и audit `incident_diagnostic_updated`.
+- Runtime/infra: `Dockerfile.worker` дополнен `ffmpeg` и `ca-certificates`; в `docker-compose.yml` добавлен shared volume `app_data` и монтирование `/data` в `api` + `worker`; миграция `0009` расширяет таблицу `incidents`.
+- API/UI: incidents DTO расширен (`diag_code`, `diag_details`, `has_screenshot`, `screenshot_taken_at`), добавлен endpoint `GET /companies/{company_id}/incidents/{id}/screenshot`, в UI добавлены колонка «Диагноз» и новая страница `/incidents/[id]` с карточкой, деталями и изображением.
+- UX поправки: убран сворачиваемый «бургер» у бокового меню (статичное меню), в форме создания потока добавлен авто-режим проекта: если проект не выбран, используется/создаётся «Общий».
+Notes:
+`go test ./...` PASS, `web npm run build` PASS. Автоматические скриншоты milestone3-lite заблокированы окружением (Docker engine недоступен), см. `screenshots/milestone3-lite/REPORT.txt`.

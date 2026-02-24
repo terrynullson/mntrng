@@ -47,9 +47,10 @@ type AIIncidentRepository interface {
 }
 
 type IncidentRepository interface {
-	GetOpenByStream(ctx context.Context, companyID int64, streamID int64) (incidentID int64, ok bool, err error)
+	GetOpenByStream(ctx context.Context, companyID int64, streamID int64) (incident domain.Incident, ok bool, err error)
 	Create(ctx context.Context, companyID int64, streamID int64, severity string, failReason string, sampleScreenshotPath *string, lastCheckID *int64) (incidentID int64, err error)
 	UpdateOpen(ctx context.Context, incidentID int64, companyID int64, severity string, failReason string, sampleScreenshotPath *string, lastCheckID *int64) error
+	UpdateDiagnostic(ctx context.Context, incidentID int64, companyID int64, streamID int64, sampleScreenshotPath *string, screenshotTakenAt time.Time, diagCode string, diagDetails map[string]interface{}) error
 	Resolve(ctx context.Context, incidentID int64, companyID int64, streamID int64) error
 }
 

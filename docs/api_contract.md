@@ -625,8 +625,16 @@ Validation:
 
 - `GET /companies/{company_id}/incidents` — список инцидентов. Query: `status` (open|resolved), `severity` (warn|fail), `stream_id`, `q` (поиск по имени потока/причине), `page`, `page_size`. `200`: `{ "items": [ Incident ], "next_cursor": string|null, "total": int }`.
 - `GET /companies/{company_id}/incidents/{incident_id}` — один инцидент. `200` -> Incident.
+- `GET /companies/{company_id}/incidents/{incident_id}/screenshot` — получить JPEG-скриншот инцидента (tenant-scoped, auth required). `404`, если скриншота нет.
 
-Incident DTO: `id`, `company_id`, `stream_id`, `stream_name`, `status` (open|resolved), `severity` (warn|fail), `started_at`, `last_event_at`, `resolved_at`, `fail_reason`, `sample_screenshot_path`, `last_check_id`. Создание/закрытие инцидентов выполняет Worker по результатам проверок; audit log при открытии/закрытии.
+Incident DTO: `id`, `company_id`, `stream_id`, `stream_name`, `status` (open|resolved), `severity` (warn|fail), `started_at`, `last_event_at`, `resolved_at`, `fail_reason`, `sample_screenshot_path`, `has_screenshot`, `screenshot_taken_at`, `diag_code` (`BLACKFRAME|FREEZE|CAPTURE_FAIL|UNKNOWN`), `diag_details` (json), `last_check_id`.
+
+Screenshot diagnostics (worker-only):
+- при WARN/FAIL worker может сохранять кадр в `/data/screenshots/incidents/{company_id}/{incident_id}/...jpg` и обновлять incident (`diag_code`, `diag_details`, `screenshot_taken_at`, `sample_screenshot_path`);
+- `diag_code=BLACKFRAME` — кадр почти полностью чёрный (по доле тёмных пикселей);
+- `diag_code=FREEZE` — 2 кадра с интервалом почти не отличаются;
+- `diag_code=CAPTURE_FAIL` — ffmpeg/таймаут/пустой кадр;
+- `diag_code=UNKNOWN` — WARN/FAIL без совпадения с правилами.
 
 ## 5.6 Check jobs (enqueue, status, history)
 
