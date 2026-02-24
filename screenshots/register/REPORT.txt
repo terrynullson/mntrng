@@ -1,4 +1,4 @@
 FE-REGISTER-001 REPORT
-Screenshot: screenshots\register\20260223173920.png
+Screenshot: screenshots\register\20260224105539.png
 Score: 9
 Checks: /register public, Registration Request title, caption, form (Company ID, Email, Login, Password, Requested role, Submit), Already approved? link.

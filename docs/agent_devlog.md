@@ -626,6 +626,14 @@ Summary:
 Notes:
 Сборка и скриншоты ок. Только UI/доступность.
 
+[2026-02-24] [FE-LOGIN-GLASS-001]
+Agent: FrontendAgent
+Commit: (в коммите)
+Summary:
+- Login/Register переведены в glassmorphism: анимированный градиентный фон через .public-root и auth-gradient, стеклянная auth-card с backdrop-filter и fallback без blur; обновлены скриншоты login и register (Score 9).
+Notes:
+Только UI/визуал; логика auth и screenshot-скрипты не менялись, build web проходит.
+
 [2026-02-22] [RV-FE-SCREENSHOTS-ALL-001]
 Agent: ReviewAgent
 Summary:
