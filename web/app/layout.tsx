@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 
 import { AppRoot } from "@/components/layout/app-root";
 
@@ -10,8 +9,9 @@ export const metadata: Metadata = {
   description: "Secure admin interface for HLS platform"
 };
 
+/** children: any для совместимости Next.js LayoutProps с дублированием react-типов (shim + @types/react). */
 type RootLayoutProps = {
-  children: ReactNode;
+  children: any;
 };
 
 const THEME_SCRIPT = `(function(){var k='hls-admin-theme';var t=localStorage.getItem(k);if(t!=='light'&&t!=='dark'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}if(t)document.documentElement.setAttribute('data-theme',t);})();`;

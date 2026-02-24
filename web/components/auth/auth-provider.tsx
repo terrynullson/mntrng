@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   createContext,
@@ -249,7 +249,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ]
   );
 
-  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
+  const Provider = AuthContext.Provider as React.ComponentType<{
+    value: AuthContextValue | null;
+    children?: React.ReactNode;
+  }>;
+  return <Provider value={contextValue}>{children}</Provider>;
 }
 
 export function useAuth(): AuthContextValue {

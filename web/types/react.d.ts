@@ -3,28 +3,57 @@
  * After successful npm install, @types/react from node_modules will be used.
  */
 declare module "react" {
+  /** Совместимость с @types/react: children обязателен, чтобы наш ReactNode был присваиваем к React.ReactNode. */
   export interface ReactPortal {
     key: string | null;
-    children?: ReactNode;
+    children: ReactNode;
     type: unknown;
     props: unknown;
   }
 
+  /** Iterable для совместимости с React 18 React.ReactNode. */
   export type ReactNode =
     | string
     | number
+    | bigint
     | boolean
     | null
     | undefined
     | ReactElement
     | ReactPortal
-    | ReactNode[];
+    | ReactNode[]
+    | Iterable<ReactNode>;
 
   interface ReactElement {
     type: unknown;
     props: unknown;
     key: string | null;
+    /** Опционально для совместимости с созданием элементов без children. */
     children?: ReactNode;
+  }
+
+  /** Минимальный набор для совместимости с @types/react при использовании шима. */
+  export interface HTMLAttributes<T = unknown> {
+    className?: string;
+    id?: string;
+    style?: Record<string, string | number | undefined>;
+    role?: string;
+    tabIndex?: number;
+    [key: string]: unknown;
+  }
+
+  /** Атрибуты кнопки: расширяют HTMLAttributes для type, disabled и т.д. */
+  export interface ButtonHTMLAttributes<T = unknown> extends HTMLAttributes<T> {
+    disabled?: boolean;
+    form?: string;
+    formAction?: string;
+    formEncType?: string;
+    formMethod?: string;
+    formNoValidate?: boolean;
+    formTarget?: string;
+    name?: string;
+    type?: "button" | "submit" | "reset";
+    value?: string | string[] | number;
   }
 
   export interface SyntheticEvent<T = Element> {
@@ -60,10 +89,17 @@ declare module "react" {
   export function useRef<T>(initialValue: T | null): { current: T | null };
   export function useRef<T>(initialValue: T): { current: T };
 
+  /** Обёртка для мемоизации компонента. */
+  export function memo<P extends object>(
+    Component: (props: P) => ReactNode,
+    propsAreEqual?: (prevProps: P, nextProps: P) => boolean
+  ): (props: P) => ReactNode;
+
   export type PropsWithChildren<P = unknown> = P & { children?: ReactNode };
 
+  /** Возврат ReactNode для совместимости с JSX и @types/react. */
   export interface ComponentType<P = unknown> {
-    (props: P): ReactElement | null;
+    (props: P): ReactNode;
   }
 }
 
