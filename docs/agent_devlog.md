@@ -690,3 +690,14 @@ Summary:
 - Контракт API обновлён в `docs/api_contract.md`; тесты API на новые endpoint-ы добавлены.
 Notes:
 `go test ./...` PASS, `web npm run build` PASS (есть существующий warning в incidents hook). Скриншоты CORE UX заблокированы окружением (docker engine/db недоступны), см. `screenshots/core-ux/REPORT.txt`.
+
+[2026-02-24] [MS2-EMBED-WHITELIST-001]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- DB/Backend: миграция `0008` добавляет `streams.source_type` (`HLS|EMBED`), `streams.source_url` и таблицу `embed_whitelist` (tenant-scoped, unique(company_id, domain), enabled, created_by_user_id).
+- API: добавлены endpoints `GET/POST/PATCH/DELETE /companies/{company_id}/embed-whitelist`, audit log (`add/toggle/remove`), RBAC (viewer forbidden), а также валидация EMBED-домена при create/update stream с сообщением `Домен не разрешён в Embed whitelist`.
+- Frontend: `/settings` получил секцию управления Embed whitelist (таблица + add/toggle/delete), `/streams` форма потока расширена типом источника и source URL, `/watch` поддерживает безопасный iframe для EMBED и HLS player для HLS.
+- CSP: в `web/middleware.ts` для `/watch` добавлен `Content-Security-Policy` с `frame-src 'self'` + динамически разрешённые домены из tenant whitelist.
+Notes:
+`go test ./...` PASS, `web npm run build` PASS (есть существующий warning в `app/incidents/page.tsx`). Скриншоты milestone2 заблокированы окружением (Docker engine недоступен), см. `screenshots/milestone2/REPORT.txt`.

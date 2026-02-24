@@ -57,6 +57,7 @@ type Server struct {
 	streamFavoriteService   *serviceapi.StreamFavoriteService
 	incidentService         *serviceapi.IncidentService
 	telegramSettingsService *serviceapi.TelegramSettingsService
+	embedWhitelistService   *serviceapi.EmbedWhitelistService
 	authService             *serviceapi.AuthService
 	registrationService     *serviceapi.RegistrationService
 }
@@ -87,6 +88,7 @@ func NewServer(db *sql.DB) *Server {
 		streamFavoriteService:   serviceapi.NewStreamFavoriteService(postgres.NewAPIStreamFavoriteRepo(db)),
 		incidentService:         serviceapi.NewIncidentService(postgres.NewAPIIncidentRepo(db)),
 		telegramSettingsService: serviceapi.NewTelegramSettingsService(postgres.NewAPITelegramSettingsRepo(db)),
+		embedWhitelistService:   serviceapi.NewEmbedWhitelistService(postgres.NewAPIEmbedWhitelistRepo(db)),
 		authService: serviceapi.NewAuthService(authRepo, serviceapi.AuthConfig{
 			AccessTTL:          time.Duration(config.GetInt("AUTH_ACCESS_TTL_MIN", 15)) * time.Minute,
 			RefreshTTL:         time.Duration(config.GetInt("AUTH_REFRESH_TTL_DAYS", 30)) * 24 * time.Hour,
@@ -136,6 +138,10 @@ func (s *Server) RouterHandlers() RouterHandlers {
 		HandleGetIncident:                   s.handleGetIncident,
 		HandleGetTelegramDeliverySettings:   s.handleGetTelegramDeliverySettings,
 		HandlePatchTelegramDeliverySettings: s.handlePatchTelegramDeliverySettings,
+		HandleListEmbedWhitelist:            s.handleListEmbedWhitelist,
+		HandleCreateEmbedWhitelist:          s.handleCreateEmbedWhitelist,
+		HandlePatchEmbedWhitelist:           s.handlePatchEmbedWhitelist,
+		HandleDeleteEmbedWhitelist:          s.handleDeleteEmbedWhitelist,
 
 		HandleRegisterRequest:            s.handleRegisterRequest,
 		HandleLogin:                      s.handleLogin,

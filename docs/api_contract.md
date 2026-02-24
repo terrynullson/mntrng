@@ -542,7 +542,8 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 ```json
 {
   "name": "Primary HLS",
-  "url": "https://cdn.example.com/live/index.m3u8",
+  "source_type": "HLS",
+  "source_url": "https://cdn.example.com/live/index.m3u8",
   "is_active": true
 }
 ```
@@ -559,7 +560,8 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 {
   "project_id": 101,
   "name": "Primary HLS",
-  "url": "https://cdn.example.com/live/index.m3u8",
+  "source_type": "HLS",
+  "source_url": "https://cdn.example.com/live/index.m3u8",
   "is_active": true
 }
 ```
@@ -584,12 +586,20 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 ```json
 {
   "name": "Backup HLS",
-  "url": "https://cdn.example.com/backup/index.m3u8",
+  "source_type": "EMBED",
+  "source_url": "https://youtube.com/watch?v=abc123",
   "is_active": false
 }
 ```
 
 - `200` -> `Stream`.
+
+`Stream` now includes:
+- `source_type`: `HLS` | `EMBED`
+- `source_url`: source URL (m3u8 for HLS, original embed URL for EMBED)
+
+Validation:
+- For `source_type=EMBED`, `source_url` host must be in tenant embed whitelist (`domain` or subdomain), otherwise `400 validation_error` with message `Домен не разрешён в Embed whitelist`.
 
 ### `DELETE /companies/{company_id}/streams/{stream_id}`
 
@@ -602,6 +612,14 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 - `DELETE /companies/{company_id}/streams/{stream_id}/favorite` — убрать из избранного. `204`.
 - `POST /companies/{company_id}/streams/{stream_id}/pin` — закрепить (body опционально `{ "sort_order": int }`). `204`.
 - `DELETE /companies/{company_id}/streams/{stream_id}/pin` — открепить. `204`.
+
+### Embed whitelist (tenant-scoped, RBAC: company_admin/super_admin)
+
+- `GET /companies/{company_id}/embed-whitelist` — список доменов: `{ "items": [ { "id": 1, "company_id": 10, "domain": "youtube.com", "enabled": true, "created_at": "...", "created_by_user_id": 5 } ] }`.
+- `POST /companies/{company_id}/embed-whitelist` — добавить домен: body `{ "domain": "youtube.com" }`, `201` -> item.
+- `PATCH /companies/{company_id}/embed-whitelist/{id}` — включить/выключить домен: body `{ "enabled": false }`, `200` -> item.
+- `DELETE /companies/{company_id}/embed-whitelist/{id}` — удалить домен, `204`.
+- Audit log actions: `add`, `toggle`, `remove` (entity_type=`embed_whitelist`).
 
 ### Incidents (tenant-scoped, read-only list/detail)
 

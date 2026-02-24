@@ -15,6 +15,7 @@ import { resolveCompanyScope } from "@/lib/auth/tenant-scope";
 import type {
   CheckResult,
   CheckStatus,
+  EmbedWhitelistItem,
   EnqueueCheckJobResponse,
   Project,
   Stream
@@ -40,6 +41,35 @@ function formatTimestamp(value: string | null): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
+function extractHost(rawURL: string): string | null {
+  try {
+    const parsed = new URL(rawURL);
+    return parsed.hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function isDomainAllowed(host: string, domains: string[]): boolean {
+  const normalized = host.toLowerCase();
+  return domains.some((domain) => normalized === domain || normalized.endsWith(`.${domain}`));
+}
+
+function buildEmbedSrc(rawURL: string): string | null {
+  try {
+    const parsed = new URL(rawURL);
+    if (parsed.hostname.includes("youtube.com")) {
+      const videoID = parsed.searchParams.get("v");
+      if (videoID) {
+        return `https://www.youtube.com/embed/${videoID}`;
+      }
+    }
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 export default function WatchPage() {
   const searchParams = useSearchParams();
   const { user, accessToken, activeCompanyId } = useAuth();
@@ -55,6 +85,7 @@ export default function WatchPage() {
   const [selectedStatus, setSelectedStatus] = useState<CheckStatus | null>(null);
   const [selectedLastCheckAt, setSelectedLastCheckAt] = useState<string | null>(null);
   const [latestStatusMap, setLatestStatusMap] = useState<Record<number, CheckStatus | null>>({});
+  const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
 
   const [projectFilter, setProjectFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -114,19 +145,27 @@ export default function WatchPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [projectResponse, streamResponse] = await Promise.all([
+      const [projectResponse, streamResponse, whitelistResponse] = await Promise.all([
         apiRequest<{ items: Project[] }>(
           `/companies/${scopeCompanyId}/projects?limit=200`,
           { accessToken }
         ),
         apiRequest<{ items: Stream[] }>(`/companies/${scopeCompanyId}/streams?limit=500`, {
           accessToken
-        })
+        }),
+        apiRequest<{ items: EmbedWhitelistItem[] }>(
+          `/companies/${scopeCompanyId}/embed-whitelist`,
+          { accessToken }
+        )
       ]);
 
       const loadedStreams = Array.isArray(streamResponse.items) ? streamResponse.items : [];
+      const loadedDomains = (whitelistResponse.items ?? [])
+        .filter((item) => item.enabled)
+        .map((item) => item.domain.toLowerCase());
       setProjects(Array.isArray(projectResponse.items) ? projectResponse.items : []);
       setStreams(loadedStreams);
+      setAllowedDomains(loadedDomains);
 
       const checks = await Promise.all(
         loadedStreams.map(async (stream) => {
@@ -180,16 +219,29 @@ export default function WatchPage() {
       return;
     }
 
-    const video = videoRef.current;
-    if (!video) {
-      return;
-    }
-
     setPlayerError(null);
-    const streamURL = selectedStream.url.trim();
+    const streamURL = (selectedStream.source_url || selectedStream.url || "").trim();
     if (!streamURL) {
       setPlayerError("URL потока пустой.");
       cleanupPlayer();
+      return;
+    }
+
+    if (selectedStream.source_type === "EMBED") {
+      cleanupPlayer();
+      const host = extractHost(streamURL);
+      if (!host || !isDomainAllowed(host, allowedDomains)) {
+        setPlayerError("Embed запрещён: домен не разрешён в whitelist.");
+      }
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(STORAGE_LAST_SECTION_KEY, "/watch");
+        window.localStorage.setItem(STORAGE_LAST_STREAM_ID_KEY, String(selectedStream.id));
+      }
+      return;
+    }
+
+    const video = videoRef.current;
+    if (!video) {
       return;
     }
 
@@ -235,7 +287,7 @@ export default function WatchPage() {
       cleanupPlayer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStream?.id, selectedStream?.url]);
+  }, [allowedDomains, selectedStream?.id, selectedStream?.source_type, selectedStream?.source_url, selectedStream?.url]);
 
   const filteredStreams = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -316,7 +368,27 @@ export default function WatchPage() {
         >
           <div className="watch-main">
             <div className="watch-player-wrap">
-              <video ref={videoRef} controls playsInline muted className="watch-player" />
+              {selectedStream?.source_type === "EMBED" ? (
+                (() => {
+                  const iframeSrc = buildEmbedSrc(selectedStream.source_url || selectedStream.url);
+                  const host = iframeSrc ? extractHost(iframeSrc) : null;
+                  if (!iframeSrc || !host || !isDomainAllowed(host, allowedDomains)) {
+                    return <StatePanel kind="error">Embed запрещён или URL некорректен.</StatePanel>;
+                  }
+                  return (
+                    <iframe
+                      className="watch-embed-frame"
+                      src={iframeSrc}
+                      title={`Embed: ${selectedStream.name}`}
+                      allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    />
+                  );
+                })()
+              ) : (
+                <video ref={videoRef} controls playsInline muted className="watch-player" />
+              )}
             </div>
             {playerError ? <StatePanel kind="error">{playerError}</StatePanel> : null}
           </div>
@@ -376,6 +448,7 @@ export default function WatchPage() {
                   >
                     <strong>{stream.name}</strong>
                     <span>ID {stream.id}</span>
+                    <span>{stream.source_type}</span>
                   </button>
                 ))}
               </div>
@@ -396,7 +469,7 @@ export default function WatchPage() {
             <AppButton
               type="button"
               variant="secondary"
-              disabled={!selectedStream || isViewer || isChecking}
+              disabled={!selectedStream || selectedStream.source_type === "EMBED" || isViewer || isChecking}
               onClick={() => {
                 void handleRunCheck();
               }}

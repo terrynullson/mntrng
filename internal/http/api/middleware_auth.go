@@ -92,6 +92,10 @@ func evaluateAccessPolicy(r *http.Request, authContext domain.AuthContext) (stri
 	if remainder == "telegram-delivery-settings" && authContext.Role == domain.RoleViewer {
 		return "forbidden", "company_admin or super_admin role is required", true
 	}
+	if (remainder == "embed-whitelist" || strings.HasPrefix(remainder, "embed-whitelist/")) &&
+		authContext.Role == domain.RoleViewer {
+		return "forbidden", "company_admin or super_admin role is required", true
+	}
 
 	if authContext.Role == domain.RoleViewer && !isReadOnlyMethod(r.Method) {
 		return "forbidden", "viewer role is read-only", true

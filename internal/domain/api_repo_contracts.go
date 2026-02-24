@@ -40,13 +40,21 @@ var (
 	ErrTelegramLinkNotFound    = errors.New("telegram_link_not_found")
 	ErrTelegramLinkConflict    = errors.New("telegram_link_conflict")
 
-	ErrTelegramDeliverySettingsNotFound    = errors.New("telegram_delivery_settings_not_found")
+	ErrTelegramDeliverySettingsNotFound     = errors.New("telegram_delivery_settings_not_found")
 	ErrTelegramDeliverySettingsInvalidInput = errors.New("telegram_delivery_settings_invalid_input")
 
 	ErrAIIncidentNotFound = errors.New("ai_incident_not_found")
 
-	ErrStreamFavoriteNotFound = errors.New("stream_favorite_not_found")
-	ErrIncidentNotFound        = errors.New("incident_not_found")
+	ErrStreamFavoriteNotFound      = errors.New("stream_favorite_not_found")
+	ErrIncidentNotFound            = errors.New("incident_not_found")
+	ErrEmbedWhitelistNotFound      = errors.New("embed_whitelist_not_found")
+	ErrEmbedWhitelistAlreadyExists = errors.New("embed_whitelist_already_exists")
+	ErrEmbedDomainNotAllowed       = errors.New("embed_domain_not_allowed")
+)
+
+const (
+	StreamSourceTypeHLS   = "HLS"
+	StreamSourceTypeEmbed = "EMBED"
 )
 
 // IncidentStatus / Severity
@@ -63,9 +71,15 @@ type StreamListFilter struct {
 }
 
 type StreamPatchInput struct {
-	Name     *string
-	URL      *string
-	IsActive *bool
+	Name       *string
+	SourceType *string
+	SourceURL  *string
+	URL        *string
+	IsActive   *bool
+}
+
+type EmbedWhitelistFilter struct {
+	EnabledOnly bool
 }
 
 type CheckJobListFilter struct {

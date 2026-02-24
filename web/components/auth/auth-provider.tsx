@@ -37,6 +37,7 @@ type AuthContextValue = {
 };
 
 const ACTIVE_COMPANY_STORAGE_KEY = "hm.active_company_id";
+const ACTIVE_COMPANY_COOKIE = "hm_active_company_id";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -87,10 +88,12 @@ function storeActiveCompanyId(value: number | null): void {
 
   if (value === null) {
     localStorage.removeItem(ACTIVE_COMPANY_STORAGE_KEY);
+    document.cookie = `${ACTIVE_COMPANY_COOKIE}=; path=/; max-age=0; samesite=lax`;
     return;
   }
 
   localStorage.setItem(ACTIVE_COMPANY_STORAGE_KEY, String(value));
+  document.cookie = `${ACTIVE_COMPANY_COOKIE}=${encodeURIComponent(String(value))}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

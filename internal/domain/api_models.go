@@ -52,14 +52,16 @@ type PatchProjectRequest struct {
 }
 
 type Stream struct {
-	ID        int64     `json:"id"`
-	CompanyID int64     `json:"company_id"`
-	ProjectID int64     `json:"project_id"`
-	Name      string    `json:"name"`
-	URL       string    `json:"url"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         int64     `json:"id"`
+	CompanyID  int64     `json:"company_id"`
+	ProjectID  int64     `json:"project_id"`
+	Name       string    `json:"name"`
+	SourceType string    `json:"source_type"`
+	SourceURL  string    `json:"source_url"`
+	URL        string    `json:"url"`
+	IsActive   bool      `json:"is_active"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type StreamListResponse struct {
@@ -68,22 +70,49 @@ type StreamListResponse struct {
 }
 
 type CreateStreamRequest struct {
-	Name     string `json:"name"`
-	URL      string `json:"url"`
-	IsActive *bool  `json:"is_active"`
+	Name       string `json:"name"`
+	SourceType string `json:"source_type"`
+	SourceURL  string `json:"source_url"`
+	URL        string `json:"url"`
+	IsActive   *bool  `json:"is_active"`
 }
 
 type CreateCompanyStreamRequest struct {
-	ProjectID int64  `json:"project_id"`
-	Name      string `json:"name"`
-	URL       string `json:"url"`
-	IsActive  *bool  `json:"is_active"`
+	ProjectID  int64  `json:"project_id"`
+	Name       string `json:"name"`
+	SourceType string `json:"source_type"`
+	SourceURL  string `json:"source_url"`
+	URL        string `json:"url"`
+	IsActive   *bool  `json:"is_active"`
 }
 
 type PatchStreamRequest struct {
-	Name     *string `json:"name"`
-	URL      *string `json:"url"`
-	IsActive *bool   `json:"is_active"`
+	Name       *string `json:"name"`
+	SourceType *string `json:"source_type"`
+	SourceURL  *string `json:"source_url"`
+	URL        *string `json:"url"`
+	IsActive   *bool   `json:"is_active"`
+}
+
+type EmbedWhitelistItem struct {
+	ID              int64     `json:"id"`
+	CompanyID       int64     `json:"company_id"`
+	Domain          string    `json:"domain"`
+	Enabled         bool      `json:"enabled"`
+	CreatedAt       time.Time `json:"created_at"`
+	CreatedByUserID *int64    `json:"created_by_user_id,omitempty"`
+}
+
+type EmbedWhitelistListResponse struct {
+	Items []EmbedWhitelistItem `json:"items"`
+}
+
+type CreateEmbedWhitelistRequest struct {
+	Domain string `json:"domain"`
+}
+
+type PatchEmbedWhitelistRequest struct {
+	Enabled *bool `json:"enabled"`
 }
 
 type CheckJob struct {
@@ -195,22 +224,26 @@ type IncidentListResponse struct {
 }
 
 const (
-	AuditActorTypeAPI          = "api"
-	AuditActorIDSystem         = "system"
-	AuditActorTypeWorker       = "worker"
-	AuditEntityTypeCompany     = "company"
-	AuditEntityTypeProject     = "project"
-	AuditEntityTypeStream      = "stream"
-	AuditEntityTypeIncident    = "incident"
-	AuditActionCompanyCreate   = "create"
-	AuditActionCompanyUpdate   = "update"
-	AuditActionCompanyDelete   = "delete"
-	AuditActionProjectCreate   = "create"
-	AuditActionProjectUpdate   = "update"
-	AuditActionProjectDelete   = "delete"
-	AuditActionStreamCreate    = "create"
-	AuditActionStreamUpdate    = "update"
-	AuditActionStreamDelete    = "delete"
-	AuditActionIncidentOpen    = "open"
-	AuditActionIncidentResolve = "resolve"
+	AuditActorTypeAPI               = "api"
+	AuditActorIDSystem              = "system"
+	AuditActorTypeWorker            = "worker"
+	AuditEntityTypeCompany          = "company"
+	AuditEntityTypeProject          = "project"
+	AuditEntityTypeStream           = "stream"
+	AuditEntityTypeEmbedWhitelist   = "embed_whitelist"
+	AuditEntityTypeIncident         = "incident"
+	AuditActionCompanyCreate        = "create"
+	AuditActionCompanyUpdate        = "update"
+	AuditActionCompanyDelete        = "delete"
+	AuditActionProjectCreate        = "create"
+	AuditActionProjectUpdate        = "update"
+	AuditActionProjectDelete        = "delete"
+	AuditActionStreamCreate         = "create"
+	AuditActionStreamUpdate         = "update"
+	AuditActionStreamDelete         = "delete"
+	AuditActionEmbedWhitelistAdd    = "add"
+	AuditActionEmbedWhitelistRemove = "remove"
+	AuditActionEmbedWhitelistToggle = "toggle"
+	AuditActionIncidentOpen         = "open"
+	AuditActionIncidentResolve      = "resolve"
 )

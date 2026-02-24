@@ -20,11 +20,13 @@ func (s *Server) handlePatchStream(w http.ResponseWriter, r *http.Request, compa
 	defer cancel()
 
 	item, err := s.streamService.PatchStream(ctx, serviceapi.PatchStreamRequest{
-		CompanyID: companyID,
-		StreamID:  streamID,
-		Name:      request.Name,
-		URL:       request.URL,
-		IsActive:  request.IsActive,
+		CompanyID:  companyID,
+		StreamID:   streamID,
+		Name:       request.Name,
+		SourceType: request.SourceType,
+		SourceURL:  request.SourceURL,
+		URL:        request.URL,
+		IsActive:   request.IsActive,
 	})
 	if err != nil {
 		writeServiceError(w, r, "patch stream", err)

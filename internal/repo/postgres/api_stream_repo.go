@@ -23,7 +23,8 @@ func (r *APIStreamRepo) CreateStream(
 	companyID int64,
 	projectID int64,
 	name string,
-	url string,
+	sourceType string,
+	sourceURL string,
 	isActive bool,
 ) (domain.Stream, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -35,19 +36,21 @@ func (r *APIStreamRepo) CreateStream(
 	var item domain.Stream
 	err = tx.QueryRowContext(
 		ctx,
-		`INSERT INTO streams (company_id, project_id, name, url, is_active)
-         SELECT $1, $2, $3, $4, $5
+		`INSERT INTO streams (company_id, project_id, name, source_type, source_url, url, is_active)
+         SELECT $1, $2, $3, $4, $5, $6, $7
          WHERE EXISTS (
              SELECT 1 FROM projects p
              WHERE p.company_id = $1 AND p.id = $2
          )
-         RETURNING id, company_id, project_id, name, url, is_active, created_at, updated_at`,
+         RETURNING id, company_id, project_id, name, source_type, source_url, url, is_active, created_at, updated_at`,
 		companyID,
 		projectID,
 		name,
-		url,
+		sourceType,
+		sourceURL,
+		sourceURL,
 		isActive,
-	).Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt)
+	).Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.SourceType, &item.SourceURL, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) || isForeignKeyViolation(err) {
 			return domain.Stream{}, domain.ErrStreamProjectMiss
@@ -68,10 +71,12 @@ func (r *APIStreamRepo) CreateStream(
 		item.ID,
 		domain.AuditActionStreamCreate,
 		map[string]interface{}{
-			"project_id": item.ProjectID,
-			"name":       item.Name,
-			"url":        item.URL,
-			"is_active":  item.IsActive,
+			"project_id":  item.ProjectID,
+			"name":        item.Name,
+			"source_type": item.SourceType,
+			"source_url":  item.SourceURL,
+			"url":         item.URL,
+			"is_active":   item.IsActive,
 		},
 	); err != nil {
 		return domain.Stream{}, err
@@ -102,7 +107,7 @@ func (r *APIStreamRepo) ListStreams(ctx context.Context, companyID int64, filter
 	}
 
 	query := fmt.Sprintf(
-		`SELECT id, company_id, project_id, name, url, is_active, created_at, updated_at
+		`SELECT id, company_id, project_id, name, source_type, source_url, url, is_active, created_at, updated_at
          FROM streams
          WHERE %s
          ORDER BY id ASC`,
@@ -118,7 +123,7 @@ func (r *APIStreamRepo) ListStreams(ctx context.Context, companyID int64, filter
 	items := make([]domain.Stream, 0)
 	for rows.Next() {
 		var item domain.Stream
-		if err := rows.Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.SourceType, &item.SourceURL, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -134,12 +139,12 @@ func (r *APIStreamRepo) GetStream(ctx context.Context, companyID int64, streamID
 	var item domain.Stream
 	err := r.db.QueryRowContext(
 		ctx,
-		`SELECT id, company_id, project_id, name, url, is_active, created_at, updated_at
+		`SELECT id, company_id, project_id, name, source_type, source_url, url, is_active, created_at, updated_at
          FROM streams
          WHERE company_id = $1 AND id = $2`,
 		companyID,
 		streamID,
-	).Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt)
+	).Scan(&item.ID, &item.CompanyID, &item.ProjectID, &item.Name, &item.SourceType, &item.SourceURL, &item.URL, &item.IsActive, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.Stream{}, domain.ErrStreamNotFound
@@ -209,7 +214,7 @@ func (r *APIStreamRepo) DeleteStream(ctx context.Context, companyID int64, strea
 		ctx,
 		`DELETE FROM streams
          WHERE company_id = $1 AND id = $2
-         RETURNING id, company_id, project_id, name, url, is_active, created_at, updated_at`,
+         RETURNING id, company_id, project_id, name, source_type, source_url, url, is_active, created_at, updated_at`,
 		companyID,
 		streamID,
 	).Scan(
@@ -217,6 +222,8 @@ func (r *APIStreamRepo) DeleteStream(ctx context.Context, companyID int64, strea
 		&deleted.CompanyID,
 		&deleted.ProjectID,
 		&deleted.Name,
+		&deleted.SourceType,
+		&deleted.SourceURL,
 		&deleted.URL,
 		&deleted.IsActive,
 		&deleted.CreatedAt,
@@ -239,10 +246,12 @@ func (r *APIStreamRepo) DeleteStream(ctx context.Context, companyID int64, strea
 		deleted.ID,
 		domain.AuditActionStreamDelete,
 		map[string]interface{}{
-			"project_id": deleted.ProjectID,
-			"name":       deleted.Name,
-			"url":        deleted.URL,
-			"is_active":  deleted.IsActive,
+			"project_id":  deleted.ProjectID,
+			"name":        deleted.Name,
+			"source_type": deleted.SourceType,
+			"source_url":  deleted.SourceURL,
+			"url":         deleted.URL,
+			"is_active":   deleted.IsActive,
 		},
 	); err != nil {
 		return err
@@ -255,11 +264,23 @@ func (r *APIStreamRepo) DeleteStream(ctx context.Context, companyID int64, strea
 }
 
 func buildStreamPatchQuery(patch domain.StreamPatchInput, companyID int64, streamID int64) (string, []interface{}, map[string]interface{}) {
-	setClauses := make([]string, 0, 3)
+	setClauses := make([]string, 0, 6)
 	args := make([]interface{}, 0, 5)
 	changePayload := make(map[string]interface{})
 	nextPlaceholder := 1
 
+	if patch.SourceType != nil {
+		setClauses = append(setClauses, fmt.Sprintf("source_type = $%d", nextPlaceholder))
+		args = append(args, *patch.SourceType)
+		changePayload["source_type"] = *patch.SourceType
+		nextPlaceholder++
+	}
+	if patch.SourceURL != nil {
+		setClauses = append(setClauses, fmt.Sprintf("source_url = $%d", nextPlaceholder))
+		args = append(args, *patch.SourceURL)
+		changePayload["source_url"] = *patch.SourceURL
+		nextPlaceholder++
+	}
 	if patch.Name != nil {
 		setClauses = append(setClauses, fmt.Sprintf("name = $%d", nextPlaceholder))
 		args = append(args, *patch.Name)
@@ -294,7 +315,7 @@ func buildStreamPatchQuery(patch domain.StreamPatchInput, companyID int64, strea
                WHERE p.id = streams.project_id
                  AND p.company_id = streams.company_id
            )
-         RETURNING id, company_id, project_id, name, url, is_active, created_at, updated_at`,
+         RETURNING id, company_id, project_id, name, source_type, source_url, url, is_active, created_at, updated_at`,
 		strings.Join(setClauses, ", "),
 		companyPlaceholder,
 		streamPlaceholder,
@@ -309,10 +330,34 @@ func runStreamPatchQueryTx(ctx context.Context, tx *sql.Tx, query string, args [
 		&item.CompanyID,
 		&item.ProjectID,
 		&item.Name,
+		&item.SourceType,
+		&item.SourceURL,
 		&item.URL,
 		&item.IsActive,
 		&item.CreatedAt,
 		&item.UpdatedAt,
 	)
 	return item, err
+}
+
+func (r *APIStreamRepo) IsEmbedDomainAllowed(ctx context.Context, companyID int64, host string) (bool, error) {
+	var exists int
+	err := r.db.QueryRowContext(
+		ctx,
+		`SELECT 1
+         FROM embed_whitelist
+         WHERE company_id = $1
+           AND enabled = TRUE
+           AND ($2 = domain OR $2 LIKE ('%.' || domain))
+         LIMIT 1`,
+		companyID,
+		strings.ToLower(strings.TrimSpace(host)),
+	).Scan(&exists)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	return false, err
 }

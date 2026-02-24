@@ -40,7 +40,7 @@ func (m *mockStreamStore) ListStreams(ctx context.Context, companyID int64, filt
 func (m *mockStreamStore) GetStream(ctx context.Context, companyID int64, streamID int64) (domain.Stream, error) {
 	return m.getResp, m.getErr
 }
-func (m *mockStreamStore) CreateStream(ctx context.Context, companyID int64, projectID int64, name string, url string, isActive bool) (domain.Stream, error) {
+func (m *mockStreamStore) CreateStream(ctx context.Context, companyID int64, projectID int64, name string, sourceType string, sourceURL string, isActive bool) (domain.Stream, error) {
 	return m.createResp, m.createErr
 }
 func (m *mockStreamStore) PatchStream(ctx context.Context, companyID int64, streamID int64, patch domain.StreamPatchInput) (domain.Stream, error) {
@@ -48,6 +48,10 @@ func (m *mockStreamStore) PatchStream(ctx context.Context, companyID int64, stre
 }
 func (m *mockStreamStore) DeleteStream(ctx context.Context, companyID int64, streamID int64) error {
 	return m.deleteErr
+}
+
+func (m *mockStreamStore) IsEmbedDomainAllowed(ctx context.Context, companyID int64, host string) (bool, error) {
+	return true, nil
 }
 
 type mockCheckJobStore struct {

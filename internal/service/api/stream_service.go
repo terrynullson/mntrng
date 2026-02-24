@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -13,19 +14,22 @@ type StreamListFilter = domain.StreamListFilter
 type StreamPatchInput = domain.StreamPatchInput
 
 type StreamStore interface {
-	CreateStream(ctx context.Context, companyID int64, projectID int64, name string, url string, isActive bool) (domain.Stream, error)
+	CreateStream(ctx context.Context, companyID int64, projectID int64, name string, sourceType string, sourceURL string, isActive bool) (domain.Stream, error)
 	ListStreams(ctx context.Context, companyID int64, filter StreamListFilter) ([]domain.Stream, error)
 	GetStream(ctx context.Context, companyID int64, streamID int64) (domain.Stream, error)
 	PatchStream(ctx context.Context, companyID int64, streamID int64, patch StreamPatchInput) (domain.Stream, error)
 	DeleteStream(ctx context.Context, companyID int64, streamID int64) error
+	IsEmbedDomainAllowed(ctx context.Context, companyID int64, host string) (bool, error)
 }
 
 type CreateStreamInput struct {
-	CompanyID int64
-	ProjectID int64
-	Name      string
-	URL       string
-	IsActive  *bool
+	CompanyID  int64
+	ProjectID  int64
+	Name       string
+	SourceType string
+	SourceURL  string
+	URL        string
+	IsActive   *bool
 }
 
 type ListStreamsInput struct {
@@ -35,11 +39,13 @@ type ListStreamsInput struct {
 }
 
 type PatchStreamRequest struct {
-	CompanyID int64
-	StreamID  int64
-	Name      *string
-	URL       *string
-	IsActive  *bool
+	CompanyID  int64
+	StreamID   int64
+	Name       *string
+	SourceType *string
+	SourceURL  *string
+	URL        *string
+	IsActive   *bool
 }
 
 type StreamService struct {
@@ -55,16 +61,25 @@ func (s *StreamService) CreateStream(ctx context.Context, input CreateStreamInpu
 	if name == "" {
 		return domain.Stream{}, NewValidationError("name is required", map[string]interface{}{"field": "name"})
 	}
-	url := strings.TrimSpace(input.URL)
-	if url == "" {
-		return domain.Stream{}, NewValidationError("url is required", map[string]interface{}{"field": "url"})
+	sourceType, sourceURL, err := normalizeStreamSource(input.SourceType, input.SourceURL, input.URL)
+	if err != nil {
+		return domain.Stream{}, err
+	}
+	if sourceType == domain.StreamSourceTypeEmbed {
+		ok, validateErr := s.validateEmbedDomain(ctx, input.CompanyID, sourceURL)
+		if validateErr != nil {
+			return domain.Stream{}, validateErr
+		}
+		if !ok {
+			return domain.Stream{}, NewValidationError("Домен не разрешён в Embed whitelist", map[string]interface{}{"field": "source_url"})
+		}
 	}
 	isActive := true
 	if input.IsActive != nil {
 		isActive = *input.IsActive
 	}
 
-	item, err := s.store.CreateStream(ctx, input.CompanyID, input.ProjectID, name, url, isActive)
+	item, err := s.store.CreateStream(ctx, input.CompanyID, input.ProjectID, name, sourceType, sourceURL, isActive)
 	if err == nil {
 		return item, nil
 	}
@@ -113,6 +128,35 @@ func (s *StreamService) PatchStream(ctx context.Context, request PatchStreamRequ
 	patchInput, err := normalizeStreamPatchInput(request)
 	if err != nil {
 		return domain.Stream{}, err
+	}
+	existing, err := s.store.GetStream(ctx, request.CompanyID, request.StreamID)
+	if err != nil {
+		if errors.Is(err, domain.ErrStreamNotFound) {
+			return domain.Stream{}, NewNotFoundError(
+				"stream not found",
+				map[string]interface{}{"company_id": request.CompanyID, "stream_id": request.StreamID},
+			)
+		}
+		return domain.Stream{}, NewInternalError()
+	}
+	targetSourceType := existing.SourceType
+	if patchInput.SourceType != nil {
+		targetSourceType = *patchInput.SourceType
+	}
+	targetSourceURL := existing.SourceURL
+	if patchInput.SourceURL != nil {
+		targetSourceURL = *patchInput.SourceURL
+	} else if patchInput.URL != nil {
+		targetSourceURL = *patchInput.URL
+	}
+	if targetSourceType == domain.StreamSourceTypeEmbed {
+		ok, validateErr := s.validateEmbedDomain(ctx, request.CompanyID, targetSourceURL)
+		if validateErr != nil {
+			return domain.Stream{}, validateErr
+		}
+		if !ok {
+			return domain.Stream{}, NewValidationError("Домен не разрешён в Embed whitelist", map[string]interface{}{"field": "source_url"})
+		}
 	}
 
 	item, patchErr := s.store.PatchStream(ctx, request.CompanyID, request.StreamID, patchInput)
@@ -194,6 +238,31 @@ func normalizeStreamPatchInput(request PatchStreamRequest) (StreamPatchInput, er
 		hasChange = true
 	}
 
+	if request.SourceType != nil {
+		sourceType := strings.ToUpper(strings.TrimSpace(*request.SourceType))
+		if sourceType != domain.StreamSourceTypeHLS && sourceType != domain.StreamSourceTypeEmbed {
+			return StreamPatchInput{}, NewValidationError(
+				"source_type must be HLS or EMBED",
+				map[string]interface{}{"field": "source_type"},
+			)
+		}
+		patch.SourceType = &sourceType
+		hasChange = true
+	}
+
+	if request.SourceURL != nil {
+		sourceURL := strings.TrimSpace(*request.SourceURL)
+		if sourceURL == "" {
+			return StreamPatchInput{}, NewValidationError(
+				"source_url must not be empty",
+				map[string]interface{}{"field": "source_url"},
+			)
+		}
+		patch.SourceURL = &sourceURL
+		patch.URL = &sourceURL
+		hasChange = true
+	}
+
 	if request.URL != nil {
 		url := strings.TrimSpace(*request.URL)
 		if url == "" {
@@ -203,6 +272,9 @@ func normalizeStreamPatchInput(request PatchStreamRequest) (StreamPatchInput, er
 			)
 		}
 		patch.URL = &url
+		if patch.SourceURL == nil {
+			patch.SourceURL = &url
+		}
 		hasChange = true
 	}
 
@@ -214,11 +286,53 @@ func normalizeStreamPatchInput(request PatchStreamRequest) (StreamPatchInput, er
 	if !hasChange {
 		return StreamPatchInput{}, NewValidationError(
 			"at least one field is required",
-			map[string]interface{}{"fields": []string{"name", "url", "is_active"}},
+			map[string]interface{}{"fields": []string{"name", "source_type", "source_url", "url", "is_active"}},
 		)
 	}
 
 	return patch, nil
+}
+
+func normalizeStreamSource(rawSourceType string, rawSourceURL string, rawURL string) (string, string, error) {
+	sourceType := strings.ToUpper(strings.TrimSpace(rawSourceType))
+	if sourceType == "" {
+		sourceType = domain.StreamSourceTypeHLS
+	}
+	if sourceType != domain.StreamSourceTypeHLS && sourceType != domain.StreamSourceTypeEmbed {
+		return "", "", NewValidationError("source_type must be HLS or EMBED", map[string]interface{}{"field": "source_type"})
+	}
+	sourceURL := strings.TrimSpace(rawSourceURL)
+	if sourceURL == "" {
+		sourceURL = strings.TrimSpace(rawURL)
+	}
+	if sourceURL == "" {
+		return "", "", NewValidationError("source_url is required", map[string]interface{}{"field": "source_url"})
+	}
+	return sourceType, sourceURL, nil
+}
+
+func (s *StreamService) validateEmbedDomain(ctx context.Context, companyID int64, sourceURL string) (bool, error) {
+	host, err := extractHost(sourceURL)
+	if err != nil {
+		return false, NewValidationError("invalid source_url", map[string]interface{}{"field": "source_url"})
+	}
+	allowed, storeErr := s.store.IsEmbedDomainAllowed(ctx, companyID, host)
+	if storeErr != nil {
+		return false, NewInternalError()
+	}
+	return allowed, nil
+}
+
+func extractHost(rawURL string) (string, error) {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return "", err
+	}
+	host := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
+	if host == "" {
+		return "", errors.New("host is empty")
+	}
+	return host, nil
 }
 
 func parsePositiveID(rawID string) (int64, error) {

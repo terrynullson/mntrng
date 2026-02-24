@@ -111,7 +111,7 @@ func (r *APIStreamFavoriteRepo) RemovePin(ctx context.Context, userID int64, com
 func (r *APIStreamFavoriteRepo) ListFavorites(ctx context.Context, userID int64, companyID int64) ([]domain.StreamWithFavorite, error) {
 	rows, err := r.db.QueryContext(
 		ctx,
-		`SELECT s.id, s.company_id, s.project_id, s.name, s.url, s.is_active, s.created_at, s.updated_at,
+		`SELECT s.id, s.company_id, s.project_id, s.name, s.source_type, s.source_url, s.url, s.is_active, s.created_at, s.updated_at,
                 COALESCE(f.is_pinned, FALSE), COALESCE(f.sort_order, 0)
          FROM stream_favorites f
          JOIN streams s ON s.id = f.stream_id AND s.company_id = $1
@@ -133,6 +133,8 @@ func (r *APIStreamFavoriteRepo) ListFavorites(ctx context.Context, userID int64,
 			&row.Stream.CompanyID,
 			&row.Stream.ProjectID,
 			&row.Stream.Name,
+			&row.Stream.SourceType,
+			&row.Stream.SourceURL,
 			&row.Stream.URL,
 			&row.Stream.IsActive,
 			&row.Stream.CreatedAt,

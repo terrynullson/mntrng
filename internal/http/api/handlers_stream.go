@@ -20,11 +20,13 @@ func (s *Server) handleCreateStream(w http.ResponseWriter, r *http.Request, comp
 	defer cancel()
 
 	item, err := s.streamService.CreateStream(ctx, serviceapi.CreateStreamInput{
-		CompanyID: companyID,
-		ProjectID: projectID,
-		Name:      request.Name,
-		URL:       request.URL,
-		IsActive:  request.IsActive,
+		CompanyID:  companyID,
+		ProjectID:  projectID,
+		Name:       request.Name,
+		SourceType: request.SourceType,
+		SourceURL:  request.SourceURL,
+		URL:        request.URL,
+		IsActive:   request.IsActive,
 	})
 	if err != nil {
 		writeServiceError(w, r, "create stream", err)
@@ -52,11 +54,13 @@ func (s *Server) handleCreateStreamInCompany(w http.ResponseWriter, r *http.Requ
 	defer cancel()
 
 	item, err := s.streamService.CreateStream(ctx, serviceapi.CreateStreamInput{
-		CompanyID: companyID,
-		ProjectID: request.ProjectID,
-		Name:      request.Name,
-		URL:       request.URL,
-		IsActive:  request.IsActive,
+		CompanyID:  companyID,
+		ProjectID:  request.ProjectID,
+		Name:       request.Name,
+		SourceType: request.SourceType,
+		SourceURL:  request.SourceURL,
+		URL:        request.URL,
+		IsActive:   request.IsActive,
 	})
 	if err != nil {
 		writeServiceError(w, r, "create stream", err)

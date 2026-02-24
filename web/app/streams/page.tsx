@@ -78,7 +78,8 @@ export default function StreamsPage() {
   const [editingStream, setEditingStream] = useState<Stream | null>(null);
   const [isFormSubmitting, setIsFormSubmitting] = useState(false);
   const [formName, setFormName] = useState("");
-  const [formURL, setFormURL] = useState("");
+  const [formSourceURL, setFormSourceURL] = useState("");
+  const [formSourceType, setFormSourceType] = useState<"HLS" | "EMBED">("HLS");
   const [formProjectID, setFormProjectID] = useState<string>("");
   const [formIsActive, setFormIsActive] = useState(true);
 
@@ -314,7 +315,8 @@ export default function StreamsPage() {
   const openCreateDialog = () => {
     setEditingStream(null);
     setFormName("");
-    setFormURL("");
+    setFormSourceURL("");
+    setFormSourceType("HLS");
     setFormProjectID(projectId || "");
     setFormIsActive(true);
     setFormError(null);
@@ -324,7 +326,8 @@ export default function StreamsPage() {
   const openEditDialog = (stream: Stream) => {
     setEditingStream(stream);
     setFormName(stream.name);
-    setFormURL(stream.url);
+    setFormSourceURL(stream.source_url || stream.url);
+    setFormSourceType(stream.source_type ?? "HLS");
     setFormProjectID(String(stream.project_id));
     setFormIsActive(stream.is_active);
     setFormError(null);
@@ -346,8 +349,8 @@ export default function StreamsPage() {
       setFormError("Выберите проект.");
       return;
     }
-    if (!formName.trim() || !formURL.trim()) {
-      setFormError("Заполните название и URL m3u8.");
+    if (!formName.trim() || !formSourceURL.trim()) {
+      setFormError("Заполните название и URL источника.");
       return;
     }
 
@@ -357,7 +360,8 @@ export default function StreamsPage() {
       if (editingStream) {
         const payload: StreamPatchRequest = {
           name: formName.trim(),
-          url: formURL.trim(),
+          source_type: formSourceType,
+          source_url: formSourceURL.trim(),
           is_active: formIsActive
         };
         await apiRequest(`/companies/${scopeCompanyId}/streams/${editingStream.id}`, {
@@ -369,7 +373,8 @@ export default function StreamsPage() {
         const payload: StreamCreateRequest = {
           project_id: parsedProjectID,
           name: formName.trim(),
-          url: formURL.trim(),
+          source_type: formSourceType,
+          source_url: formSourceURL.trim(),
           is_active: formIsActive
         };
         await apiRequest(`/companies/${scopeCompanyId}/streams`, {
@@ -585,6 +590,7 @@ export default function StreamsPage() {
                 <th aria-label="Избранное и закрепление" />
                 <th>ID</th>
                 <th>Название</th>
+                <th>Тип</th>
                 <th>Проект</th>
                 <th>Статус</th>
                 <th>Последняя проверка</th>
@@ -640,6 +646,7 @@ export default function StreamsPage() {
                         {stream.name}
                       </Link>
                     </td>
+                    <td>{stream.source_type}</td>
                     <td>{stream.project_id}</td>
                     <td>
                       {latestStatus ? (
@@ -710,13 +717,24 @@ export default function StreamsPage() {
                 />
               </label>
               <label className="form-field" htmlFor="stream-url">
-                <span>URL m3u8</span>
+                <span>URL источника</span>
                 <input
                   id="stream-url"
-                  value={formURL}
-                  onChange={(event) => setFormURL(event.target.value)}
-                  placeholder="https://example.com/live.m3u8"
+                  value={formSourceURL}
+                  onChange={(event) => setFormSourceURL(event.target.value)}
+                  placeholder={formSourceType === "HLS" ? "https://example.com/live.m3u8" : "https://youtube.com/watch?v=..."}
                 />
+              </label>
+              <label className="form-field" htmlFor="stream-source-type">
+                <span>Тип источника</span>
+                <select
+                  id="stream-source-type"
+                  value={formSourceType}
+                  onChange={(event) => setFormSourceType(event.target.value as "HLS" | "EMBED")}
+                >
+                  <option value="HLS">HLS</option>
+                  <option value="EMBED">Embed</option>
+                </select>
               </label>
               <label className="form-field" htmlFor="stream-project">
                 <span>Проект</span>
@@ -744,6 +762,9 @@ export default function StreamsPage() {
               </label>
             </div>
             {formError ? <StatePanel kind="error">{formError}</StatePanel> : null}
+            {formSourceType === "EMBED" ? (
+              <StatePanel>Домен должен быть в whitelist.</StatePanel>
+            ) : null}
             <div className="overlay-actions">
               <AppButton
                 type="button"

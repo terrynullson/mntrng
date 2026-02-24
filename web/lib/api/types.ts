@@ -104,6 +104,8 @@ export type Stream = {
   company_id: number;
   project_id: number;
   name: string;
+  source_type: "HLS" | "EMBED";
+  source_url: string;
   url: string;
   is_active: boolean;
   created_at: string;
@@ -113,14 +115,25 @@ export type Stream = {
 export type StreamCreateRequest = {
   project_id: number;
   name: string;
-  url: string;
+  source_type: "HLS" | "EMBED";
+  source_url: string;
   is_active: boolean;
 };
 
 export type StreamPatchRequest = {
   name?: string;
-  url?: string;
+  source_type?: "HLS" | "EMBED";
+  source_url?: string;
   is_active?: boolean;
+};
+
+export type EmbedWhitelistItem = {
+  id: number;
+  company_id: number;
+  domain: string;
+  enabled: boolean;
+  created_at: string;
+  created_by_user_id?: number | null;
 };
 
 export type CheckJob = {

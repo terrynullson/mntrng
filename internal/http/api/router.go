@@ -17,6 +17,8 @@ const (
 	checkResultsCollectionPath   = "check-results"
 	checkResultsItemPrefix       = "check-results/"
 	telegramDeliverySettingsPath = "telegram-delivery-settings"
+	embedWhitelistPath           = "embed-whitelist"
+	embedWhitelistItemPrefix     = "embed-whitelist/"
 	aiIncidentPathSuffix         = "ai-incident"
 )
 
@@ -69,6 +71,10 @@ type RouterHandlers struct {
 
 	HandleGetTelegramDeliverySettings   companyHandler
 	HandlePatchTelegramDeliverySettings companyHandler
+	HandleListEmbedWhitelist            companyHandler
+	HandleCreateEmbedWhitelist          companyHandler
+	HandlePatchEmbedWhitelist           companyResourceHandler
+	HandleDeleteEmbedWhitelist          companyResourceHandler
 
 	HandleRegisterRequest            http.HandlerFunc
 	HandleLogin                      http.HandlerFunc
@@ -163,6 +169,38 @@ func routeCompanyByID(w http.ResponseWriter, r *http.Request, handlers RouterHan
 	}
 	if pathRemainder == telegramDeliverySettingsPath {
 		routeTelegramDeliverySettings(w, r, handlers, companyID)
+		return
+	}
+	if pathRemainder == embedWhitelistPath {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.HandleListEmbedWhitelist(w, r, companyID)
+		case http.MethodPost:
+			handlers.HandleCreateEmbedWhitelist(w, r, companyID)
+		default:
+			WriteMethodNotAllowed(w, r, http.MethodGet, http.MethodPost)
+		}
+		return
+	}
+	if strings.HasPrefix(pathRemainder, embedWhitelistItemPrefix) {
+		itemPath := strings.TrimPrefix(pathRemainder, embedWhitelistItemPrefix)
+		if itemPath == "" || strings.Contains(itemPath, "/") {
+			writeRouterPathNotFound(w, r)
+			return
+		}
+		itemID, err := parsePositiveID(itemPath)
+		if err != nil {
+			WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid embed_whitelist_id", map[string]interface{}{"path": r.URL.Path})
+			return
+		}
+		switch r.Method {
+		case http.MethodPatch:
+			handlers.HandlePatchEmbedWhitelist(w, r, companyID, itemID)
+		case http.MethodDelete:
+			handlers.HandleDeleteEmbedWhitelist(w, r, companyID, itemID)
+		default:
+			WriteMethodNotAllowed(w, r, http.MethodPatch, http.MethodDelete)
+		}
 		return
 	}
 	if pathRemainder == "incidents" {

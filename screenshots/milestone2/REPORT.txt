@@ -1,0 +1,11 @@
+MS2-EMBED-WHITELIST-001 REPORT
+Status: BLOCKED (screenshots)
+Date: 2026-02-24
+Requested shots:
+- /settings -> screenshots/milestone2/{timestamp}-embed-whitelist.png
+- /watch (EMBED stream) -> screenshots/milestone2/{timestamp}-watch-embed.png
+Reason: Docker engine недоступен в окружении; локальный запуск через compose не стартует.
+Checks completed:
+- go test ./... PASS
+- web: npm run build PASS (есть существующий warning в incidents useEffect deps)
+Self-score: N/A (blocked by runtime environment)

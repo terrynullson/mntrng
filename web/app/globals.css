@@ -1484,6 +1484,13 @@ tbody tr:last-child td {
   height: 100%;
 }
 
+.watch-embed-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #000;
+}
+
 .watch-filters {
   display: grid;
   grid-template-columns: 1fr;
@@ -1567,6 +1574,13 @@ tbody tr:last-child td {
   gap: 8px;
 }
 
+.embed-whitelist-add {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
 @media (max-width: 1080px) {
   .filters-grid,
   .streams-v2-filters,
@@ -1582,7 +1596,8 @@ tbody tr:last-child td {
   .core-launchpad-grid,
   .core-launchpad-meta,
   .watch-layout,
-  .overlay-grid {
+  .overlay-grid,
+  .embed-whitelist-add {
     grid-template-columns: 1fr;
   }
 }
