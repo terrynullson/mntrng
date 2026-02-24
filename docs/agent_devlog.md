@@ -680,3 +680,13 @@ Summary:
 - UI: потоки — ⭐/📌, pinned сверху, русские тексты, skeleton/empty/error; страница инциденты — таблица, фильтры, summary-карточки.
 Notes:
 Backend тесты проходят; frontend build в среде с блокировкой node (npm ci EPERM) не выполнялся — на CI/контейнере ожидается успех. Скриншоты milestone1 — по инструкции в REPORT.txt.
+
+[2026-02-24] [CORE-UX-001]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- Backend: добавлены tenant-scoped маршруты `POST /companies/{company_id}/streams` и `POST /companies/{company_id}/streams/{stream_id}/check`; ручная проверка только enqueue job в очередь worker (API без ffmpeg/heavy).
+- Frontend: новая домашняя `/` (СМОТРЕТЬ/МОНИТОРИНГ + Continue + OK/WARN/FAIL summary), новый `/watch` с `<video>` + native HLS fallback на `hls.js`, и расширенный `/streams` с CRUD-диалогами + actions (watch/check/edit/delete) при сохранении ⭐/📌.
+- Контракт API обновлён в `docs/api_contract.md`; тесты API на новые endpoint-ы добавлены.
+Notes:
+`go test ./...` PASS, `web npm run build` PASS (есть существующий warning в incidents hook). Скриншоты CORE UX заблокированы окружением (docker engine/db недоступны), см. `screenshots/core-ux/REPORT.txt`.

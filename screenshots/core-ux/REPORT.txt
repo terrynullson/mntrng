@@ -1,0 +1,10 @@
+CORE-UX-001 REPORT
+Status: BLOCKED (screenshots)
+Date: 2026-02-24
+Requested shots:
+- /home -> screenshots/core-ux/{timestamp}-home.png
+- /watch -> screenshots/core-ux/{timestamp}-watch.png
+- /streams -> screenshots/core-ux/{timestamp}-streams-crud.png
+Reason: Docker engine is unavailable and local API cannot connect to DB in this environment.
+Checks completed: go test ./... PASS; web build PASS (1 existing warning in incidents hook deps).
+Self-score: N/A (blocked by runtime environment)
