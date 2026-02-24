@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { AnimatedGradientBackground } from "@/components/ui/AnimatedGradientBackground";
 import { AppButton } from "@/components/ui/app-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { ThemeToggleButton } from "@/components/theme/theme-toggle-button";
@@ -122,6 +123,7 @@ export function ProtectedShell({ children }: PropsWithChildren) {
         <div className="public-theme-toggle">
           <ThemeToggleButton />
         </div>
+        <AnimatedGradientBackground />
         {children}
       </div>
     );

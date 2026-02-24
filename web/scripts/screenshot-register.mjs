@@ -71,9 +71,9 @@ async function main() {
     await page.waitForSelector("h1", { state: "visible", timeout: 25000 });
     await page.waitForTimeout(800);
 
-    const hasTitle = await page.locator("h1:has-text('Registration Request')").count() > 0;
+    const hasTitle = await page.locator("h1:has-text('Регистрация')").count() > 0;
     const hasCaption = await page
-      .locator("text=Create a pending request for super admin approval")
+      .locator("text=Заявка попадёт на подтверждение администратора")
       .count() > 0;
     const hasCompanyId = await page.locator("#register-company-id").count() > 0;
     const hasEmail = await page.locator("#register-email").count() > 0;
@@ -81,7 +81,7 @@ async function main() {
     const hasPassword = await page.locator("#register-password").count() > 0;
     const hasRole = await page.locator("#register-role").count() > 0;
     const hasButton = await page.locator('button[type="submit"]').count() > 0;
-    const hasBackToLogin = await page.locator("text=Already approved?").count() > 0;
+    const hasBackToLogin = await page.locator("text=Уже есть аккаунт?").count() > 0;
 
     await page.screenshot({ path: screenshotPath, fullPage: true });
     log("Screenshot saved: " + screenshotPath);
@@ -96,7 +96,7 @@ async function main() {
       "FE-REGISTER-001 REPORT",
       "Screenshot: " + path.relative(ROOT_DIR, screenshotPath),
       "Score: " + score,
-      "Checks: /register public, Registration Request title, caption, form (Company ID, Email, Login, Password, Requested role, Submit), Already approved? link.",
+      "Checks: /register public, Регистрация title, caption, form (Company ID, Email, Login, Password, role, Submit), Уже есть аккаунт? link.",
     ];
     const reportContent = reportLines.join("\n") + "\n";
     await writeFile(REPORT_PATH, reportContent);

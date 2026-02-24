@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 import { FormEvent, useState } from "react";
 
 import { AppButton } from "@/components/ui/app-button";
@@ -8,8 +9,8 @@ import { apiRequest, toErrorMessage } from "@/lib/api/client";
 import type { RegisterRequest, RegistrationRequest, Role } from "@/lib/api/types";
 
 const REGISTRATION_ROLES: Array<{ value: Extract<Role, "company_admin" | "viewer">; label: string }> = [
-  { value: "viewer", label: "Viewer" },
-  { value: "company_admin", label: "Company admin" }
+  { value: "viewer", label: "Просмотр (viewer)" },
+  { value: "company_admin", label: "Администратор компании" }
 ];
 
 export default function RegisterPage() {
@@ -25,17 +26,19 @@ export default function RegisterPage() {
   const [pendingRequest, setPendingRequest] =
     useState<RegistrationRequest | null>(null);
 
+  const prefersReducedMotion = useReducedMotion();
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const parsedCompanyID = Number.parseInt(companyID, 10);
     if (!Number.isFinite(parsedCompanyID) || parsedCompanyID <= 0) {
-      setError("company_id must be a positive number.");
+      setError("company_id должен быть положительным числом.");
       return;
     }
 
     if (!email.trim() || !login.trim() || password.length < 8) {
-      setError("Fill all fields. Password must be at least 8 characters.");
+      setError("Заполните все поля. Пароль — минимум 8 символов.");
       return;
     }
 
@@ -65,28 +68,42 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-page">
-      <section className="auth-card">
-        <h1>Registration Request</h1>
-        <p>Create a pending request for super admin approval.</p>
+      <motion.section
+        className="auth-card"
+        initial={prefersReducedMotion ? undefined : { opacity: 0, y: 18 }}
+        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={
+          prefersReducedMotion
+            ? undefined
+            : {
+                duration: 0.3,
+                ease: "easeOut"
+              }
+        }
+      >
+        <div className="auth-card-header">
+          <h1>Регистрация</h1>
+          <p>Заявка попадёт на подтверждение администратора</p>
+        </div>
 
         {pendingRequest ? (
           <div className="pending-card">
-            <h2>Request submitted</h2>
+            <h2>Заявка отправлена</h2>
             <p>
-              Request #{pendingRequest.id} is in <strong>{pendingRequest.status}</strong>
-              .
+              Заявка №{pendingRequest.id} со статусом{" "}
+              <strong>{pendingRequest.status}</strong>.
             </p>
-            <p>Login will be available only after approval and activation.</p>
+            <p>Вход станет доступен после одобрения и активации учётной записи.</p>
             <p>
-              <Link href="/login" className="stream-link" aria-label="Back to login">
-                Back to login
+              <Link href="/login" className="stream-link" aria-label="Вернуться к входу">
+                Вернуться к входу
               </Link>
             </p>
           </div>
         ) : (
           <form className="auth-form" onSubmit={handleSubmit}>
             <label className="form-field" htmlFor="register-company-id">
-              <span>Company ID</span>
+              <span>ID компании</span>
               <input
                 id="register-company-id"
                 type="number"
@@ -108,7 +125,7 @@ export default function RegisterPage() {
             </label>
 
             <label className="form-field" htmlFor="register-login">
-              <span>Login</span>
+              <span>Логин</span>
               <input
                 id="register-login"
                 value={login}
@@ -118,7 +135,7 @@ export default function RegisterPage() {
             </label>
 
             <label className="form-field" htmlFor="register-password">
-              <span>Password</span>
+              <span>Пароль</span>
               <input
                 id="register-password"
                 type="password"
@@ -129,7 +146,7 @@ export default function RegisterPage() {
             </label>
 
             <label className="form-field" htmlFor="register-role">
-              <span>Requested role</span>
+              <span>Запрашиваемая роль</span>
               <select
                 id="register-role"
                 value={requestedRole}
@@ -148,20 +165,25 @@ export default function RegisterPage() {
               </select>
             </label>
 
-            {error ? (
-              <p className="state state-error">{error}</p>
-            ) : null}
+            {error ? <p className="state state-error">{error}</p> : null}
 
-            <AppButton type="submit" disabled={isSubmitting} aria-label="Submit registration request">
-              {isSubmitting ? "Submitting..." : "Submit request"}
+            <AppButton
+              type="submit"
+              isLoading={isSubmitting}
+              aria-label="Отправить заявку на регистрацию"
+            >
+              {isSubmitting ? "Отправляем…" : "Отправить заявку"}
             </AppButton>
           </form>
         )}
 
         <p className="auth-secondary">
-          Already approved? <Link href="/login" aria-label="Go to login">Login</Link>
+          Уже есть аккаунт?{" "}
+          <Link href="/login" aria-label="Перейти к входу">
+            Войти
+          </Link>
         </p>
-      </section>
+      </motion.section>
     </div>
   );
 }

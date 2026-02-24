@@ -71,26 +71,25 @@ async function main() {
     await page.goto("/login", { waitUntil: "networkidle", timeout: 30000 });
     await page.waitForTimeout(500);
 
-    const hasTitle = await page.locator("h1:has-text('Login')").count() > 0;
-    const hasSignIn = await page.locator("text=Sign in to access secure admin routes").count() > 0;
+    const hasTitle = await page.locator("h1:has-text('Вход')").count() > 0;
     const hasForm =
       (await page.locator("#login-or-email").count()) > 0 &&
       (await page.locator("#login-password").count()) > 0;
     const hasButton = await page.locator('button[type="submit"]').count() > 0;
-    const hasRegisterLink = await page.locator("text=Create registration request").count() > 0;
+    const hasRegisterLink = await page.locator("text=Зарегистрироваться").count() > 0;
 
     await page.screenshot({ path: screenshotPath, fullPage: true });
     log("Screenshot saved: " + screenshotPath);
 
     let score = 9;
     if (!hasTitle) score = 7;
-    if (!hasSignIn || !hasForm || !hasButton || !hasRegisterLink) score = Math.min(score, 8);
+    if (!hasForm || !hasButton || !hasRegisterLink) score = Math.min(score, 8);
 
     const reportLines = [
       "FE-LOGIN-001 REPORT",
       "Screenshot: " + path.relative(ROOT_DIR, screenshotPath),
       "Score: " + score,
-      "Checks: /login public, Login title, Sign in caption, form (login-or-email, password, Login button), Create registration request link.",
+      "Checks: /login public, Вход title, form (login-or-email, password, submit), Зарегистрироваться link.",
     ];
     const reportContent = reportLines.join("\n") + "\n";
     await writeFile(REPORT_PATH, reportContent);

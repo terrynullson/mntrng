@@ -16,6 +16,7 @@
     "screenshot:overview": "node scripts/screenshot-overview.mjs",
     "screenshot:login": "node scripts/screenshot-login.mjs",
     "screenshot:register": "node scripts/screenshot-register.mjs",
+    "screenshot:auth": "node scripts/screenshot-auth.mjs",
     "screenshot:all": "node scripts/screenshot-all.mjs"
   },
   "dependencies": {

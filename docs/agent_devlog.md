@@ -626,6 +626,15 @@ Summary:
 Notes:
 Сборка и скриншоты ок. Только UI/доступность.
 
+[2026-02-24] [UI-AUTH-GLASS-GRAD-001]
+Agent: AuthUXAgent
+Commit: 2aa2a0f
+Summary:
+- Auth-экраны: AnimatedGradientBackground (blobs + prefers-reduced-motion), шум feTurbulence, glass-карточки /login и /register, русские тексты, без бейджа и подзаголовка на входе.
+- Loading состояния кнопок без спиннера (shimmer), hover/tap через CSS; favicon (icon.svg); скриншоты в screenshots/auth/, REPORT self-score 9.
+Notes:
+npm run build проходит; маршрутизация и логика auth не менялись.
+
 [2026-02-24] [FE-LOGIN-GLASS-001]
 Agent: FrontendAgent
 Commit: 18c967c

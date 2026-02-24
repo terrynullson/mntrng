@@ -1,16 +1,21 @@
-﻿import type { ButtonHTMLAttributes, ReactNode } from "react";
+"use client";
+
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
 
 type AppButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   children: ReactNode;
+  isLoading?: boolean;
 };
 
 export function AppButton({
   variant = "primary",
   className = "",
   children,
+  isLoading = false,
+  disabled,
   ...props
 }: AppButtonProps) {
   const variantClass =
@@ -22,9 +27,17 @@ export function AppButton({
           ? "button-ghost"
           : "button-primary";
 
+  const isDisabled = disabled ?? isLoading;
+
   return (
-    <button {...props} className={`${variantClass} ${className}`.trim()}>
-      {children}
+    <button
+      {...props}
+      type={props.type ?? "button"}
+      disabled={isDisabled}
+      data-loading={isLoading ? "true" : undefined}
+      className={`${variantClass} ${className}`.trim()}
+    >
+      <span className="button-label">{children}</span>
     </button>
   );
 }

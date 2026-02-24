@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [nextPath, setNextPath] = useState<string>("/");
+
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -41,7 +43,7 @@ export default function LoginPage() {
     event.preventDefault();
 
     if (!loginOrEmail.trim() || !password) {
-      setError("Enter login/email and password.");
+      setError("Введите логин и пароль.");
       return;
     }
 
@@ -64,13 +66,24 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <section className="auth-card">
-        <h1>Login</h1>
-        <p>Sign in to access secure admin routes.</p>
+      <motion.section
+        className="auth-card"
+        initial={prefersReducedMotion ? undefined : { opacity: 0, y: 18 }}
+        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={
+          prefersReducedMotion
+            ? undefined
+            : {
+                duration: 0.3,
+                ease: "easeOut"
+              }
+        }
+      >
+        <h1>Вход</h1>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="form-field" htmlFor="login-or-email">
-            <span>Login or email</span>
+            <span>Логин или email</span>
             <input
               id="login-or-email"
               value={loginOrEmail}
@@ -81,7 +94,7 @@ export default function LoginPage() {
           </label>
 
           <label className="form-field" htmlFor="login-password">
-            <span>Password</span>
+            <span>Пароль</span>
             <input
               id="login-password"
               type="password"
@@ -103,15 +116,22 @@ export default function LoginPage() {
             </motion.p>
           ) : null}
 
-          <AppButton type="submit" disabled={isSubmitting} aria-label="Sign in">
-            {isSubmitting ? "Signing in..." : "Login"}
+          <AppButton
+            type="submit"
+            isLoading={isSubmitting}
+            aria-label="Вход в админку"
+          >
+            {isSubmitting ? "Входим…" : "Войти"}
           </AppButton>
         </form>
 
         <p className="auth-secondary">
-          No account? <Link href="/register" aria-label="Create registration request">Create registration request</Link>
+          Нет аккаунта?{" "}
+          <Link href="/register" aria-label="Создать заявку на регистрацию">
+            Зарегистрироваться
+          </Link>
         </p>
-      </section>
+      </motion.section>
     </div>
   );
 }
