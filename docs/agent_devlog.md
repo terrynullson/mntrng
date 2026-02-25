@@ -715,7 +715,7 @@ Notes:
 
 [2026-02-25] [TOP5-PROD-HARDENING-001]
 Agent: UniversalAgent (Full-Stack Delivery)
-Commit: pending
+Commit: f1c8922
 Summary:
 - Разделены API base переменные: `INTERNAL_API_BASE_URL` для server-side/rewrite и `NEXT_PUBLIC_API_BASE_URL` для публичного клиента; обновлены `web/next.config.mjs`, `web/Dockerfile`, `.env.example`, `docker-compose.yml`, `README.md`.
 - Упрощён `web/middleware.ts`: убраны сетевые вызовы в API на каждом запросе; сохранены auth redirect и базовый CSP для `/watch`.
