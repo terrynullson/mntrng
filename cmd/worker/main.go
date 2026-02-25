@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
+	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
@@ -13,6 +15,7 @@ import (
 	postgresrepo "github.com/example/hls-monitoring-platform/internal/repo/postgres"
 	workerservice "github.com/example/hls-monitoring-platform/internal/service/worker"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -56,6 +59,7 @@ func main() {
 	}
 	retryMax := config.IntAtLeast(config.GetInt("WORKER_DB_RETRY_MAX", 2), 0)
 	retryBackoff := time.Duration(config.IntAtLeast(config.GetInt("WORKER_DB_RETRY_BACKOFF_MS", 500), 1)) * time.Millisecond
+	workerMetricsPort := config.IntAtLeast(config.GetInt("WORKER_METRICS_PORT", 9091), 1)
 
 	databaseURL := config.GetString("DATABASE_URL", "")
 	if databaseURL == "" {
@@ -76,6 +80,7 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	startWorkerMetricsServer(ctx, workerMetricsPort)
 
 	incidentAnalyzer := &ai.LogAnalyzer{Inner: ai.NewStubAnalyzer()}
 
@@ -172,4 +177,34 @@ func main() {
 		w.RunRetentionCleanup,
 	)
 	app.Run(ctx)
+}
+
+func startWorkerMetricsServer(ctx context.Context, port int) {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok","service":"worker"}`))
+	})
+
+	server := &http.Server{
+		Addr:              fmt.Sprintf(":%d", port),
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_ = server.Shutdown(shutdownCtx)
+	}()
+
+	go func() {
+		log.Printf("worker metrics server listening on :%d", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("worker metrics server error: %v", err)
+		}
+	}()
 }

@@ -2,7 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
+	"io"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -45,9 +48,7 @@ func (s *Server) handleListIncidents(w http.ResponseWriter, r *http.Request, com
 		return
 	}
 	out := make([]incidentResponse, len(items))
-	for i := range items {
-		out[i] = items[i]
-	}
+	copy(out, items)
 	if err := WriteJSON(w, http.StatusOK, incidentListResponse{Items: out, NextCursor: nextCursor, Total: total}); err != nil {
 		log.Printf("list incidents response encode error: %v", err)
 	}
@@ -87,9 +88,8 @@ func (s *Server) handleGetIncidentScreenshot(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	dataRoot := filepath.Clean(config.GetString("APP_DATA_DIR", "/data"))
-	absPath := filepath.Clean(strings.TrimSpace(*item.SampleScreenshotPath))
-	incidentsRoot := filepath.Join(dataRoot, "screenshots", "incidents")
-	if !strings.HasPrefix(absPath, incidentsRoot) {
+	absPath, pathErr := secureIncidentScreenshotPath(dataRoot, strings.TrimSpace(*item.SampleScreenshotPath))
+	if pathErr != nil {
 		WriteJSONError(w, r, http.StatusForbidden, "forbidden", "invalid screenshot path", map[string]interface{}{"incident_id": incidentID})
 		return
 	}
@@ -104,6 +104,55 @@ func (s *Server) handleGetIncidentScreenshot(w http.ResponseWriter, r *http.Requ
 		WriteJSONError(w, r, http.StatusNotFound, "not_found", "screenshot not found", map[string]interface{}{"incident_id": incidentID})
 		return
 	}
-	w.Header().Set("Content-Type", "image/jpeg")
+	if !info.Mode().IsRegular() {
+		WriteJSONError(w, r, http.StatusNotFound, "not_found", "screenshot not found", map[string]interface{}{"incident_id": incidentID})
+		return
+	}
+	header := make([]byte, 512)
+	n, _ := io.ReadFull(file, header)
+	contentType := strings.ToLower(strings.TrimSpace(http.DetectContentType(header[:n])))
+	if !strings.HasPrefix(contentType, "image/jpeg") {
+		WriteJSONError(w, r, http.StatusNotFound, "not_found", "screenshot not found", map[string]interface{}{"incident_id": incidentID})
+		return
+	}
+	if _, seekErr := file.Seek(0, io.SeekStart); seekErr != nil {
+		WriteJSONError(w, r, http.StatusNotFound, "not_found", "screenshot not found", map[string]interface{}{"incident_id": incidentID})
+		return
+	}
+	if ext := strings.ToLower(filepath.Ext(info.Name())); ext == ".jpg" || ext == ".jpeg" {
+		contentType = mime.TypeByExtension(ext)
+	}
+	if contentType == "" {
+		contentType = "image/jpeg"
+	}
+	w.Header().Set("Content-Type", contentType)
 	http.ServeContent(w, r, info.Name(), info.ModTime(), file)
+}
+
+func secureIncidentScreenshotPath(dataRoot string, screenshotPath string) (string, error) {
+	raw := strings.TrimSpace(screenshotPath)
+	if raw == "" {
+		return "", errors.New("empty screenshot path")
+	}
+	if !filepath.IsAbs(raw) {
+		return "", errors.New("path must be absolute")
+	}
+	incidentsRoot := filepath.Join(filepath.Clean(dataRoot), "screenshots", "incidents")
+	rootAbs, err := filepath.Abs(incidentsRoot)
+	if err != nil {
+		return "", err
+	}
+	targetAbs, err := filepath.Abs(filepath.Clean(raw))
+	if err != nil {
+		return "", err
+	}
+	rel, err := filepath.Rel(rootAbs, targetAbs)
+	if err != nil {
+		return "", err
+	}
+	rel = filepath.Clean(rel)
+	if rel == "." || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
+		return "", errors.New("path outside incidents root")
+	}
+	return targetAbs, nil
 }

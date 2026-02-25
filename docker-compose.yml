@@ -49,6 +49,12 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:${API_PORT:-8080}/api/v1/ready >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
     ports:
       - "${API_PORT:-8080}:${API_PORT:-8080}"
     volumes:
@@ -62,13 +68,17 @@ services:
       WORKER_HEARTBEAT_SEC: ${WORKER_HEARTBEAT_SEC:-15}
       DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-hls_monitoring}?sslmode=disable
       REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
+      WORKER_METRICS_PORT: ${WORKER_METRICS_PORT:-9091}
     depends_on:
       init:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+    restart: unless-stopped
     volumes:
       - app_data:/data
+    ports:
+      - "${WORKER_METRICS_PORT:-9091}:${WORKER_METRICS_PORT:-9091}"
 
   frontend:
     build:
@@ -76,12 +86,20 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+        INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE_URL:-http://api:8080}
     environment:
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+      INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE_URL:-http://api:8080}
       PORT: ${FRONTEND_PORT:-3000}
     depends_on:
       api:
         condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/login >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
 

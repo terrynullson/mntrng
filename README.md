@@ -12,7 +12,7 @@
 
 ## Frontend (сборка и запуск)
 
-Из каталога `web/`: `npm install` — установка зависимостей; `npm run dev` — режим разработки (dev-сервер с hot reload); `npm run build` — продакшен-сборка. После сборки запуск: `npm run start`. Для production-сборки задайте `NEXT_PUBLIC_API_BASE_URL` (URL API с точки зрения браузера) перед `npm run build`.
+Из каталога `web/`: `npm install` — установка зависимостей; `npm run dev` — режим разработки (dev-сервер с hot reload); `npm run build` — продакшен-сборка. После сборки запуск: `npm run start`. Для production используйте две переменные: `INTERNAL_API_BASE_URL` (для server-side rewrites/middleware, внутри docker: `http://api:8080`) и `NEXT_PUBLIC_API_BASE_URL` (публичный URL API с точки зрения браузера, если нужен напрямую).
 
 ## Реализованные возможности
 
@@ -63,7 +63,7 @@ cp .env.example .env
 - `API_PORT`, `REDIS_ADDR`, `AUTH_ACCESS_TTL_MIN`, `AUTH_REFRESH_TTL_DAYS`, `AUTH_TELEGRAM_MAX_AGE_SEC`, `SUPER_ADMIN_TELEGRAM_CHAT_ID`, `WORKER_HEARTBEAT_SEC`
 - `WORKER_JOB_TIMEOUT_SEC`, `WORKER_DB_RETRY_MAX`, `WORKER_DB_RETRY_BACKOFF_MS`
 - `PLAYLIST_TIMEOUT_MS`, `SEGMENT_TIMEOUT_MS`, `SEGMENTS_SAMPLE_COUNT`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`, `FREEZE_WARN_SEC`, `FREEZE_FAIL_SEC`, `BLACKFRAME_WARN_RATIO`, `BLACKFRAME_FAIL_RATIO`, `EFFECTIVE_BITRATE_WARN_RATIO`, `EFFECTIVE_BITRATE_FAIL_RATIO`, `ALERT_FAIL_STREAK`, `ALERT_COOLDOWN_MIN`, `ALERT_SEND_RECOVERED`, `TELEGRAM_HTTP_TIMEOUT_MS`, `TELEGRAM_SEND_RETRY_MAX`, `TELEGRAM_SEND_RETRY_BACKOFF_MS`, `TELEGRAM_BOT_TOKEN_DEFAULT`, `RETENTION_TTL_DAYS`, `RETENTION_CLEANUP_INTERVAL_MIN`, `RETENTION_CLEANUP_BATCH_SIZE`
-- `FRONTEND_PORT`, `NEXT_PUBLIC_API_BASE_URL`
+- `FRONTEND_PORT`, `NEXT_PUBLIC_API_BASE_URL`, `INTERNAL_API_BASE_URL`, `WORKER_METRICS_PORT`
 
 Файл `.env` не добавляется в git (трекается только `.env.example`).
 
@@ -116,7 +116,7 @@ git config core.hooksPath .githooks
 docker compose up --build -d
 ```
 
-**Обязательные переменные окружения** (в `.env` или в среде контейнеров): `DATABASE_URL`, `API_PORT` (по умолчанию 8080), для frontend — `NEXT_PUBLIC_API_BASE_URL` (URL API с точки зрения браузера). Остальные переменные — см. [.env.example](.env.example) и разделы README выше.
+**Обязательные переменные окружения** (в `.env` или в среде контейнеров): `DATABASE_URL`, `API_PORT` (по умолчанию 8080), для frontend — `INTERNAL_API_BASE_URL` (в docker: `http://api:8080`) и `NEXT_PUBLIC_API_BASE_URL` (публичный URL API, не домен самого frontend). Остальные переменные — см. [.env.example](.env.example) и разделы README выше.
 
 **Порты:** API — 8080, frontend — 3000. При необходимости пробросьте их в `docker-compose.yml` на хосте.
 
@@ -128,7 +128,15 @@ docker compose up --build -d
 
 ### Мониторинг
 
-Рекомендуется проверять: (1) **liveness** — `GET /api/v1/health` (200); (2) **readiness** — `GET /api/v1/ready` (200 при доступности БД); (3) **логи контейнеров** — `docker compose logs -f api`, `docker compose logs -f worker` и т.д.; (4) **место на диске** — для логов, volume БД и локальных скриншотов (при хранении на том же хосте).
+Рекомендуется проверять: (1) **liveness** — `GET /api/v1/health` (200); (2) **readiness** — `GET /api/v1/ready` (200 при доступности БД); (3) **worker metrics** — `GET /metrics` на `WORKER_METRICS_PORT` (по умолчанию 9091); (4) **логи контейнеров** — `docker compose logs -f api`, `docker compose logs -f worker` и т.д.; (5) **место на диске** — для логов, volume БД и локальных скриншотов (при хранении на том же хосте).
+
+### Быстрая диагностика `internal_error`
+
+1. Проверить frontend env: `INTERNAL_API_BASE_URL=http://api:8080` (docker-сеть), `NEXT_PUBLIC_API_BASE_URL` не должен указывать на домен самого frontend.
+2. Проверить API из frontend-контейнера: `wget -q -O - http://api:8080/api/v1/health`.
+3. Проверить логи: `docker compose logs -f frontend api`.
+4. Проверить readiness API: `curl http://localhost:8080/api/v1/ready`.
+5. Пересобрать frontend после смены env: `docker compose up --build -d frontend`.
 
 ### Откат
 

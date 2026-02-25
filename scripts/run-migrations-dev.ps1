@@ -19,7 +19,17 @@ if (-not $db) {
     exit 1
 }
 $MigrationsDir = Join-Path $RootDir "migrations"
-$order = @("0001_baseline_schema.up.sql", "0002_telegram_delivery_settings.up.sql", "0003_preserve_company_audit_history.up.sql", "0004_auth_and_registration.up.sql")
+$order = @(
+    "0001_baseline_schema.up.sql",
+    "0002_telegram_delivery_settings.up.sql",
+    "0003_preserve_company_audit_history.up.sql",
+    "0004_auth_and_registration.up.sql",
+    "0005_indexes_admin_and_lists.up.sql",
+    "0006_ai_incident_results.up.sql",
+    "0007_stream_favorites_and_incidents.up.sql",
+    "0008_embed_whitelist_and_stream_sources.up.sql",
+    "0009_incident_diagnostics_lite.up.sql"
+)
 foreach ($f in $order) {
     $path = Join-Path $MigrationsDir $f
     if (-not (Test-Path $path)) { continue }

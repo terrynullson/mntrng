@@ -712,3 +712,15 @@ Summary:
 - UX поправки: убран сворачиваемый «бургер» у бокового меню (статичное меню), в форме создания потока добавлен авто-режим проекта: если проект не выбран, используется/создаётся «Общий».
 Notes:
 `go test ./...` PASS, `web npm run build` PASS. Автоматические скриншоты milestone3-lite заблокированы окружением (Docker engine недоступен), см. `screenshots/milestone3-lite/REPORT.txt`.
+
+[2026-02-25] [TOP5-PROD-HARDENING-001]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- Разделены API base переменные: `INTERNAL_API_BASE_URL` для server-side/rewrite и `NEXT_PUBLIC_API_BASE_URL` для публичного клиента; обновлены `web/next.config.mjs`, `web/Dockerfile`, `.env.example`, `docker-compose.yml`, `README.md`.
+- Упрощён `web/middleware.ts`: убраны сетевые вызовы в API на каждом запросе; сохранены auth redirect и базовый CSP для `/watch`.
+- В worker добавлен metrics/health endpoint (`/metrics`, `/health`) на `WORKER_METRICS_PORT`; обновлены compose и документация по мониторингу.
+- Усилен `incident screenshot` handler: безопасная нормализация пути (`Abs/Rel`), защита от traversal, проверка regular file + MIME; добавлены тесты `internal/http/api/handlers_incidents_test.go`.
+- Добавлены healthchecks/restart policies для `api/frontend/worker` и runbook диагностики `internal_error` в `README`.
+Notes:
+`go test ./...` PASS, `web npm run build` PASS; docker-lint warning по CVE базового образа не блокирует текущие изменения.
