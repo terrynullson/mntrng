@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 const PUBLIC_PATHS = new Set(["/login", "/register"]);
 const ACCESS_COOKIE = "hm_access_token";
+const REFRESH_COOKIE = "hm_refresh_token";
 const WATCH_BASE_CSP =
   "default-src 'self'; frame-src 'self' https:; img-src 'self' data: blob: https:; media-src 'self' https:; script-src 'self'; style-src 'self' 'unsafe-inline';";
 
@@ -22,17 +23,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const hasAccessCookie = Boolean(request.cookies.get(ACCESS_COOKIE)?.value);
+  const hasSessionCookie =
+    Boolean(request.cookies.get(ACCESS_COOKIE)?.value) ||
+    Boolean(request.cookies.get(REFRESH_COOKIE)?.value);
   const isPublic = PUBLIC_PATHS.has(pathname);
 
-  if (!hasAccessCookie && !isPublic) {
+  if (!hasSessionCookie && !isPublic) {
     const loginURL = request.nextUrl.clone();
     loginURL.pathname = "/login";
     loginURL.searchParams.set("next", `${pathname}${search}`);
     return NextResponse.redirect(loginURL);
   }
 
-  if (hasAccessCookie && isPublic) {
+  if (hasSessionCookie && isPublic) {
     const homeURL = request.nextUrl.clone();
     homeURL.pathname = "/";
     homeURL.search = "";

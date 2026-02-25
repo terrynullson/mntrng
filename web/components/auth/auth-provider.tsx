@@ -16,12 +16,6 @@ import type {
   Company,
   LoginRequest
 } from "@/lib/api/types";
-import {
-  clearAuthTokens,
-  persistAuthTokens,
-  readAccessToken,
-  readRefreshToken
-} from "@/lib/auth/tokens";
 
 type AuthContextValue = {
   isReady: boolean;
@@ -51,12 +45,9 @@ async function requestMe(accessToken: string): Promise<AuthUser> {
   });
 }
 
-async function requestRefresh(refreshToken: string): Promise<AuthTokensResponse> {
+async function requestRefresh(): Promise<AuthTokensResponse> {
   return apiRequest<AuthTokensResponse>("/auth/refresh", {
-    method: "POST",
-    body: {
-      refresh_token: refreshToken
-    }
+    method: "POST"
   });
 }
 
@@ -137,41 +128,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAccessToken(null);
     setCompanies([]);
     setActiveCompanyId(null);
-    clearAuthTokens();
   }, [setActiveCompanyId]);
 
   const refreshMe = useCallback(async () => {
-    const token = readAccessToken();
-    const refreshToken = readRefreshToken();
-
-    if (!token) {
-      resetAuthState();
-      setIsReady(true);
-      return;
-    }
-
-    try {
-      const authUser = await requestMe(token);
-      setUser(authUser);
-      setAccessToken(token);
-      await hydrateSuperAdminState(token, authUser);
-      setIsReady(true);
-      return;
-    } catch (error) {
-      if (!(error instanceof ApiError) || error.status !== 401 || !refreshToken) {
-        resetAuthState();
+    if (accessToken) {
+      try {
+        const authUser = await requestMe(accessToken);
+        setUser(authUser);
+        await hydrateSuperAdminState(accessToken, authUser);
         setIsReady(true);
         return;
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 401) {
+          resetAuthState();
+          setIsReady(true);
+          return;
+        }
       }
     }
 
     try {
-      const refreshed = await requestRefresh(refreshToken);
-      persistAuthTokens(
-        refreshed.access_token,
-        refreshed.refresh_token,
-        refreshed.expires_in
-      );
+      const refreshed = await requestRefresh();
       setUser(refreshed.user);
       setAccessToken(refreshed.access_token);
       await hydrateSuperAdminState(refreshed.access_token, refreshed.user);
@@ -180,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsReady(true);
     }
-  }, [hydrateSuperAdminState, resetAuthState]);
+  }, [accessToken, hydrateSuperAdminState, resetAuthState]);
 
   useEffect(() => {
     void refreshMe();
@@ -193,11 +170,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: request
       });
 
-      persistAuthTokens(
-        response.access_token,
-        response.refresh_token,
-        response.expires_in
-      );
       setUser(response.user);
       setAccessToken(response.access_token);
       await hydrateSuperAdminState(response.access_token, response.user);
@@ -207,15 +179,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    const token = readAccessToken();
-    const refreshToken = readRefreshToken();
-
     try {
-      if (token) {
+      if (accessToken) {
         await apiRequest<void>("/auth/logout", {
           method: "POST",
-          accessToken: token,
-          body: refreshToken ? { refresh_token: refreshToken } : undefined
+          accessToken
         });
       }
     } catch {
@@ -224,7 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     resetAuthState();
     setIsReady(true);
-  }, [resetAuthState]);
+  }, [accessToken, resetAuthState]);
 
   const contextValue = useMemo<AuthContextValue>(
     () => ({

@@ -83,6 +83,7 @@ export async function apiRequest<T>(
     method,
     headers,
     cache: "no-store",
+    credentials: "same-origin",
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     signal: options.signal
   });

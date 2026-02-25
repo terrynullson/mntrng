@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -60,6 +61,7 @@ func main() {
 	retryMax := config.IntAtLeast(config.GetInt("WORKER_DB_RETRY_MAX", 2), 0)
 	retryBackoff := time.Duration(config.IntAtLeast(config.GetInt("WORKER_DB_RETRY_BACKOFF_MS", 500), 1)) * time.Millisecond
 	workerMetricsPort := config.IntAtLeast(config.GetInt("WORKER_METRICS_PORT", 9091), 1)
+	workerMetricsToken := config.GetString("WORKER_METRICS_TOKEN", "")
 
 	databaseURL := config.GetString("DATABASE_URL", "")
 	if databaseURL == "" {
@@ -71,6 +73,7 @@ func main() {
 		log.Fatalf("failed to open database connection: %v", err)
 	}
 	defer db.Close()
+	configureWorkerDBPool(db)
 
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer pingCancel()
@@ -80,7 +83,7 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	startWorkerMetricsServer(ctx, workerMetricsPort)
+	startWorkerMetricsServer(ctx, workerMetricsPort, workerMetricsToken)
 
 	incidentAnalyzer := &ai.LogAnalyzer{Inner: ai.NewStubAnalyzer()}
 
@@ -179,9 +182,9 @@ func main() {
 	app.Run(ctx)
 }
 
-func startWorkerMetricsServer(ctx context.Context, port int) {
+func startWorkerMetricsServer(ctx context.Context, port int, metricsToken string) {
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/metrics", metricsAuthMiddleware(metricsToken, promhttp.Handler()))
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -207,4 +210,41 @@ func startWorkerMetricsServer(ctx context.Context, port int) {
 			log.Printf("worker metrics server error: %v", err)
 		}
 	}()
+}
+
+func metricsAuthMiddleware(expectedToken string, next http.Handler) http.Handler {
+	trimmedToken := strings.TrimSpace(expectedToken)
+	if trimmedToken == "" {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+		if !strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte("metrics token is required"))
+			return
+		}
+		token := strings.TrimSpace(authHeader[len("Bearer "):])
+		if token != trimmedToken {
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = w.Write([]byte("invalid metrics token"))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func configureWorkerDBPool(db *sql.DB) {
+	maxOpen := config.IntAtLeast(config.GetInt("DB_MAX_OPEN_CONNS", 20), 1)
+	maxIdle := config.IntAtLeast(config.GetInt("DB_MAX_IDLE_CONNS", 10), 1)
+	if maxIdle > maxOpen {
+		maxIdle = maxOpen
+	}
+	connMaxLifetime := time.Duration(config.IntAtLeast(config.GetInt("DB_CONN_MAX_LIFETIME_MIN", 30), 1)) * time.Minute
+	connMaxIdleTime := time.Duration(config.IntAtLeast(config.GetInt("DB_CONN_MAX_IDLE_TIME_MIN", 10), 1)) * time.Minute
+
+	db.SetMaxOpenConns(maxOpen)
+	db.SetMaxIdleConns(maxIdle)
+	db.SetConnMaxLifetime(connMaxLifetime)
+	db.SetConnMaxIdleTime(connMaxIdleTime)
 }

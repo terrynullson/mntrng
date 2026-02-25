@@ -91,6 +91,21 @@ func (s *Server) handleListStreams(w http.ResponseWriter, r *http.Request, compa
 	}
 }
 
+func (s *Server) handleListStreamLatestStatuses(w http.ResponseWriter, r *http.Request, companyID int64) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	items, err := s.streamService.ListLatestStatuses(ctx, companyID)
+	if err != nil {
+		writeServiceError(w, r, "list stream latest statuses", err)
+		return
+	}
+
+	if err := WriteJSON(w, http.StatusOK, streamLatestStatusListResponse{Items: items}); err != nil {
+		log.Printf("list stream latest statuses response encode error: %v", err)
+	}
+}
+
 func (s *Server) handleGetStream(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()

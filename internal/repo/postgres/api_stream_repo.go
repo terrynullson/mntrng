@@ -135,6 +135,55 @@ func (r *APIStreamRepo) ListStreams(ctx context.Context, companyID int64, filter
 	return items, nil
 }
 
+func (r *APIStreamRepo) ListLatestStatuses(ctx context.Context, companyID int64) ([]domain.StreamLatestStatus, error) {
+	rows, err := r.db.QueryContext(
+		ctx,
+		`SELECT s.id,
+                cr.status,
+                cr.created_at
+         FROM streams s
+         LEFT JOIN LATERAL (
+             SELECT c.status, c.created_at
+             FROM check_results c
+             WHERE c.company_id = s.company_id
+               AND c.stream_id = s.id
+             ORDER BY c.created_at DESC, c.id DESC
+             LIMIT 1
+         ) cr ON TRUE
+         WHERE s.company_id = $1
+         ORDER BY s.id ASC`,
+		companyID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]domain.StreamLatestStatus, 0)
+	for rows.Next() {
+		var item domain.StreamLatestStatus
+		var status sql.NullString
+		var createdAt sql.NullTime
+		if err := rows.Scan(&item.StreamID, &status, &createdAt); err != nil {
+			return nil, err
+		}
+		if status.Valid {
+			formatted := formatCheckResultStatus(status.String)
+			item.Status = &formatted
+		}
+		if createdAt.Valid {
+			createdAtUTC := createdAt.Time.UTC()
+			item.LastCheckAt = &createdAtUTC
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
 func (r *APIStreamRepo) GetStream(ctx context.Context, companyID int64, streamID int64) (domain.Stream, error) {
 	var item domain.Stream
 	err := r.db.QueryRowContext(

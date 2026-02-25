@@ -69,6 +69,16 @@ type StreamListResponse struct {
 	NextCursor *string  `json:"next_cursor"`
 }
 
+type StreamLatestStatus struct {
+	StreamID    int64      `json:"stream_id"`
+	Status      *string    `json:"status,omitempty"`
+	LastCheckAt *time.Time `json:"last_check_at,omitempty"`
+}
+
+type StreamLatestStatusListResponse struct {
+	Items []StreamLatestStatus `json:"items"`
+}
+
 type CreateStreamRequest struct {
 	Name       string `json:"name"`
 	SourceType string `json:"source_type"`

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/example/hls-monitoring-platform/internal/config"
 	"github.com/example/hls-monitoring-platform/internal/domain"
 	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
 )
@@ -21,7 +22,10 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 
 		accessToken := bearerTokenFromHeader(r.Header.Get("Authorization"))
 		if accessToken == "" {
-			WriteJSONError(w, r, http.StatusUnauthorized, "unauthorized", "authorization bearer token is required", map[string]interface{}{})
+			accessToken = readTokenFromCookie(r, loadAuthCookieConfig().accessName)
+		}
+		if accessToken == "" {
+			WriteJSONError(w, r, http.StatusUnauthorized, "unauthorized", "access token is required", map[string]interface{}{})
 			return
 		}
 
@@ -44,8 +48,10 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 
 func isPublicPath(path string) bool {
 	switch path {
-	case "/api/v1/health", "/api/v1/metrics":
+	case "/api/v1/health":
 		return true
+	case "/api/v1/metrics":
+		return config.GetBool("API_METRICS_PUBLIC", false)
 	case "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/telegram/login":
 		return true
 	default:
@@ -61,6 +67,9 @@ func evaluateAccessPolicy(r *http.Request, authContext domain.AuthContext) (stri
 			return "forbidden", "super_admin role is required", true
 		}
 		return "", "", false
+	}
+	if path == "/api/v1/metrics" && authContext.Role != domain.RoleSuperAdmin {
+		return "forbidden", "super_admin role is required", true
 	}
 
 	if strings.HasPrefix(path, "/api/v1/auth/") {

@@ -16,6 +16,7 @@ func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {
 	if !ok {
 		return nil
 	}
+	jobStartedAt := time.Now()
 
 	log.Printf(
 		"worker claimed job: id=%d company_id=%d stream_id=%d planned_at=%s",
@@ -30,6 +31,7 @@ func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {
 		if finalizeErr := w.finalizeWithRetry(ctx, job, domain.WorkerJobStatusFailed, processErr.Error()); finalizeErr != nil {
 			return finalizeErr
 		}
+		observeFinalizedJob(domain.WorkerJobStatusFailed, jobStartedAt)
 		log.Printf("worker finalized job as failed: id=%d company_id=%d reason=%s", job.ID, job.CompanyID, processErr.Error())
 		return nil
 	}
@@ -38,6 +40,7 @@ func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {
 		if finalizeErr := w.finalizeWithRetry(ctx, job, domain.WorkerJobStatusFailed, persistErr.Error()); finalizeErr != nil {
 			return finalizeErr
 		}
+		observeFinalizedJob(domain.WorkerJobStatusFailed, jobStartedAt)
 		log.Printf("worker finalized job as failed: id=%d company_id=%d reason=%s", job.ID, job.CompanyID, persistErr.Error())
 		return nil
 	}
@@ -50,6 +53,7 @@ func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {
 		if finalizeErr := w.finalizeWithRetry(ctx, job, domain.WorkerJobStatusFailed, alertErr.Error()); finalizeErr != nil {
 			return finalizeErr
 		}
+		observeFinalizedJob(domain.WorkerJobStatusFailed, jobStartedAt)
 		log.Printf("worker finalized job as failed: id=%d company_id=%d reason=%s", job.ID, job.CompanyID, alertErr.Error())
 		return nil
 	}
@@ -59,6 +63,7 @@ func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {
 	if finalizeErr := w.finalizeWithRetry(ctx, job, domain.WorkerJobStatusDone, ""); finalizeErr != nil {
 		return finalizeErr
 	}
+	observeFinalizedJob(domain.WorkerJobStatusDone, jobStartedAt)
 	log.Printf("worker finalized job as done: id=%d company_id=%d", job.ID, job.CompanyID)
 	return nil
 }

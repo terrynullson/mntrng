@@ -23,6 +23,7 @@ type createProjectRequest = domain.CreateProjectRequest
 type patchProjectRequest = domain.PatchProjectRequest
 type stream = domain.Stream
 type streamListResponse = domain.StreamListResponse
+type streamLatestStatusListResponse = domain.StreamLatestStatusListResponse
 type createStreamRequest = domain.CreateStreamRequest
 type createCompanyStreamRequest = domain.CreateCompanyStreamRequest
 type patchStreamRequest = domain.PatchStreamRequest
@@ -59,6 +60,8 @@ type Server struct {
 	telegramSettingsService *serviceapi.TelegramSettingsService
 	embedWhitelistService   *serviceapi.EmbedWhitelistService
 	authService             *serviceapi.AuthService
+	authAccessTTL           time.Duration
+	authRefreshTTL          time.Duration
 	registrationService     *serviceapi.RegistrationService
 }
 
@@ -77,6 +80,8 @@ func NewServer(db *sql.DB) *Server {
 		config.GetString("SUPER_ADMIN_TELEGRAM_CHAT_ID", ""),
 	)
 
+	authAccessTTL := time.Duration(config.IntAtLeast(config.GetInt("AUTH_ACCESS_TTL_MIN", 15), 1)) * time.Minute
+	authRefreshTTL := time.Duration(config.IntAtLeast(config.GetInt("AUTH_REFRESH_TTL_DAYS", 30), 1)) * 24 * time.Hour
 	return &Server{
 		db:                      db,
 		companyService:          serviceapi.NewCompanyService(postgres.NewAPICompanyRepo(db)),
@@ -90,11 +95,13 @@ func NewServer(db *sql.DB) *Server {
 		telegramSettingsService: serviceapi.NewTelegramSettingsService(postgres.NewAPITelegramSettingsRepo(db)),
 		embedWhitelistService:   serviceapi.NewEmbedWhitelistService(postgres.NewAPIEmbedWhitelistRepo(db)),
 		authService: serviceapi.NewAuthService(authRepo, serviceapi.AuthConfig{
-			AccessTTL:          time.Duration(config.GetInt("AUTH_ACCESS_TTL_MIN", 15)) * time.Minute,
-			RefreshTTL:         time.Duration(config.GetInt("AUTH_REFRESH_TTL_DAYS", 30)) * 24 * time.Hour,
+			AccessTTL:          authAccessTTL,
+			RefreshTTL:         authRefreshTTL,
 			TelegramBotToken:   config.GetString("TELEGRAM_BOT_TOKEN_DEFAULT", ""),
 			TelegramAuthMaxAge: time.Duration(config.GetInt("AUTH_TELEGRAM_MAX_AGE_SEC", 600)) * time.Second,
 		}),
+		authAccessTTL:       authAccessTTL,
+		authRefreshTTL:      authRefreshTTL,
 		registrationService: serviceapi.NewRegistrationService(registrationRepo, registrationNotifier),
 	}
 }
@@ -118,6 +125,7 @@ func (s *Server) RouterHandlers() RouterHandlers {
 		HandleCreateStream:                  s.handleCreateStream,
 		HandleCreateStreamInCompany:         s.handleCreateStreamInCompany,
 		HandleListStreams:                   s.handleListStreams,
+		HandleListStreamLatestStatuses:      s.handleListStreamLatestStatuses,
 		HandleGetStream:                     s.handleGetStream,
 		HandlePatchStream:                   s.handlePatchStream,
 		HandleDeleteStream:                  s.handleDeleteStream,

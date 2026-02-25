@@ -12,6 +12,7 @@ const (
 	projectItemPrefix            = "projects/"
 	streamCollectionPath         = "streams"
 	streamItemPrefix             = "streams/"
+	streamLatestStatusesPath     = "streams/latest-statuses"
 	checkJobsCollectionPath      = "check-jobs"
 	checkJobsItemPrefix          = "check-jobs/"
 	checkResultsCollectionPath   = "check-results"
@@ -45,12 +46,13 @@ type RouterHandlers struct {
 	HandlePatchProject  companyResourceHandler
 	HandleDeleteProject companyResourceHandler
 
-	HandleCreateStream          companyResourceHandler
-	HandleCreateStreamInCompany companyHandler
-	HandleListStreams           companyHandler
-	HandleGetStream             companyResourceHandler
-	HandlePatchStream           companyResourceHandler
-	HandleDeleteStream          companyResourceHandler
+	HandleCreateStream             companyResourceHandler
+	HandleCreateStreamInCompany    companyHandler
+	HandleListStreams              companyHandler
+	HandleListStreamLatestStatuses companyHandler
+	HandleGetStream                companyResourceHandler
+	HandlePatchStream              companyResourceHandler
+	HandleDeleteStream             companyResourceHandler
 
 	HandleEnqueueCheckJob     companyResourceHandler
 	HandleTriggerStreamCheck  companyResourceHandler
@@ -247,6 +249,14 @@ func routeCompanyByID(w http.ResponseWriter, r *http.Request, handlers RouterHan
 		return
 	}
 	if routeCompanyStreamCollection(w, r, handlers, companyID, pathRemainder) {
+		return
+	}
+	if pathRemainder == streamLatestStatusesPath {
+		if r.Method == http.MethodGet {
+			handlers.HandleListStreamLatestStatuses(w, r, companyID)
+		} else {
+			WriteMethodNotAllowed(w, r, http.MethodGet)
+		}
 		return
 	}
 	if routeCompanyCheckJobsPath(w, r, handlers, companyID, pathRemainder) {

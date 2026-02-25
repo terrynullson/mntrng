@@ -36,6 +36,7 @@
 - [docs/agents_and_responsibilities.md](docs/agents_and_responsibilities.md) — процесс, роли агентов, JOB→RESULT→ROUTING, источник истины по правилам.
 - [docs/screenshot_automation.md](docs/screenshot_automation.md) — автоматизация скриншотов для UI-модулей (Docker, скрипты).
 - [docs/agent_devlog.md](docs/agent_devlog.md) — журнал работ агентов по модулям, формат записей и ограничения.
+- [docs/incident_runbook.md](docs/incident_runbook.md) — incident/rollback runbook для production-эксплуатации.
 
 Переменные DevLog (`DEV_LOG_*`), retention (`RETENTION_*`) и Telegram Alerts (`TELEGRAM_*`, `ALERT_*`) описаны в [.env.example](.env.example) и в подразделах README ниже.
 
@@ -61,21 +62,25 @@ cp .env.example .env
 
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
 - `API_PORT`, `REDIS_ADDR`, `AUTH_ACCESS_TTL_MIN`, `AUTH_REFRESH_TTL_DAYS`, `AUTH_TELEGRAM_MAX_AGE_SEC`, `SUPER_ADMIN_TELEGRAM_CHAT_ID`, `WORKER_HEARTBEAT_SEC`
+- `API_METRICS_PUBLIC`, `AUTH_COOKIE_SECURE`, `AUTH_COOKIE_SAMESITE`, `AUTH_COOKIE_DOMAIN`, `AUTH_COOKIE_PATH`, `AUTH_ACCESS_COOKIE_NAME`, `AUTH_REFRESH_COOKIE_NAME`
 - `WORKER_JOB_TIMEOUT_SEC`, `WORKER_DB_RETRY_MAX`, `WORKER_DB_RETRY_BACKOFF_MS`
 - `PLAYLIST_TIMEOUT_MS`, `SEGMENT_TIMEOUT_MS`, `SEGMENTS_SAMPLE_COUNT`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`, `FREEZE_WARN_SEC`, `FREEZE_FAIL_SEC`, `BLACKFRAME_WARN_RATIO`, `BLACKFRAME_FAIL_RATIO`, `EFFECTIVE_BITRATE_WARN_RATIO`, `EFFECTIVE_BITRATE_FAIL_RATIO`, `ALERT_FAIL_STREAK`, `ALERT_COOLDOWN_MIN`, `ALERT_SEND_RECOVERED`, `TELEGRAM_HTTP_TIMEOUT_MS`, `TELEGRAM_SEND_RETRY_MAX`, `TELEGRAM_SEND_RETRY_BACKOFF_MS`, `TELEGRAM_BOT_TOKEN_DEFAULT`, `RETENTION_TTL_DAYS`, `RETENTION_CLEANUP_INTERVAL_MIN`, `RETENTION_CLEANUP_BATCH_SIZE`
-- `FRONTEND_PORT`, `NEXT_PUBLIC_API_BASE_URL`, `INTERNAL_API_BASE_URL`, `WORKER_METRICS_PORT`
+- `FRONTEND_PORT`, `NEXT_PUBLIC_API_BASE_URL`, `INTERNAL_API_BASE_URL`, `WORKER_METRICS_PORT`, `WORKER_METRICS_TOKEN`, `BOOTSTRAP_SEED_ENABLED`
+- `DB_MAX_OPEN_CONNS`, `DB_MAX_IDLE_CONNS`, `DB_CONN_MAX_LIFETIME_MIN`, `DB_CONN_MAX_IDLE_TIME_MIN`
 
 Файл `.env` не добавляется в git (трекается только `.env.example`).
 
 ## Запуск в Docker (без ручных шагов)
 
-Миграции и тестовый пользователь для скриншотов применяются автоматически при старте (сервис `init`).
+Миграции применяются автоматически при старте (сервис `init`).
+Seed тестовых пользователей теперь выключен по умолчанию (`BOOTSTRAP_SEED_ENABLED=false`) и включается только явно.
 
 ```bash
 docker compose up --build -d
 ```
 
-После старта: API на 8080, frontend на 3000, БД с миграциями и сидером (логин `test_screenshot_admin` / `TestScreenshot1`).
+После старта: API на 8080, frontend на 3000, БД с миграциями.
+Если нужны тестовые учётки для screenshot-автоматизации: установите `BOOTSTRAP_SEED_ENABLED=true`.
 
 ### Быстрый старт
 
@@ -128,7 +133,7 @@ docker compose up --build -d
 
 ### Мониторинг
 
-Рекомендуется проверять: (1) **liveness** — `GET /api/v1/health` (200); (2) **readiness** — `GET /api/v1/ready` (200 при доступности БД); (3) **worker metrics** — `GET /metrics` на `WORKER_METRICS_PORT` (по умолчанию 9091); (4) **логи контейнеров** — `docker compose logs -f api`, `docker compose logs -f worker` и т.д.; (5) **место на диске** — для логов, volume БД и локальных скриншотов (при хранении на том же хосте).
+Рекомендуется проверять: (1) **liveness** — `GET /api/v1/health` (200); (2) **readiness** — `GET /api/v1/ready` (200 при доступности БД); (3) **worker metrics** — `GET /metrics` на `WORKER_METRICS_PORT` (по умолчанию 9091) c bearer-токеном `WORKER_METRICS_TOKEN`, если он задан; (4) **логи контейнеров** — `docker compose logs -f api`, `docker compose logs -f worker` и т.д.; (5) **место на диске** — для логов, volume БД и локальных скриншотов (при хранении на том же хосте).
 
 ### Быстрая диагностика `internal_error`
 
@@ -144,7 +149,7 @@ docker compose up --build -d
 
 ## Authentication + controlled registration smoke-check
 
-All API endpoints except health and public auth endpoints are protected by bearer auth.
+All API endpoints except health, ready, and public auth endpoints are protected by auth session (Bearer token or HttpOnly auth cookies).
 
 1. Apply migrations (если не используете Docker; при `docker compose up` миграции выполняет сервис `init`):
 

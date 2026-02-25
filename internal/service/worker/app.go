@@ -69,12 +69,15 @@ func (a *App) Run(ctx context.Context) {
 }
 
 func (a *App) processCycleWithRetry(ctx context.Context) error {
+	startedAt := time.Now()
 	for attempt := 0; ; attempt++ {
 		err := a.processCycle(ctx)
 		if err == nil {
+			observeWorkerCycle("ok", startedAt)
 			return nil
 		}
 		if !a.isRetryable(err) || attempt >= a.retryMax {
+			observeWorkerCycle("error", startedAt)
 			return err
 		}
 
@@ -90,9 +93,11 @@ func (a *App) runRetentionCleanupWithRetry(ctx context.Context) error {
 	for attempt := 0; ; attempt++ {
 		err := a.retentionCleanup(ctx)
 		if err == nil {
+			observeRetentionCleanup("ok")
 			return nil
 		}
 		if !a.isRetryable(err) || attempt >= a.retryMax {
+			observeRetentionCleanup("error")
 			return err
 		}
 

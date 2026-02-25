@@ -13,11 +13,11 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { apiRequest, toErrorMessage } from "@/lib/api/client";
 import { resolveCompanyScope } from "@/lib/auth/tenant-scope";
 import type {
-  CheckResult,
   CheckStatus,
   EmbedWhitelistItem,
   EnqueueCheckJobResponse,
   Project,
+  StreamLatestStatus,
   Stream
 } from "@/lib/api/types";
 
@@ -85,6 +85,7 @@ export default function WatchPage() {
   const [selectedStatus, setSelectedStatus] = useState<CheckStatus | null>(null);
   const [selectedLastCheckAt, setSelectedLastCheckAt] = useState<string | null>(null);
   const [latestStatusMap, setLatestStatusMap] = useState<Record<number, CheckStatus | null>>({});
+  const [latestCheckAtMap, setLatestCheckAtMap] = useState<Record<number, string | null>>({});
   const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
 
   const [projectFilter, setProjectFilter] = useState<string>("");
@@ -114,30 +115,12 @@ export default function WatchPage() {
     }
   };
 
-  const loadSelectedStatus = async (streamId: number) => {
-    if (!accessToken || !scopeCompanyId) {
-      setSelectedStatus(null);
-      setSelectedLastCheckAt(null);
-      return;
-    }
-    try {
-      const response = await apiRequest<{ items: CheckResult[] }>(
-        `/companies/${scopeCompanyId}/streams/${streamId}/check-results?limit=1`,
-        { accessToken }
-      );
-      const latest = response.items?.[0];
-      setSelectedStatus(latest ? normalizeStatus(latest.status) : null);
-      setSelectedLastCheckAt(latest?.created_at ?? null);
-    } catch {
-      setSelectedStatus(null);
-      setSelectedLastCheckAt(null);
-    }
-  };
-
   const loadData = async () => {
     if (!accessToken || !scopeCompanyId) {
       setProjects([]);
       setStreams([]);
+      setLatestStatusMap({});
+      setLatestCheckAtMap({});
       setSelectedStreamId(null);
       return;
     }
@@ -145,7 +128,7 @@ export default function WatchPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [projectResponse, streamResponse, whitelistResponse] = await Promise.all([
+      const [projectResponse, streamResponse, whitelistResponse, latestStatusesResponse] = await Promise.all([
         apiRequest<{ items: Project[] }>(
           `/companies/${scopeCompanyId}/projects?limit=200`,
           { accessToken }
@@ -156,7 +139,11 @@ export default function WatchPage() {
         apiRequest<{ items: EmbedWhitelistItem[] }>(
           `/companies/${scopeCompanyId}/embed-whitelist`,
           { accessToken }
-        )
+        ),
+        apiRequest<{ items: StreamLatestStatus[] }>(
+          `/companies/${scopeCompanyId}/streams/latest-statuses`,
+          { accessToken }
+        ),
       ]);
 
       const loadedStreams = Array.isArray(streamResponse.items) ? streamResponse.items : [];
@@ -166,37 +153,22 @@ export default function WatchPage() {
       setProjects(Array.isArray(projectResponse.items) ? projectResponse.items : []);
       setStreams(loadedStreams);
       setAllowedDomains(loadedDomains);
-
-      const checks = await Promise.all(
-        loadedStreams.map(async (stream) => {
-          try {
-            const resultResponse = await apiRequest<{ items: CheckResult[] }>(
-              `/companies/${scopeCompanyId}/streams/${stream.id}/check-results?limit=1`,
-              { accessToken }
-            );
-            const latest = resultResponse.items?.[0];
-            return {
-              streamId: stream.id,
-              status: latest ? normalizeStatus(latest.status) : null
-            };
-          } catch {
-            return { streamId: stream.id, status: null };
-          }
-        })
-      );
-      const nextMap: Record<number, CheckStatus | null> = {};
-      checks.forEach((item) => {
-        nextMap[item.streamId] = item.status;
+      const nextStatusMap: Record<number, CheckStatus | null> = {};
+      const nextCheckAtMap: Record<number, string | null> = {};
+      (latestStatusesResponse.items ?? []).forEach((item) => {
+        const normalizedStatus =
+          typeof item.status === "string" ? normalizeStatus(item.status) : null;
+        nextStatusMap[item.stream_id] = normalizedStatus;
+        nextCheckAtMap[item.stream_id] = item.last_check_at ?? null;
       });
-      setLatestStatusMap(nextMap);
+      setLatestStatusMap(nextStatusMap);
+      setLatestCheckAtMap(nextCheckAtMap);
 
       const streamIdParam = Number.parseInt(searchParams.get("streamId") ?? "", 10);
       if (Number.isFinite(streamIdParam) && loadedStreams.some((item) => item.id === streamIdParam)) {
         setSelectedStreamId(streamIdParam);
-        void loadSelectedStatus(streamIdParam);
       } else if (loadedStreams.length > 0) {
         setSelectedStreamId(loadedStreams[0].id);
-        void loadSelectedStatus(loadedStreams[0].id);
       } else {
         setSelectedStreamId(null);
       }
@@ -212,6 +184,16 @@ export default function WatchPage() {
     // dependent on auth/scope only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, scopeCompanyId]);
+
+  useEffect(() => {
+    if (!selectedStreamId) {
+      setSelectedStatus(null);
+      setSelectedLastCheckAt(null);
+      return;
+    }
+    setSelectedStatus(latestStatusMap[selectedStreamId] ?? null);
+    setSelectedLastCheckAt(latestCheckAtMap[selectedStreamId] ?? null);
+  }, [latestCheckAtMap, latestStatusMap, selectedStreamId]);
 
   useEffect(() => {
     if (!selectedStream) {
@@ -318,7 +300,6 @@ export default function WatchPage() {
   const handleSelectStream = (stream: Stream) => {
     setSelectedStreamId(stream.id);
     setCheckMessage(null);
-    void loadSelectedStatus(stream.id);
   };
 
   const handleRunCheck = async () => {
@@ -336,8 +317,7 @@ export default function WatchPage() {
         }
       );
       setCheckMessage(`Проверка поставлена в очередь: job #${response.job.id}.`);
-      await loadSelectedStatus(selectedStreamId);
-      void loadData();
+      await loadData();
     } catch (runError) {
       setCheckMessage(toErrorMessage(runError));
     } finally {

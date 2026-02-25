@@ -16,6 +16,7 @@ type StreamPatchInput = domain.StreamPatchInput
 type StreamStore interface {
 	CreateStream(ctx context.Context, companyID int64, projectID int64, name string, sourceType string, sourceURL string, isActive bool) (domain.Stream, error)
 	ListStreams(ctx context.Context, companyID int64, filter StreamListFilter) ([]domain.Stream, error)
+	ListLatestStatuses(ctx context.Context, companyID int64) ([]domain.StreamLatestStatus, error)
 	GetStream(ctx context.Context, companyID int64, streamID int64) (domain.Stream, error)
 	PatchStream(ctx context.Context, companyID int64, streamID int64, patch StreamPatchInput) (domain.Stream, error)
 	DeleteStream(ctx context.Context, companyID int64, streamID int64) error
@@ -122,6 +123,14 @@ func (s *StreamService) GetStream(ctx context.Context, companyID int64, streamID
 		)
 	}
 	return domain.Stream{}, NewInternalError()
+}
+
+func (s *StreamService) ListLatestStatuses(ctx context.Context, companyID int64) ([]domain.StreamLatestStatus, error) {
+	items, err := s.store.ListLatestStatuses(ctx, companyID)
+	if err != nil {
+		return nil, NewInternalError()
+	}
+	return items, nil
 }
 
 func (s *StreamService) PatchStream(ctx context.Context, request PatchStreamRequest) (domain.Stream, error) {

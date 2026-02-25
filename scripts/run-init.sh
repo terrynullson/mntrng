@@ -36,5 +36,9 @@ for f in /migrations/0001_baseline_schema.up.sql \
 done
 
 echo "Running seed..."
-/app/seed
+if [ "${BOOTSTRAP_SEED_ENABLED:-false}" = "true" ]; then
+  /app/seed
+else
+  echo "Skipping seed (BOOTSTRAP_SEED_ENABLED=false)"
+fi
 echo "Init done."

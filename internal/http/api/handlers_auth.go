@@ -4,7 +4,10 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strings"
 	"time"
+
+	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
 )
 
 func (s *Server) handleRegisterRequest(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +46,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, r, "login", err)
 		return
 	}
+	s.setAuthCookies(w, item.AccessToken, item.RefreshToken)
 
 	if err := WriteJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("login response encode error: %v", err)
@@ -51,9 +55,14 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	var request refreshRequest
-	if err := DecodeJSONBody(r, &request); err != nil {
-		WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid request body", map[string]interface{}{"error": err.Error()})
-		return
+	if r.ContentLength > 0 {
+		if err := DecodeJSONBody(r, &request); err != nil {
+			WriteJSONError(w, r, http.StatusBadRequest, "validation_error", "invalid request body", map[string]interface{}{"error": err.Error()})
+			return
+		}
+	}
+	if strings.TrimSpace(request.RefreshToken) == "" {
+		request.RefreshToken = readTokenFromCookie(r, loadAuthCookieConfig().refreshName)
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
@@ -61,9 +70,13 @@ func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 
 	item, err := s.authService.Refresh(ctx, request)
 	if err != nil {
+		if serviceErr, ok := serviceapi.AsServiceError(err); ok && serviceErr.StatusCode == http.StatusUnauthorized {
+			s.clearAuthCookies(w)
+		}
 		writeServiceError(w, r, "refresh", err)
 		return
 	}
+	s.setAuthCookies(w, item.AccessToken, item.RefreshToken)
 
 	if err := WriteJSON(w, http.StatusOK, item); err != nil {
 		log.Printf("refresh response encode error: %v", err)
@@ -92,6 +105,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, r, "logout", err)
 		return
 	}
+	s.clearAuthCookies(w)
 
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -724,3 +724,13 @@ Summary:
 - Добавлены healthchecks/restart policies для `api/frontend/worker` и runbook диагностики `internal_error` в `README`.
 Notes:
 `go test ./...` PASS, `web npm run build` PASS; docker-lint warning по CVE базового образа не блокирует текущие изменения.
+
+[2026-02-25] [PROD-HARDENING-WAVES-ABC-001]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- Wave A: secure-by-default hardening — seed disable by default (`BOOTSTRAP_SEED_ENABLED=false`), auth cookies (`HttpOnly`, configurable secure/samesite), refresh-from-cookie, metrics visibility tightened (`API_METRICS_PUBLIC=false` by default, worker metrics token support).
+- Wave B: performance/observability — aggregated endpoint `GET /companies/{company_id}/streams/latest-statuses` for watch page (N+1 removed), API request Prometheus metrics + structured request logs, worker cycle/job Prometheus metrics, DB pool limits via env.
+- Wave C: ops maturity — worker healthcheck in compose, localhost-bound worker metrics publish, incident+rollback runbook (`docs/incident_runbook.md`), contracts/docs synced (`README`, `docs/api_contract.md`, `.env.example`).
+Notes:
+`go test ./...` PASS; `web: npm ci && npm run build` PASS. Остались dependency-vuln предупреждения npm audit (внешние пакеты), вне текущего scope.

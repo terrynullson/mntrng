@@ -16,15 +16,17 @@
 
 ### Authentication and authorization
 
-- Every non-public endpoint requires `Authorization: Bearer <access_token>`.
+- Every non-public endpoint requires authenticated session:
+  - `Authorization: Bearer <access_token>`, or
+  - server-side HttpOnly cookie `hm_access_token` (name configurable).
 - Public endpoints:
   - `GET /api/v1/health`
   - `GET /api/v1/ready`
-  - `GET /api/v1/metrics` (Prometheus)
   - `POST /api/v1/auth/register`
   - `POST /api/v1/auth/login`
   - `POST /api/v1/auth/refresh`
   - `POST /api/v1/auth/telegram/login`
+- `GET /api/v1/metrics` is public only when `API_METRICS_PUBLIC=true`; otherwise requires authenticated `super_admin`.
 - RBAC roles:
   - `super_admin` — cross-company operations by policy.
   - `company_admin` — read/write only in own company scope.
@@ -255,11 +257,12 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 
 - Errors: `400`, `401`, `403`, `500`.
 - Pending/rejected/disabled identities cannot login.
+- Response also sets HttpOnly auth cookies (`hm_access_token`, `hm_refresh_token` by default; names configurable).
 
 ### `POST /api/v1/auth/refresh`
 
 - Public token refresh by refresh token.
-- Body:
+- Body (optional when refresh cookie is present):
 
 ```json
 {
@@ -269,6 +272,8 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 
 - `200` -> token response (same schema as login).
 - Errors: `400`, `401`, `500`.
+- If body token is omitted, backend reads refresh token from HttpOnly cookie (`hm_refresh_token` by default).
+- Successful refresh rotates tokens and refreshes HttpOnly auth cookies.
 
 ### `POST /api/v1/auth/logout`
 
@@ -283,6 +288,7 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 
 - `204` no body.
 - Errors: `400`, `401`, `500`.
+- Successful logout clears HttpOnly auth cookies.
 
 ### `GET /api/v1/auth/me`
 
@@ -573,6 +579,32 @@ All endpoints in this section are tenant-scoped by route `company_id`.
 
 - Query params: `project_id`, `is_active`, `limit`, `cursor`.
 - `200` -> paginated list of `Stream`.
+
+### `GET /companies/{company_id}/streams/latest-statuses`
+
+- Purpose: aggregated latest check status for each stream in company (used by watch screen to avoid N+1 requests).
+- `200`:
+
+```json
+{
+  "items": [
+    {
+      "stream_id": 1201,
+      "status": "OK",
+      "last_check_at": "2026-02-13T10:05:12Z"
+    },
+    {
+      "stream_id": 1202,
+      "status": null,
+      "last_check_at": null
+    }
+  ]
+}
+```
+
+- Notes:
+  - `status` is uppercase (`OK|WARN|FAIL`) or `null` when stream has no checks yet.
+  - Endpoint is tenant-scoped and requires auth.
 
 ### `GET /companies/{company_id}/streams/{stream_id}`
 

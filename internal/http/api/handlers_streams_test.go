@@ -34,6 +34,37 @@ func TestHandleListStreams_200(t *testing.T) {
 	}
 }
 
+func TestHandleListStreamLatestStatuses_200(t *testing.T) {
+	okStatus := "OK"
+	store := &mockStreamStore{
+		latestResp: []domain.StreamLatestStatus{
+			{StreamID: 1, Status: &okStatus, LastCheckAt: ptrTime(testTime)},
+			{StreamID: 2, Status: nil, LastCheckAt: nil},
+		},
+	}
+	srv := &Server{streamService: serviceapi.NewStreamService(store)}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/companies/10/streams/latest-statuses", nil)
+	rec := httptest.NewRecorder()
+	srv.handleListStreamLatestStatuses(rec, req, 10)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d %s", rec.Code, rec.Body.String())
+	}
+
+	var out domain.StreamLatestStatusListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(out.Items) != 2 {
+		t.Fatalf("unexpected items len: %d", len(out.Items))
+	}
+	if out.Items[0].Status == nil || *out.Items[0].Status != "OK" {
+		t.Fatalf("unexpected first status: %+v", out.Items[0])
+	}
+	if out.Items[1].Status != nil {
+		t.Fatalf("expected nil status for second stream: %+v", out.Items[1])
+	}
+}
+
 func TestHandleGetStream_200(t *testing.T) {
 	store := &mockStreamStore{
 		getResp: domain.Stream{ID: 2, CompanyID: 10, ProjectID: 1, Name: "S2", URL: "https://x/y.m3u8", IsActive: true, CreatedAt: testTime, UpdatedAt: testTime},
@@ -220,4 +251,9 @@ func TestStreams_403_TenantEscape(t *testing.T) {
 		t.Fatalf("expected 403, got %d", rec.Code)
 	}
 	assertErrorCode(t, rec.Body.Bytes(), "tenant_scope_required")
+}
+
+func ptrTime(value time.Time) *time.Time {
+	v := value
+	return &v
 }

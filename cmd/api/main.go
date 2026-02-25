@@ -30,6 +30,7 @@ func main() {
 		log.Fatalf("failed to open database connection: %v", err)
 	}
 	defer db.Close()
+	configureDBPool(db)
 
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer pingCancel()
@@ -84,4 +85,19 @@ func main() {
 	} else {
 		log.Printf("api shutdown complete")
 	}
+}
+
+func configureDBPool(db *sql.DB) {
+	maxOpen := config.IntAtLeast(config.GetInt("DB_MAX_OPEN_CONNS", 30), 1)
+	maxIdle := config.IntAtLeast(config.GetInt("DB_MAX_IDLE_CONNS", 10), 1)
+	if maxIdle > maxOpen {
+		maxIdle = maxOpen
+	}
+	connMaxLifetime := time.Duration(config.IntAtLeast(config.GetInt("DB_CONN_MAX_LIFETIME_MIN", 30), 1)) * time.Minute
+	connMaxIdleTime := time.Duration(config.IntAtLeast(config.GetInt("DB_CONN_MAX_IDLE_TIME_MIN", 10), 1)) * time.Minute
+
+	db.SetMaxOpenConns(maxOpen)
+	db.SetMaxIdleConns(maxIdle)
+	db.SetConnMaxLifetime(connMaxLifetime)
+	db.SetConnMaxIdleTime(connMaxIdleTime)
 }

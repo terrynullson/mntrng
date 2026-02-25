@@ -112,6 +112,12 @@ export type Stream = {
   updated_at: string;
 };
 
+export type StreamLatestStatus = {
+  stream_id: number;
+  status?: CheckStatus | null;
+  last_check_at?: string | null;
+};
+
 export type StreamCreateRequest = {
   project_id: number;
   name: string;

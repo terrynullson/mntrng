@@ -151,6 +151,48 @@ func TestAuthMiddlewareAllowsValidToken(t *testing.T) {
 	}
 }
 
+func TestAuthMiddlewareAllowsTokenFromCookie(t *testing.T) {
+	accessToken := "cookie-access-token"
+	hash := sha256.Sum256([]byte(accessToken))
+	accessHash := hex.EncodeToString(hash[:])
+
+	companyID := int64(10)
+	store := &middlewareAuthStore{
+		sessionByAccess: map[string]domain.AuthSessionUser{
+			accessHash: {
+				Session: domain.AuthSession{
+					ID:               17,
+					AccessExpiresAt:  time.Now().Add(15 * time.Minute),
+					RefreshExpiresAt: time.Now().Add(24 * time.Hour),
+				},
+				User: domain.AuthUser{
+					ID:        91,
+					CompanyID: &companyID,
+					Role:      domain.RoleViewer,
+					Status:    domain.UserStatusActive,
+				},
+			},
+		},
+	}
+
+	server := &Server{authService: serviceapi.NewAuthService(store, serviceapi.AuthConfig{})}
+	middleware := server.authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/companies/10/projects", nil)
+	request.AddCookie(&http.Cookie{
+		Name:  defaultAccessCookieName,
+		Value: accessToken,
+	})
+	response := httptest.NewRecorder()
+
+	middleware.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", response.Code, response.Body.String())
+	}
+}
+
 func TestAuthMiddlewareTenantEscapeDenied(t *testing.T) {
 	accessToken := "tenant-access-token"
 	hash := sha256.Sum256([]byte(accessToken))
@@ -340,5 +382,39 @@ func TestEvaluateAccessPolicyRBACMatrix(t *testing.T) {
 				t.Fatalf("code=%s expected=%s", code, testCase.expectCode)
 			}
 		})
+	}
+}
+
+func TestMetricsPathRequiresAuthByDefault(t *testing.T) {
+	t.Setenv("API_METRICS_PUBLIC", "false")
+
+	server := &Server{authService: serviceapi.NewAuthService(&middlewareAuthStore{}, serviceapi.AuthConfig{})}
+	middleware := server.authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/metrics", nil)
+	response := httptest.NewRecorder()
+
+	middleware.ServeHTTP(response, request)
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", response.Code)
+	}
+}
+
+func TestMetricsPathIsPublicWhenEnabled(t *testing.T) {
+	t.Setenv("API_METRICS_PUBLIC", "true")
+
+	server := &Server{authService: serviceapi.NewAuthService(&middlewareAuthStore{}, serviceapi.AuthConfig{})}
+	middleware := server.authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/metrics", nil)
+	response := httptest.NewRecorder()
+
+	middleware.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", response.Code)
 	}
 }

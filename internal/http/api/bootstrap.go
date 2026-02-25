@@ -18,6 +18,7 @@ func NewHTTPServer(addr string, db *sql.DB, limiter ratelimit.Limiter) *http.Ser
 	if limiter != nil {
 		handler = rateLimitMiddleware(limiter)(handler)
 	}
+	handler = withHTTPObservability(handler)
 	if telemetry.Enabled() {
 		handler = otelhttp.NewHandler(handler, "api")
 	}
