@@ -37,6 +37,7 @@
 - [docs/screenshot_automation.md](docs/screenshot_automation.md) — автоматизация скриншотов для UI-модулей (Docker, скрипты).
 - [docs/agent_devlog.md](docs/agent_devlog.md) — журнал работ агентов по модулям, формат записей и ограничения.
 - [docs/incident_runbook.md](docs/incident_runbook.md) — incident/rollback runbook для production-эксплуатации.
+- [docs/deploy_timeweb.md](docs/deploy_timeweb.md) — пошаговый production deploy на Timeweb Cloud (Caddy TLS, backup/restore).
 
 Переменные DevLog (`DEV_LOG_*`), retention (`RETENTION_*`) и Telegram Alerts (`TELEGRAM_*`, `ALERT_*`) описаны в [.env.example](.env.example) и в подразделах README ниже.
 
@@ -46,6 +47,16 @@
 
 ```bash
 go test ./...
+```
+
+Быстрый production-smoke (health/readiness/auth/tenant-guard):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-prod.ps1 `
+  -ApiBaseUrl http://localhost:8080 `
+  -Login root `
+  -Password Admin12345 `
+  -ExpectedRole super_admin
 ```
 
 Тесты, требующие БД, используют `DATABASE_URL` из окружения (например из `.env` или `env_dev`); при отсутствии подключения такие тесты можно пропускать.
@@ -61,7 +72,9 @@ cp .env.example .env
 2. При необходимости изменить значения в `.env`:
 
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
-- `API_PORT`, `REDIS_ADDR`, `AUTH_ACCESS_TTL_MIN`, `AUTH_REFRESH_TTL_DAYS`, `AUTH_TELEGRAM_MAX_AGE_SEC`, `SUPER_ADMIN_TELEGRAM_CHAT_ID`, `WORKER_HEARTBEAT_SEC`
+- `APP_ENV`, `API_PORT`, `REDIS_ADDR`, `AUTH_ACCESS_TTL_MIN`, `AUTH_REFRESH_TTL_DAYS`, `AUTH_TELEGRAM_MAX_AGE_SEC`, `SUPER_ADMIN_TELEGRAM_CHAT_ID`, `WORKER_HEARTBEAT_SEC`, `API_HSTS_ENABLED`, `API_READ_HEADER_TIMEOUT_SEC`, `API_READ_TIMEOUT_SEC`, `API_WRITE_TIMEOUT_SEC`, `API_IDLE_TIMEOUT_SEC`, `API_MAX_HEADER_BYTES`, `API_MAX_BODY_BYTES`
+- `RATE_LIMIT_AUTH_PER_MIN` (IP limit for `auth/login`, `auth/register`, `auth/refresh`, `auth/telegram/login`)
+- `TRUST_PROXY_HEADERS` (default `false`; set `true` only behind trusted reverse proxy to use `X-Forwarded-For` / `X-Real-IP`)
 - `API_METRICS_PUBLIC`, `AUTH_COOKIE_SECURE`, `AUTH_COOKIE_SAMESITE`, `AUTH_COOKIE_DOMAIN`, `AUTH_COOKIE_PATH`, `AUTH_ACCESS_COOKIE_NAME`, `AUTH_REFRESH_COOKIE_NAME`
 - `WORKER_JOB_TIMEOUT_SEC`, `WORKER_DB_RETRY_MAX`, `WORKER_DB_RETRY_BACKOFF_MS`
 - `PLAYLIST_TIMEOUT_MS`, `SEGMENT_TIMEOUT_MS`, `SEGMENTS_SAMPLE_COUNT`, `FRESHNESS_WARN_SEC`, `FRESHNESS_FAIL_SEC`, `FREEZE_WARN_SEC`, `FREEZE_FAIL_SEC`, `BLACKFRAME_WARN_RATIO`, `BLACKFRAME_FAIL_RATIO`, `EFFECTIVE_BITRATE_WARN_RATIO`, `EFFECTIVE_BITRATE_FAIL_RATIO`, `ALERT_FAIL_STREAK`, `ALERT_COOLDOWN_MIN`, `ALERT_SEND_RECOVERED`, `TELEGRAM_HTTP_TIMEOUT_MS`, `TELEGRAM_SEND_RETRY_MAX`, `TELEGRAM_SEND_RETRY_BACKOFF_MS`, `TELEGRAM_BOT_TOKEN_DEFAULT`, `RETENTION_TTL_DAYS`, `RETENTION_CLEANUP_INTERVAL_MIN`, `RETENTION_CLEANUP_BATCH_SIZE`
@@ -69,6 +82,9 @@ cp .env.example .env
 - `DB_MAX_OPEN_CONNS`, `DB_MAX_IDLE_CONNS`, `DB_CONN_MAX_LIFETIME_MIN`, `DB_CONN_MAX_IDLE_TIME_MIN`
 
 Файл `.env` не добавляется в git (трекается только `.env.example`).
+
+`AUTH_COOKIE_SECURE` в compose теперь secure-by-default (`true`). Для локального запуска по чистому HTTP выставляйте `AUTH_COOKIE_SECURE=false` явно.
+При `APP_ENV=production` API делает fail-fast проверку безопасности конфигурации и не стартует при небезопасных значениях (`API_METRICS_PUBLIC=true`, `AUTH_COOKIE_SECURE=false`, `AUTH_COOKIE_SAMESITE=none`, `BOOTSTRAP_SEED_ENABLED=true`, insecure CORS origins).
 
 ## Запуск в Docker (без ручных шагов)
 
@@ -120,6 +136,16 @@ git config core.hooksPath .githooks
 ```bash
 docker compose up --build -d
 ```
+
+Для production с TLS и reverse-proxy (Caddy) используйте профиль:
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Упрощённый вариант: подготовить `.env.prod` из `deploy/env.prod.example` и запустить `ENV_FILE=.env.prod ./scripts/deploy-prod.sh`.
+Если нужен полный набор переменных с комментариями, используйте `deploy/env.prod.full.example`.
+Для начального доступа в production используйте `scripts/bootstrap-superadmin.sh` (создаёт/обновляет `super_admin` с bcrypt-хешем через `pgcrypto`).
 
 **Обязательные переменные окружения** (в `.env` или в среде контейнеров): `DATABASE_URL`, `API_PORT` (по умолчанию 8080), для frontend — `INTERNAL_API_BASE_URL` (в docker: `http://api:8080`) и `NEXT_PUBLIC_API_BASE_URL` (публичный URL API, не домен самого frontend). Остальные переменные — см. [.env.example](.env.example) и разделы README выше.
 

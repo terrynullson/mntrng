@@ -1,14 +1,21 @@
 package api
 
 import (
+	"net"
 	"net/http"
 	"strings"
 
+	"github.com/example/hls-monitoring-platform/internal/config"
 	"github.com/example/hls-monitoring-platform/internal/ratelimit"
 )
 
 // authRateLimitPaths are the path prefixes that get rate-limited by IP.
-var authRateLimitPaths = []string{"/api/v1/auth/login", "/api/v1/auth/register"}
+var authRateLimitPaths = []string{
+	"/api/v1/auth/login",
+	"/api/v1/auth/register",
+	"/api/v1/auth/refresh",
+	"/api/v1/auth/telegram/login",
+}
 
 func rateLimitMiddleware(limiter ratelimit.Limiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -45,14 +52,32 @@ func rateLimitMiddleware(limiter ratelimit.Limiter) func(http.Handler) http.Hand
 }
 
 func clientIP(r *http.Request) string {
-	if x := r.Header.Get("X-Forwarded-For"); x != "" {
-		if i := strings.Index(x, ","); i > 0 {
-			return strings.TrimSpace(x[:i])
+	if r == nil {
+		return ""
+	}
+	trustProxyHeaders := config.GetBool("TRUST_PROXY_HEADERS", false)
+	if trustProxyHeaders {
+		if x := r.Header.Get("X-Forwarded-For"); x != "" {
+			if i := strings.Index(x, ","); i > 0 {
+				return normalizeClientIP(strings.TrimSpace(x[:i]))
+			}
+			return normalizeClientIP(strings.TrimSpace(x))
 		}
-		return strings.TrimSpace(x)
+		if x := r.Header.Get("X-Real-IP"); x != "" {
+			return normalizeClientIP(strings.TrimSpace(x))
+		}
 	}
-	if x := r.Header.Get("X-Real-IP"); x != "" {
-		return strings.TrimSpace(x)
+	return normalizeClientIP(r.RemoteAddr)
+}
+
+func normalizeClientIP(raw string) string {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return ""
 	}
-	return r.RemoteAddr
+	host, _, err := net.SplitHostPort(value)
+	if err == nil {
+		return strings.Trim(host, "[]")
+	}
+	return strings.Trim(value, "[]")
 }

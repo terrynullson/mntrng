@@ -1,0 +1,49 @@
+services:
+  init:
+    environment:
+      APP_ENV: production
+
+  api:
+    environment:
+      APP_ENV: production
+      API_HSTS_ENABLED: "true"
+      TRUST_PROXY_HEADERS: "true"
+      AUTH_COOKIE_SECURE: "true"
+      AUTH_COOKIE_SAMESITE: "strict"
+      CORS_ALLOWED_ORIGINS: https://${DOMAIN}
+    ports: []
+
+  worker:
+    environment:
+      APP_ENV: production
+    ports: []
+
+  frontend:
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: https://${DOMAIN}
+      INTERNAL_API_BASE_URL: http://api:8080
+    ports: []
+
+  caddy:
+    image: caddy:2.8-alpine
+    depends_on:
+      api:
+        condition: service_started
+      frontend:
+        condition: service_started
+    environment:
+      DOMAIN: ${DOMAIN}
+      CADDY_EMAIL: ${CADDY_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
+

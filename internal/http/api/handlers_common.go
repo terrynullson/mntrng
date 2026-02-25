@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -57,15 +58,20 @@ func DecodeJSONBody(r *http.Request, target interface{}) error {
 	if err := decoder.Decode(target); err != nil {
 		return err
 	}
-	if decoder.More() {
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
 		return errors.New("request body must contain a single JSON object")
 	}
 	return nil
 }
 
 func RequestIDFromRequest(r *http.Request) string {
-	if requestID := r.Header.Get("X-Request-ID"); requestID != "" {
-		return requestID
+	if r != nil {
+		if requestID, ok := requestIDFromContext(r.Context()); ok {
+			return requestID
+		}
+		if requestID := r.Header.Get("X-Request-ID"); requestID != "" {
+			return requestID
+		}
 	}
 	return "req_" + time.Now().UTC().Format("20060102150405.000000000")
 }

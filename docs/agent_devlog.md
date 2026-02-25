@@ -734,3 +734,52 @@ Summary:
 - Wave C: ops maturity — worker healthcheck in compose, localhost-bound worker metrics publish, incident+rollback runbook (`docs/incident_runbook.md`), contracts/docs synced (`README`, `docs/api_contract.md`, `.env.example`).
 Notes:
 `go test ./...` PASS; `web: npm ci && npm run build` PASS. Остались dependency-vuln предупреждения npm audit (внешние пакеты), вне текущего scope.
+
+[2026-02-25] [PROD-HARDENING-9PT-001]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- API runtime hardening: добавлены recovery middleware (panic-safe 500), строгие security headers (CSP/referrer/permissions), и production timeouts (`API_*_TIMEOUT_SEC`, `API_MAX_HEADER_BYTES`, optional `API_HSTS_ENABLED`).
+- Добавлен automated smoke-check `scripts/smoke-prod.ps1` (health, ready, metrics visibility, login, me, tenant-escape guard) для предрелизной проверки.
+- README/.env синхронизированы с новыми runtime env и smoke-процедурой.
+Notes:
+Изменения минимально-инвазивные и совместимы с текущим docker compose деплоем.
+
+[2026-02-25] [PROD-HARDENING-9PT-002]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- Security/perf fix: нормализован `clientIP` в rate-limit middleware (убран source-port из `RemoteAddr`, поддержаны `X-Forwarded-For`/`X-Real-IP`), чтобы исключить обход лимитера.
+- Secure-by-default: proxy headers (`X-Forwarded-For`, `X-Real-IP`) используются только при `TRUST_PROXY_HEADERS=true`, чтобы исключить spoofing в прямом доступе к API.
+- Compose hardening: в `docker-compose.yml` у API `AUTH_COOKIE_SECURE` переведён на secure-by-default (`${AUTH_COOKIE_SECURE:-true}`), без принудительного insecure override.
+- Расширен auth rate-limit на публичные endpoints `POST /api/v1/auth/refresh` и `POST /api/v1/auth/telegram/login` (кроме уже существующих login/register).
+- Добавлены регрессионные тесты `internal/http/api/ratelimit_middleware_test.go` (IP parsing + 429 на refresh), синхронизированы `docs/api_contract.md` и `README.md`.
+Notes:
+`go test ./...` PASS, `web npm run build` PASS.
+
+[2026-02-25] [PROD-HARDENING-9PT-003]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- Добавлен fail-fast runtime safety guard для API (`APP_ENV=production`): запрет небезопасных конфигов (`API_METRICS_PUBLIC=true`, `AUTH_COOKIE_SECURE=false`, `AUTH_COOKIE_SAMESITE=none`, `BOOTSTRAP_SEED_ENABLED=true`, non-localhost `http://` в CORS).
+- Усилен bootstrap init: `scripts/run-init.sh` теперь блокирует `BOOTSTRAP_SEED_ENABLED=true` при `APP_ENV=production`.
+- Введён глобальный лимит request body (`API_MAX_BODY_BYTES`, default 1 MiB) middleware-уровня с `413 payload_too_large`.
+- Исправлена трассировка request-id: единый `X-Request-ID` и `error_envelope.request_id` через context (без расхождения ID в одном запросе).
+- Улучшен JSON decode guard: запрет нескольких JSON объектов в body через EOF-check.
+- Добавлены тесты: `internal/config/runtime_safety_test.go`, `internal/http/api/body_limit_middleware_test.go`, `internal/http/api/request_id_middleware_test.go`, `internal/http/api/handlers_common_test.go`.
+Notes:
+Изменения совместимы с текущей архитектурой (API/Worker separation сохранён) и docker compose deploy.
+
+[2026-02-25] [PROD-DEPLOY-TIMEWEB-001]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- Добавлен production compose override `docker-compose.prod.yml`: Caddy reverse-proxy + TLS entrypoints `80/443`, internal-only API/frontend/worker ports, `APP_ENV=production`, proxy-trust и secure-cookie defaults.
+- Добавлен Caddy config `deploy/caddy/Caddyfile` с маршрутизацией `/api/* -> api:8080`, остальное -> `frontend:3000`, редирект `www -> apex`.
+- Добавлена документация `docs/deploy_timeweb.md` (Ubuntu 24.04 Timeweb VPS): DNS, Docker install, `.env.prod`, запуск, smoke-check, backup/restore и cron.
+- Добавлены ops scripts `scripts/backup-db.sh` и `scripts/restore-db.sh` для PostgreSQL rollback path.
+- Добавлен `scripts/bootstrap-superadmin.sh` для безопасного первичного bootstrap `super_admin` в production (bcrypt через `pgcrypto` без тестовых паролей).
+- Добавлен полный шаблон env для новичка `deploy/env.prod.full.example` (все переменные + подсказки по заполнению).
+- README/.env обновлены под production profile (`DOMAIN`, `CADDY_EMAIL`, compose prod command).
+Notes:
+Профиль ориентирован на сервер 2 vCPU / 4 GB RAM / 50 GB NVMe, без изменений архитектуры API/Worker.

@@ -45,6 +45,7 @@ func withHTTPObservability(next http.Handler) http.Handler {
 
 		requestID := RequestIDFromRequest(r)
 		responseRecorder.Header().Set("X-Request-ID", requestID)
+		r = r.WithContext(withRequestID(r.Context(), requestID))
 
 		next.ServeHTTP(responseRecorder, r)
 

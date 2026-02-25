@@ -20,6 +20,10 @@ const apiShutdownTimeout = 15 * time.Second
 
 func main() {
 	port := config.GetString("API_PORT", "8080")
+	if err := config.ValidateAPIRuntimeSafety(); err != nil {
+		log.Fatalf("api startup config validation failed: %v", err)
+	}
+
 	databaseURL := config.GetString("DATABASE_URL", "")
 	if databaseURL == "" {
 		log.Fatal("DATABASE_URL is required")

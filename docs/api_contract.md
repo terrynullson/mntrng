@@ -6,6 +6,7 @@
 - Transport: JSON over HTTP.
 - Baseline scope: contract only. No runtime implementation details.
 - Architectural boundary: API does not run `ffmpeg/ffprobe`; heavy checks are executed by Worker.
+- API enforces request body size limit (`API_MAX_BODY_BYTES`, default 1 MiB) for write methods.
 
 ### Tenant scoping (mandatory)
 
@@ -55,6 +56,8 @@ All non-2xx responses use one JSON envelope:
 - `not_found` -> `404`
 - `conflict` -> `409`
 - `rate_limited` -> `429`
+- `rate_limit_exceeded` -> `429`
+- `payload_too_large` -> `413`
 - `internal_error` -> `500`
 - `method_not_allowed` -> `405`
 
@@ -256,6 +259,8 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 ```
 
 - Errors: `400`, `401`, `403`, `500`.
+- Brute-force/IP rate limit is applied (`RATE_LIMIT_AUTH_PER_MIN`).
+  - IP source defaults to connection `RemoteAddr`; proxy headers are used only with `TRUST_PROXY_HEADERS=true`.
 - Pending/rejected/disabled identities cannot login.
 - Response also sets HttpOnly auth cookies (`hm_access_token`, `hm_refresh_token` by default; names configurable).
 
@@ -274,6 +279,7 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 - Errors: `400`, `401`, `500`.
 - If body token is omitted, backend reads refresh token from HttpOnly cookie (`hm_refresh_token` by default).
 - Successful refresh rotates tokens and refreshes HttpOnly auth cookies.
+- IP rate limit is applied (`RATE_LIMIT_AUTH_PER_MIN`).
 
 ### `POST /api/v1/auth/logout`
 
@@ -310,6 +316,7 @@ API contract uses uppercase status values. Persistence layer may store lowercase
 - Allowed only for approved+active linked users.
 - `200` -> token response (same schema as password login).
 - Errors: `400`, `401`, `403`, `500`.
+- IP rate limit is applied (`RATE_LIMIT_AUTH_PER_MIN`).
 
 ### `GET /api/v1/admin/registration-requests`
 

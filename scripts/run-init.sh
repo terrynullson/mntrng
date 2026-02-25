@@ -8,6 +8,11 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
+if [ "${APP_ENV:-}" = "production" ] && [ "${BOOTSTRAP_SEED_ENABLED:-false}" = "true" ]; then
+  echo "BOOTSTRAP_SEED_ENABLED=true is forbidden when APP_ENV=production"
+  exit 1
+fi
+
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
 CREATE TABLE IF NOT EXISTS schema_migrations (
   version TEXT PRIMARY KEY,
