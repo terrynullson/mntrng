@@ -35,8 +35,8 @@ export function ModuleCard({ href, title, subtitle, icon: Icon, meta, ctaLabel =
         </div>
 
         <div className="module-card-bottom">
-          {meta ? (
-            <div className="module-card-meta">{meta}</div>
+          {meta != null ? (
+            <div className="module-card-meta">{meta as any}</div>
           ) : (
             <span className="module-card-cta" aria-hidden>
               {ctaLabel}
