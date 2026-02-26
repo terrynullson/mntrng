@@ -1884,6 +1884,22 @@ tbody tr:last-child td {
   justify-content: center;
 }
 
+.hub-icon-bell {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  color: color-mix(in srgb, var(--text) 65%, transparent);
+  background: transparent;
+  box-shadow: none;
+}
+
+.hub-icon-bell:hover {
+  color: color-mix(in srgb, var(--text) 82%, transparent);
+  box-shadow: none;
+}
+
 .hub-theme-control {
   width: 36px;
   padding: 0;
@@ -1971,17 +1987,6 @@ tbody tr:last-child td {
   background: color-mix(in srgb, var(--surface-soft) 96%, transparent);
 }
 
-.hub-welcome {
-  margin: 0 0 20px;
-}
-
-.hub-welcome h1 {
-  margin: 0;
-  font-size: clamp(1.18rem, 1.5vw, 1.38rem);
-  font-weight: 500;
-  letter-spacing: 0.01em;
-}
-
 .hub-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1998,6 +2003,7 @@ tbody tr:last-child td {
   position: relative;
   overflow: hidden;
   color: inherit;
+  cursor: pointer;
   background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, transparent) 0%, color-mix(in srgb, var(--surface) 78%, transparent) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 16px 34px rgba(2, 6, 23, 0.2);
   backdrop-filter: blur(14px);
@@ -2096,19 +2102,6 @@ tbody tr:last-child td {
 
 .module-card-meta {
   width: 100%;
-}
-
-.module-card-cta {
-  min-height: 30px;
-  border-radius: 10px;
-  padding: 0 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  letter-spacing: 0.03em;
-  color: color-mix(in srgb, var(--text) 72%, transparent);
-  background: color-mix(in srgb, var(--surface-soft) 78%, transparent);
 }
 
 .hub-status-row {

@@ -96,7 +96,7 @@ export default function HubPage() {
           <div className="hub-floating-topbar">
             <div className="hub-topbar-zone hub-topbar-left">
               <span className="hub-brand-mark" aria-hidden />
-              <span className="hub-brand-text">HLS Portal</span>
+              <span className="hub-brand-text">SHOZA PORTAL</span>
             </div>
 
             <div className="hub-topbar-zone hub-topbar-center">
@@ -129,11 +129,11 @@ export default function HubPage() {
 
               <button
                 type="button"
-                className="hub-floating-control hub-icon-control"
+                className="hub-floating-control hub-icon-control hub-icon-bell"
                 aria-label="Уведомления"
                 title="Уведомления"
               >
-                <Bell size={15} strokeWidth={1.75} aria-hidden />
+                <Bell size={16} strokeWidth={1.75} aria-hidden />
               </button>
 
               <div className="hub-user-menu" ref={userMenuRef}>
@@ -161,10 +161,6 @@ export default function HubPage() {
               </div>
             </div>
           </div>
-
-          <header className="hub-welcome">
-            <h1>Добро пожаловать</h1>
-          </header>
 
           <div className="hub-grid">
             {MODULES.map((moduleItem) => (

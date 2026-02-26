@@ -11,13 +11,12 @@ type ModuleCardProps = {
   subtitle?: string;
   icon: LucideIcon;
   meta?: ReactNode;
-  ctaLabel?: string;
 };
 
-export function ModuleCard({ href, title, subtitle, icon: Icon, meta, ctaLabel = "Открыть" }: ModuleCardProps) {
+export function ModuleCard({ href, title, subtitle, icon: Icon, meta }: ModuleCardProps) {
   return (
     <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2, ease: "easeOut" }}>
-      <Link href={href} className="module-card">
+      <Link href={href} className="module-card" tabIndex={0}>
         <div className="module-card-top">
           <span className="module-card-icon-wrap" aria-hidden>
             <span className="module-card-icon-glow" />
@@ -35,13 +34,7 @@ export function ModuleCard({ href, title, subtitle, icon: Icon, meta, ctaLabel =
         </div>
 
         <div className="module-card-bottom">
-          {meta != null ? (
-            <div className="module-card-meta">{meta as any}</div>
-          ) : (
-            <span className="module-card-cta" aria-hidden>
-              {ctaLabel}
-            </span>
-          )}
+          {meta != null ? <div className="module-card-meta">{meta as any}</div> : null}
         </div>
       </Link>
     </motion.div>
