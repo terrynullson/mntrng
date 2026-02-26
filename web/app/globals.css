@@ -2146,6 +2146,44 @@ tbody tr:last-child td {
   }
 }
 
+/* Dark theme: faster, more visible blob animation (~3x speed, parallax) */
+[data-theme="dark"] .hub-page {
+  background: radial-gradient(circle at 16% 10%, rgba(148, 163, 184, 0.28), transparent 38%),
+    radial-gradient(circle at 84% 6%, rgba(100, 116, 139, 0.24), transparent 34%),
+    linear-gradient(160deg, color-mix(in srgb, var(--bg) 94%, #0f172a 6%) 0%, var(--bg) 48%, color-mix(in srgb, var(--bg) 93%, #020617 7%) 100%);
+}
+
+[data-theme="dark"] .hub-page::before,
+[data-theme="dark"] .hub-page::after {
+  background: radial-gradient(circle at 40% 40%, rgba(148, 163, 184, 0.22), transparent 48%);
+  filter: blur(28px);
+  animation: hub-space-drift 14s ease-in-out infinite alternate;
+}
+
+[data-theme="dark"] .hub-page::after {
+  background: radial-gradient(circle at 70% 32%, rgba(71, 85, 105, 0.26), transparent 50%);
+  animation-duration: 18s;
+}
+
+@keyframes hub-space-drift-dark {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(4%, -3%, 0) scale(1.04);
+    opacity: 1;
+  }
+}
+
+[data-theme="dark"] .hub-page::before {
+  animation-name: hub-space-drift-dark;
+}
+
+[data-theme="dark"] .hub-page::after {
+  animation-name: hub-space-drift-dark;
+}
+
 @media (max-width: 1080px) {
   .hub-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
