@@ -284,7 +284,7 @@ export default function StreamDetailsPageV2() {
       <header className="page-header compact">
         <h2 className="page-title">Плеер потока</h2>
         <p className="page-note">
-          <Link className="stream-link" href="/streams">
+          <Link className="stream-link" href="/monitoring/streams">
             К списку потоков
           </Link>
         </p>
@@ -298,7 +298,7 @@ export default function StreamDetailsPageV2() {
                 onChange={(event: { target: { value: string } }) => {
                   const targetId = event.target.value;
                   if (targetId && targetId !== streamID) {
-                    router.push(`/streams/${targetId}`);
+                    router.push(`/monitoring/streams/${targetId}`);
                   }
                 }}
                 disabled={isLoadingStreams || companyStreams.length === 0}

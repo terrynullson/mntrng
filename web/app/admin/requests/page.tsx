@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Check, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { AppButton } from "@/components/ui/app-button";
+import { IconButton } from "@/components/navigation/icon-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { apiRequest, toErrorMessage } from "@/lib/api/client";
@@ -191,28 +192,27 @@ export default function AdminRequestsPage() {
                   <td>{item.requested_role}</td>
                   <td>{formatTimestamp(item.created_at)}</td>
                   <td className="table-actions">
-                    <AppButton
-                      type="button"
-                      variant="secondary"
+                    <IconButton
                       disabled={busyRequestID === item.id}
                       onClick={() => {
                         void handleApprove(item);
                       }}
-                      aria-label={`Approve request ${item.id}`}
+                      label={`Одобрить заявку ${item.id}`}
+                      tooltip="Одобрить"
                     >
-                      Approve
-                    </AppButton>
-                    <AppButton
-                      type="button"
-                      variant="danger"
+                      <Check size={16} />
+                    </IconButton>
+                    <IconButton
                       disabled={busyRequestID === item.id}
                       onClick={() => {
                         void handleReject(item);
                       }}
-                      aria-label={`Reject request ${item.id}`}
+                      label={`Отклонить заявку ${item.id}`}
+                      tooltip="Отклонить"
+                      destructive
                     >
-                      Reject
-                    </AppButton>
+                      <X size={16} />
+                    </IconButton>
                   </td>
                 </tr>
               ))}

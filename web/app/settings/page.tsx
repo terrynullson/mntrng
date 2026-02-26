@@ -1,9 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Power, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { IconButton } from "@/components/navigation/icon-button";
 import { AppButton } from "@/components/ui/app-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
@@ -483,26 +485,27 @@ export default function SettingsPage() {
                           <td>{new Date(item.created_at).toLocaleString()}</td>
                           <td>
                             <div className="stream-actions">
-                              <AppButton
-                                type="button"
-                                variant="secondary"
+                              <IconButton
                                 disabled={embedBusyID === item.id}
                                 onClick={() => {
                                   void handleToggleDomain(item);
                                 }}
+                                label={`${item.enabled ? "Отключить" : "Включить"} домен ${item.domain}`}
+                                tooltip={item.enabled ? "Отключить домен" : "Включить домен"}
                               >
-                                {item.enabled ? "Отключить" : "Включить"}
-                              </AppButton>
-                              <AppButton
-                                type="button"
-                                variant="danger"
+                                <Power size={16} />
+                              </IconButton>
+                              <IconButton
                                 disabled={embedBusyID === item.id}
                                 onClick={() => {
                                   void handleDeleteDomain(item);
                                 }}
+                                label={`Удалить домен ${item.domain}`}
+                                tooltip="Удалить домен"
+                                destructive
                               >
-                                Удалить
-                              </AppButton>
+                                <Trash2 size={16} />
+                              </IconButton>
                             </div>
                           </td>
                         </tr>

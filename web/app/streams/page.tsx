@@ -2,9 +2,18 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import {
+  Eye,
+  Pencil,
+  Pin,
+  Play,
+  Star,
+  Trash2
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { IconButton } from "@/components/navigation/icon-button";
 import { AppButton } from "@/components/ui/app-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
@@ -180,7 +189,7 @@ export default function StreamsPage() {
     if (typeof window === "undefined") {
       return;
     }
-    window.localStorage.setItem(STORAGE_LAST_SECTION_KEY, "/streams");
+    window.localStorage.setItem(STORAGE_LAST_SECTION_KEY, "/monitoring/streams");
   }, []);
 
   const favoriteMap = useMemo(() => {
@@ -631,35 +640,28 @@ export default function StreamsPage() {
                     className={isPinned ? "stream-row-pinned" : undefined}
                   >
                     <td className="fav-pin-cell">
-                      <button
-                        type="button"
-                        className="icon-btn"
+                      <IconButton
                         onClick={() => void handleToggleFavorite(stream)}
                         disabled={isViewer || busyFav}
                         aria-pressed={isFavorite}
-                        aria-label={isFavorite ? "Убрать из избранного" : "В избранное"}
-                        title={isFavorite ? "Убрать из избранного" : "В избранное"}
+                        label={isFavorite ? "Убрать из избранного" : "В избранное"}
+                        tooltip={isFavorite ? "Убрать из избранного" : "В избранное"}
                       >
-                        ⭐
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-btn"
+                        <Star size={16} fill={isFavorite ? "currentColor" : "none"} />
+                      </IconButton>
+                      <IconButton
                         onClick={() => void handleTogglePin(stream)}
                         disabled={isViewer || busyFav}
                         aria-pressed={isPinned}
-                        aria-label={isPinned ? "Открепить" : "Закрепить"}
-                        title={isPinned ? "Открепить" : "Закрепить"}
+                        label={isPinned ? "Открепить" : "Закрепить"}
+                        tooltip={isPinned ? "Открепить" : "Закрепить"}
                       >
-                        📌
-                      </button>
+                        <Pin size={16} />
+                      </IconButton>
                     </td>
                     <td>{stream.id}</td>
                     <td>
-                      {isPinned ? (
-                        <span className="pin-indicator" aria-hidden>📌 </span>
-                      ) : null}
-                      <Link className="stream-link" href={`/streams/${stream.id}`}>
+                      <Link className="stream-link" href={`/monitoring/streams/${stream.id}`}>
                         {stream.name}
                       </Link>
                     </td>
@@ -677,38 +679,43 @@ export default function StreamsPage() {
                     <td>{formatTimestamp(stream.updated_at)}</td>
                     <td>
                       <div className="stream-actions">
-                        <Link className="stream-link" href={`/watch?streamId=${stream.id}`}>
-                          Смотреть
+                        <Link
+                          className="icon-button"
+                          href={`/watch?streamId=${stream.id}`}
+                          aria-label={`Смотреть поток ${stream.name}`}
+                          title="Смотреть"
+                        >
+                          <Eye size={16} />
                         </Link>
-                        <AppButton
-                          type="button"
-                          variant="secondary"
+                        <IconButton
                           disabled={isViewer || busyStreamID === stream.id}
                           onClick={() => {
                             void handleRunCheck(stream);
                           }}
-                          aria-label={busyStreamID === stream.id ? "В очереди" : `Запустить проверку: ${stream.name}`}
+                          label={busyStreamID === stream.id ? "В очереди" : `Запустить проверку: ${stream.name}`}
+                          tooltip="Запустить проверку"
                         >
-                          {busyStreamID === stream.id ? "В очереди…" : "Проверить сейчас"}
-                        </AppButton>
-                        <AppButton
-                          type="button"
-                          variant="secondary"
+                          <Play size={16} />
+                        </IconButton>
+                        <IconButton
                           disabled={isViewer}
                           onClick={() => openEditDialog(stream)}
+                          label={`Редактировать поток ${stream.name}`}
+                          tooltip="Редактировать"
                         >
-                          Редактировать
-                        </AppButton>
-                        <AppButton
-                          type="button"
-                          variant="danger"
+                          <Pencil size={16} />
+                        </IconButton>
+                        <IconButton
                           disabled={isViewer || busyStreamID === stream.id}
                           onClick={() => {
                             void handleDeleteStream(stream);
                           }}
+                          label={`Удалить поток ${stream.name}`}
+                          tooltip="Удалить"
+                          destructive
                         >
-                          Удалить
-                        </AppButton>
+                          <Trash2 size={16} />
+                        </IconButton>
                       </div>
                     </td>
                   </tr>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { AuthShell } from "@/components/layout/auth-shell";
 import { AppButton } from "@/components/ui/app-button";
 import { toErrorMessage } from "@/lib/api/client";
 
@@ -18,24 +19,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [nextPath, setNextPath] = useState<string>("/");
 
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const value = new URLSearchParams(window.location.search).get("next");
-    if (value && value.startsWith("/")) {
-      setNextPath(value);
-    }
-  }, []);
-
-  useEffect(() => {
     if (isReady && isAuthenticated) {
-      router.replace("/");
+      router.replace("/hub");
     }
   }, [isAuthenticated, isReady, router]);
 
@@ -56,7 +45,7 @@ export default function LoginPage() {
         password
       });
 
-      router.replace(nextPath);
+      router.replace("/hub");
     } catch (submitError) {
       setError(toErrorMessage(submitError));
     } finally {
@@ -65,7 +54,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-page">
+    <AuthShell>
+      <div className="auth-page">
       <motion.section
         className="auth-card"
         initial={prefersReducedMotion ? undefined : { opacity: 0, y: 18 }}
@@ -127,11 +117,12 @@ export default function LoginPage() {
 
         <p className="auth-secondary">
           Нет аккаунта?{" "}
-          <Link href="/register" aria-label="Создать заявку на регистрацию">
+          <Link href="/auth/register" aria-label="Создать заявку на регистрацию">
             Зарегистрироваться
           </Link>
         </p>
       </motion.section>
-    </div>
+      </div>
+    </AuthShell>
   );
 }

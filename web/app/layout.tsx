@@ -14,7 +14,7 @@ type RootLayoutProps = {
   children: any;
 };
 
-const THEME_SCRIPT = `(function(){var k='hls-admin-theme';var t=localStorage.getItem(k);if(t!=='light'&&t!=='dark'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}if(t)document.documentElement.setAttribute('data-theme',t);})();`;
+const THEME_SCRIPT = `(function(){var k='hls-admin-theme';var t=localStorage.getItem(k);if(t!=='light'&&t!=='dark'){t='dark';}if(t)document.documentElement.setAttribute('data-theme',t);})();`;
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (

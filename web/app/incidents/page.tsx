@@ -305,7 +305,7 @@ export default function IncidentsPage() {
                       <td>
                         <Link
                           className="stream-link"
-                          href={`/streams/${inc.stream_id}`}
+                          href={`/monitoring/streams/${inc.stream_id}`}
                         >
                           {inc.stream_name ?? `Поток #${inc.stream_id}`}
                         </Link>
@@ -315,7 +315,7 @@ export default function IncidentsPage() {
                       <td>{formatTimestamp(inc.resolved_at)}</td>
                       <td>{inc.fail_reason ?? "—"}</td>
                       <td>
-                        <Link className="stream-link" href={`/incidents/${inc.id}`}>
+                        <Link className="stream-link" href={`/monitoring/incidents/${inc.id}`}>
                           Открыть
                         </Link>
                       </td>

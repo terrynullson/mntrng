@@ -1,10 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Check } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { IconButton } from "@/components/navigation/icon-button";
 import { AppButton } from "@/components/ui/app-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
@@ -504,9 +506,7 @@ export default function AdminUsersPage() {
                               }
                               placeholder="Company ID"
                             />
-                            <AppButton
-                              type="button"
-                              variant="secondary"
+                            <IconButton
                               disabled={
                                 busyRoleUserID === item.id ||
                                 busyStatusUserID === item.id
@@ -514,10 +514,11 @@ export default function AdminUsersPage() {
                               onClick={() => {
                                 void handleRoleChange(item);
                               }}
-                              aria-label={busyRoleUserID === item.id ? "Saving role" : `Save role for user ${item.login}`}
+                              label={busyRoleUserID === item.id ? "Сохраняем роль" : `Сохранить роль пользователя ${item.login}`}
+                              tooltip="Сохранить роль"
                             >
-                              {busyRoleUserID === item.id ? "Saving..." : "Save role"}
-                            </AppButton>
+                              <Check size={16} />
+                            </IconButton>
                           </div>
 
                           <div className="users-action-row">
@@ -538,22 +539,19 @@ export default function AdminUsersPage() {
                               <option value="active">active</option>
                               <option value="disabled">disabled</option>
                             </select>
-<AppButton
-                            type="button"
-                            variant="secondary"
-                            disabled={
-                              busyRoleUserID === item.id ||
-                              busyStatusUserID === item.id
-                            }
-                            onClick={() => {
-                              void handleStatusChange(item);
-                            }}
-                            aria-label={busyStatusUserID === item.id ? "Saving status" : `Save status for user ${item.login}`}
-                          >
-                            {busyStatusUserID === item.id
-                              ? "Saving..."
-                              : "Save status"}
-                          </AppButton>
+                            <IconButton
+                              disabled={
+                                busyRoleUserID === item.id ||
+                                busyStatusUserID === item.id
+                              }
+                              onClick={() => {
+                                void handleStatusChange(item);
+                              }}
+                              label={busyStatusUserID === item.id ? "Сохраняем статус" : `Сохранить статус пользователя ${item.login}`}
+                              tooltip="Сохранить статус"
+                            >
+                              <Check size={16} />
+                            </IconButton>
                           </div>
                         </div>
                       ) : (

@@ -783,3 +783,15 @@ Summary:
 - README/.env обновлены под production profile (`DOMAIN`, `CADDY_EMAIL`, compose prod command).
 Notes:
 Профиль ориентирован на сервер 2 vCPU / 4 GB RAM / 50 GB NVMe, без изменений архитектуры API/Worker.
+
+[2026-02-26] [UI-PLATFORM-REDESIGN-002]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- IA/роутинг: добавлены зоны `/hub`, `/monitoring/*`, `/admin/*`, `/watch`-layout, а также модульные каркасы `/sms/*` и `/ai/*`; индексы `/`, `/monitoring`, `/admin` переведены на канонические redirect.
+- Auth UX: после логина/регистрации редирект жёстко на `/hub`; middleware обновлён под `/auth/login|register` и защищённые маршруты.
+- Design system/UI shell: внедрены переиспользуемые компоненты `ModuleCard`, `Sidebar`, `SidebarItem`, `IconButton`, `StatusCountBadge`, `PrivateTopbar`, `AuthShell`, `AuthGate`; сайдбары сворачиваемые с persistence в localStorage.
+- Hub/Watch/Admin polish: cinematic gateway с модульной сеткой и status icon+count для Monitoring; `/watch` приведён к операторскому 3-колоночному flow; action-зоны в `streams`, `admin/users`, `admin/requests`, `settings(embed whitelist)` переведены в icon-first + aria/tooltip.
+- UI tokens/CSS: обновлены surface/hover/active слои и поведение для новых layout, сохранена совместимость текущей бизнес-логики/API.
+Notes:
+`web npm run lint` PASS, `web npm run build` PASS.

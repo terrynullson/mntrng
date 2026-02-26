@@ -2,11 +2,12 @@
 
 import Hls from "hls.js";
 import { motion } from "framer-motion";
+import { Play } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { AppButton } from "@/components/ui/app-button";
+import { IconButton } from "@/components/navigation/icon-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -346,33 +347,6 @@ export default function WatchPage() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.24, ease: "easeOut" }}
         >
-          <div className="watch-main">
-            <div className="watch-player-wrap">
-              {selectedStream?.source_type === "EMBED" ? (
-                (() => {
-                  const iframeSrc = buildEmbedSrc(selectedStream.source_url || selectedStream.url);
-                  const host = iframeSrc ? extractHost(iframeSrc) : null;
-                  if (!iframeSrc || !host || !isDomainAllowed(host, allowedDomains)) {
-                    return <StatePanel kind="error">Embed запрещён или URL некорректен.</StatePanel>;
-                  }
-                  return (
-                    <iframe
-                      className="watch-embed-frame"
-                      src={iframeSrc}
-                      title={`Embed: ${selectedStream.name}`}
-                      allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                      referrerPolicy="strict-origin-when-cross-origin"
-                      allowFullScreen
-                    />
-                  );
-                })()
-              ) : (
-                <video ref={videoRef} controls playsInline muted className="watch-player" />
-              )}
-            </div>
-            {playerError ? <StatePanel kind="error">{playerError}</StatePanel> : null}
-          </div>
-
           <aside className="watch-sidebar">
             <div className="watch-filters">
               <label className="form-field" htmlFor="watch-search">
@@ -435,6 +409,33 @@ export default function WatchPage() {
             )}
           </aside>
 
+          <div className="watch-main">
+            <div className="watch-player-wrap">
+              {selectedStream?.source_type === "EMBED" ? (
+                (() => {
+                  const iframeSrc = buildEmbedSrc(selectedStream.source_url || selectedStream.url);
+                  const host = iframeSrc ? extractHost(iframeSrc) : null;
+                  if (!iframeSrc || !host || !isDomainAllowed(host, allowedDomains)) {
+                    return <StatePanel kind="error">Embed запрещён или URL некорректен.</StatePanel>;
+                  }
+                  return (
+                    <iframe
+                      className="watch-embed-frame"
+                      src={iframeSrc}
+                      title={`Embed: ${selectedStream.name}`}
+                      allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    />
+                  );
+                })()
+              ) : (
+                <video ref={videoRef} controls playsInline muted className="watch-player" />
+              )}
+            </div>
+            {playerError ? <StatePanel kind="error">{playerError}</StatePanel> : null}
+          </div>
+
           <aside className="watch-status">
             <h3>Статус потока</h3>
             <p>{selectedStream ? selectedStream.name : "Поток не выбран"}</p>
@@ -446,16 +447,18 @@ export default function WatchPage() {
               )}
             </div>
             <p>Последняя проверка: {formatTimestamp(selectedLastCheckAt)}</p>
-            <AppButton
-              type="button"
-              variant="secondary"
+            <div style={{ marginTop: "10px" }}>
+              <IconButton
               disabled={!selectedStream || selectedStream.source_type === "EMBED" || isViewer || isChecking}
               onClick={() => {
                 void handleRunCheck();
               }}
-            >
-              {isChecking ? "Ставим в очередь…" : "Проверить сейчас"}
-            </AppButton>
+              label={isChecking ? "Ставим в очередь" : "Проверить сейчас"}
+              tooltip="Проверить сейчас"
+              >
+                <Play size={16} />
+              </IconButton>
+            </div>
           </aside>
         </motion.div>
       ) : null}

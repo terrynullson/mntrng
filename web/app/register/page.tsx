@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 
+import { AuthShell } from "@/components/layout/auth-shell";
 import { AppButton } from "@/components/ui/app-button";
 import { apiRequest, toErrorMessage } from "@/lib/api/client";
 import type { RegisterRequest, RegistrationRequest, Role } from "@/lib/api/types";
@@ -67,7 +68,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="auth-page">
+    <AuthShell>
+      <div className="auth-page">
       <motion.section
         className="auth-card"
         initial={prefersReducedMotion ? undefined : { opacity: 0, y: 18 }}
@@ -95,7 +97,7 @@ export default function RegisterPage() {
             </p>
             <p>Вход станет доступен после одобрения и активации учётной записи.</p>
             <p>
-              <Link href="/login" className="stream-link" aria-label="Вернуться к входу">
+              <Link href="/auth/login" className="stream-link" aria-label="Вернуться к входу">
                 Вернуться к входу
               </Link>
             </p>
@@ -179,11 +181,12 @@ export default function RegisterPage() {
 
         <p className="auth-secondary">
           Уже есть аккаунт?{" "}
-          <Link href="/login" aria-label="Перейти к входу">
+          <Link href="/auth/login" aria-label="Перейти к входу">
             Войти
           </Link>
         </p>
       </motion.section>
-    </div>
+      </div>
+    </AuthShell>
   );
 }

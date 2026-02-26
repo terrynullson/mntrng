@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const PUBLIC_PATHS = new Set(["/login", "/register"]);
+const PUBLIC_PATHS = new Set(["/login", "/register", "/auth/login", "/auth/register"]);
 const ACCESS_COOKIE = "hm_access_token";
 const REFRESH_COOKIE = "hm_refresh_token";
 const WATCH_BASE_CSP =
@@ -17,7 +17,7 @@ function isStaticAsset(pathname: string): boolean {
 }
 
 export function middleware(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
+  const { pathname } = request.nextUrl;
 
   if (isStaticAsset(pathname)) {
     return NextResponse.next();
@@ -30,14 +30,13 @@ export function middleware(request: NextRequest) {
 
   if (!hasSessionCookie && !isPublic) {
     const loginURL = request.nextUrl.clone();
-    loginURL.pathname = "/login";
-    loginURL.searchParams.set("next", `${pathname}${search}`);
+    loginURL.pathname = "/auth/login";
     return NextResponse.redirect(loginURL);
   }
 
   if (hasSessionCookie && isPublic) {
     const homeURL = request.nextUrl.clone();
-    homeURL.pathname = "/";
+    homeURL.pathname = "/hub";
     homeURL.search = "";
     return NextResponse.redirect(homeURL);
   }
