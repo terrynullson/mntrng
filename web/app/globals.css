@@ -1900,6 +1900,15 @@ tbody tr:last-child td {
   box-shadow: none;
 }
 
+[data-theme="dark"] .hub-icon-bell {
+  color: color-mix(in srgb, var(--text) 58%, transparent);
+}
+
+[data-theme="dark"] .hub-icon-bell:hover {
+  color: color-mix(in srgb, var(--text) 78%, transparent);
+  box-shadow: none;
+}
+
 .hub-theme-control {
   width: 36px;
   padding: 0;
@@ -2038,6 +2047,11 @@ tbody tr:last-child td {
   outline-offset: 2px;
 }
 
+[data-theme="dark"] .module-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text) 45%, transparent);
+  outline-offset: 2px;
+}
+
 .module-card-top {
   display: flex;
   align-items: center;
@@ -2148,69 +2162,68 @@ tbody tr:last-child td {
 
 /* Dark theme: faster, more visible blob animation (~3x speed, parallax) */
 [data-theme="dark"] .hub-page {
-  background: radial-gradient(circle at 16% 10%, rgba(148, 163, 184, 0.28), transparent 38%),
-    radial-gradient(circle at 84% 6%, rgba(100, 116, 139, 0.24), transparent 34%),
+  background: radial-gradient(circle at 16% 10%, rgba(148, 163, 184, 0.32), transparent 36%),
+    radial-gradient(circle at 84% 6%, rgba(100, 116, 139, 0.28), transparent 32%),
     linear-gradient(160deg, color-mix(in srgb, var(--bg) 94%, #0f172a 6%) 0%, var(--bg) 48%, color-mix(in srgb, var(--bg) 93%, #020617 7%) 100%);
 }
 
 [data-theme="dark"] .hub-page::before,
 [data-theme="dark"] .hub-page::after {
-  background: radial-gradient(circle at 40% 40%, rgba(148, 163, 184, 0.22), transparent 48%);
-  filter: blur(28px);
-  animation: hub-space-drift 14s ease-in-out infinite alternate;
+  filter: blur(26px);
+}
+
+[data-theme="dark"] .hub-page::before {
+  background: radial-gradient(circle at 40% 40%, rgba(148, 163, 184, 0.32), transparent 45%);
+  animation: hub-space-drift-dark 6s ease-in-out infinite alternate;
 }
 
 [data-theme="dark"] .hub-page::after {
-  background: radial-gradient(circle at 70% 32%, rgba(71, 85, 105, 0.26), transparent 50%);
-  animation-duration: 18s;
+  background: radial-gradient(circle at 70% 32%, rgba(71, 85, 105, 0.3), transparent 48%);
+  animation: hub-space-drift-dark 8s ease-in-out infinite alternate;
 }
 
 @keyframes hub-space-drift-dark {
   0% {
     transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.85;
+    opacity: 0.88;
   }
   100% {
-    transform: translate3d(4%, -3%, 0) scale(1.04);
+    transform: translate3d(5%, -4%, 0) scale(1.05);
     opacity: 1;
   }
-}
-
-[data-theme="dark"] .hub-page::before {
-  animation-name: hub-space-drift-dark;
-}
-
-[data-theme="dark"] .hub-page::after {
-  animation-name: hub-space-drift-dark;
 }
 
 /* Dark theme: more glass / transparency so blob movement is visible under cards */
 [data-theme="dark"] .module-card {
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--surface) 52%, transparent) 0%,
-    color-mix(in srgb, var(--surface) 38%, transparent) 100%
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.04) 100%
   );
-  backdrop-filter: blur(20px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 34px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 16px 34px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="dark"] .module-card::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 60%, transparent 100%);
 }
 
 [data-theme="dark"] .module-card::after {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 6%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 [data-theme="dark"] .module-card:hover {
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--surface) 58%, transparent) 0%,
-    color-mix(in srgb, var(--surface) 44%, transparent) 100%
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.05) 100%
   );
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 20px 40px rgba(0, 0, 0, 0.4),
-    0 0 0 1px color-mix(in srgb, var(--text) 12%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 20px 40px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 28px rgba(255, 255, 255, 0.06);
 }
 
 @media (max-width: 1080px) {

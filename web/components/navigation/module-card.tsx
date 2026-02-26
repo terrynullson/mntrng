@@ -15,7 +15,10 @@ type ModuleCardProps = {
 
 export function ModuleCard({ href, title, subtitle, icon: Icon, meta }: ModuleCardProps) {
   return (
-    <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2, ease: "easeOut" }}>
+    <motion.div
+      whileHover={{ y: -2, transition: { duration: 0.2, ease: "easeOut" } }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+    >
       <Link href={href} className="module-card" tabIndex={0}>
         <div className="module-card-top">
           <span className="module-card-icon-wrap" aria-hidden>

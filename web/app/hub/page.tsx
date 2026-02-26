@@ -178,6 +178,7 @@ export default function HubPage() {
                         name="Activity"
                         count={summary.total}
                         label={`${summary.total} потоков всего`}
+                        iconNumberOnly
                       />
                       <StatusCountBadge
                         icon={AlertTriangle}
@@ -185,6 +186,7 @@ export default function HubPage() {
                         count={summary.warn}
                         tone="warn"
                         label={`${summary.warn} потоков требуют внимания (WARN)`}
+                        iconNumberOnly
                       />
                       <StatusCountBadge
                         icon={XCircle}
@@ -192,6 +194,7 @@ export default function HubPage() {
                         count={summary.fail}
                         tone="fail"
                         label={`${summary.fail} потоков недоступны (FAIL)`}
+                        iconNumberOnly
                       />
                     </div>
                   ) : null

@@ -6,6 +6,8 @@ type StatusCountBadgeProps = {
   label: string;
   name: string;
   tone?: "neutral" | "warn" | "fail";
+  /** Hide name text, show only icon + number (tooltip still uses label) */
+  iconNumberOnly?: boolean;
 };
 
 export function StatusCountBadge({
@@ -13,7 +15,8 @@ export function StatusCountBadge({
   count,
   label,
   name,
-  tone = "neutral"
+  tone = "neutral",
+  iconNumberOnly = false
 }: StatusCountBadgeProps) {
   const toneClass =
     tone === "fail"
@@ -25,7 +28,7 @@ export function StatusCountBadge({
   return (
     <span className={toneClass} title={label} aria-label={label}>
       <Icon size={14} strokeWidth={1.75} aria-hidden />
-      <span className="status-count-name">{name}</span>
+      {!iconNumberOnly ? <span className="status-count-name">{name}</span> : null}
       <span>{count}</span>
     </span>
   );
