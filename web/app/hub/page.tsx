@@ -1,10 +1,24 @@
 "use client";
 
-import { Bell, Activity, AlertTriangle, Bot, ChevronDown, Gauge, LogOut, Radar, Settings, Shield, Tv, XCircle } from "lucide-react";
+import {
+  BarChart3,
+  Bell,
+  Activity,
+  AlertTriangle,
+  Bot,
+  ChevronDown,
+  LogOut,
+  MessageSquare,
+  Radar,
+  Settings,
+  Tv,
+  XCircle
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AuthGate } from "@/components/auth/auth-gate";
+import { HubBackgroundBlobs } from "@/components/hub/hub-background-blobs";
 import { ModuleCard } from "@/components/navigation/module-card";
 import { StatusCountBadge } from "@/components/navigation/status-count-badge";
 import { ThemeToggleButton } from "@/components/theme/theme-toggle-button";
@@ -22,10 +36,10 @@ type MonitoringSummary = {
 const MODULES = [
   { href: "/watch", title: "Watch", subtitle: "Операторский режим", icon: Tv },
   { href: "/monitoring/streams", title: "Monitoring", subtitle: "Потоки и инциденты", icon: Radar },
-  { href: "/admin/users", title: "Admin", subtitle: "Пользователи и настройки", icon: Shield },
-  { href: "/sms", title: "SMS", subtitle: "Модуль уведомлений", icon: Settings },
+  { href: "/admin/users", title: "Admin", subtitle: "Пользователи и настройки", icon: Settings },
+  { href: "/sms", title: "SMS", subtitle: "Модуль уведомлений", icon: MessageSquare },
   { href: "/ai", title: "AI", subtitle: "AI-инструменты", icon: Bot },
-  { href: "/monitoring/analytics", title: "Reports", subtitle: "Сводная аналитика", icon: Gauge }
+  { href: "/monitoring/analytics", title: "Reports", subtitle: "Сводная аналитика", icon: BarChart3 }
 ] as const;
 
 export default function HubPage() {
@@ -35,23 +49,30 @@ export default function HubPage() {
   const [summary, setSummary] = useState<MonitoringSummary>({ total: 0, warn: 0, fail: 0 });
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
+  const [isCompanyOpen, setIsCompanyOpen] = useState<boolean>(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const companyMenuRef = useRef<HTMLDivElement | null>(null);
 
   const closeUserMenu = useCallback(() => setIsUserMenuOpen(false), []);
+  const closeCompanyMenu = useCallback(() => setIsCompanyOpen(false), []);
 
   useEffect(() => {
-    if (!isUserMenuOpen) {
-      return;
-    }
+    if (!isUserMenuOpen) return;
     const handleClick = (event: MouseEvent) => {
-      const root = userMenuRef.current;
-      if (root && !root.contains(event.target as Node)) {
-        closeUserMenu();
-      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) closeUserMenu();
     };
     document.addEventListener("click", handleClick, true);
     return () => document.removeEventListener("click", handleClick, true);
   }, [closeUserMenu, isUserMenuOpen]);
+
+  useEffect(() => {
+    if (!isCompanyOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      if (companyMenuRef.current && !companyMenuRef.current.contains(event.target as Node)) closeCompanyMenu();
+    };
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [closeCompanyMenu, isCompanyOpen]);
 
   const handleLogout = async () => {
     await logout();
@@ -89,9 +110,12 @@ export default function HubPage() {
     void loadSummary();
   }, [accessToken, scopeCompanyId]);
 
+  const activeCompany = companies.find((c) => c.id === activeCompanyId);
+
   return (
     <AuthGate>
       <div className="hub-page">
+        <HubBackgroundBlobs />
         <main className="hub-content">
           <div className="hub-floating-topbar">
             <div className="hub-topbar-zone hub-topbar-left">
@@ -107,24 +131,53 @@ export default function HubPage() {
 
             <div className="hub-topbar-zone hub-topbar-right">
               {user?.role === "super_admin" ? (
-                <label className="hub-floating-control hub-company-switcher" htmlFor="hub-active-company-switcher">
-                  <select
-                    id="hub-active-company-switcher"
-                    value={activeCompanyId ?? ""}
-                    onChange={(event) => {
-                      const value = Number.parseInt(event.target.value, 10);
-                      setActiveCompanyId(Number.isFinite(value) ? value : null);
-                    }}
+                <div className="hub-company-popover" ref={companyMenuRef}>
+                  <button
+                    type="button"
+                    className="hub-floating-control hub-company-trigger"
+                    onClick={() => setIsCompanyOpen((prev) => !prev)}
+                    aria-expanded={isCompanyOpen}
+                    aria-haspopup="listbox"
                     aria-label="Выбор компании (контекст)"
+                    id="hub-company-switcher-trigger"
                   >
-                    {companies.length === 0 ? <option value="">Нет компаний</option> : null}
-                    {companies.map((company) => (
-                      <option key={company.id} value={company.id}>
-                        {company.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <span className="hub-company-trigger-label">
+                      {companies.length === 0 ? "Нет компаний" : activeCompany?.name ?? "Компания"}
+                    </span>
+                    <ChevronDown size={14} strokeWidth={1.75} aria-hidden />
+                  </button>
+                  {isCompanyOpen ? (
+                    <div
+                      id="hub-company-listbox"
+                      className="hub-company-popover-panel"
+                      role="listbox"
+                      aria-labelledby="hub-company-switcher-trigger"
+                    >
+                      {companies.length === 0 ? (
+                        <div className="hub-company-popover-item hub-company-popover-item-empty">Нет компаний</div>
+                      ) : (
+                        companies.map((company) => (
+                          <button
+                            key={company.id}
+                            type="button"
+                            role="option"
+                            aria-selected={activeCompanyId === company.id}
+                            className="hub-company-popover-item"
+                            onClick={() => {
+                              setActiveCompanyId(company.id);
+                              closeCompanyMenu();
+                            }}
+                          >
+                            {activeCompanyId === company.id ? (
+                              <span className="hub-company-popover-item-marker" aria-hidden />
+                            ) : null}
+                            <span>{company.name}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
 
               <button
