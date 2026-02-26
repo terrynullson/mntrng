@@ -1,12 +1,13 @@
 "use client";
 
-import { Activity, AlertTriangle, Bot, Gauge, Radar, Settings, Shield, Tv } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Bell, Activity, AlertTriangle, Bot, ChevronDown, Gauge, LogOut, Radar, Settings, Shield, Tv, XCircle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { AuthGate } from "@/components/auth/auth-gate";
-import { PrivateTopbar } from "@/components/layout/private-topbar";
 import { ModuleCard } from "@/components/navigation/module-card";
 import { StatusCountBadge } from "@/components/navigation/status-count-badge";
+import { ThemeToggleButton } from "@/components/theme/theme-toggle-button";
 import { apiRequest, toErrorMessage } from "@/lib/api/client";
 import { resolveCompanyScope } from "@/lib/auth/tenant-scope";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -28,10 +29,34 @@ const MODULES = [
 ] as const;
 
 export default function HubPage() {
-  const { user, accessToken, activeCompanyId } = useAuth();
+  const router = useRouter();
+  const { user, companies, accessToken, activeCompanyId, setActiveCompanyId, logout } = useAuth();
   const scopeCompanyId = resolveCompanyScope(user, activeCompanyId);
   const [summary, setSummary] = useState<MonitoringSummary>({ total: 0, warn: 0, fail: 0 });
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const closeUserMenu = useCallback(() => setIsUserMenuOpen(false), []);
+
+  useEffect(() => {
+    if (!isUserMenuOpen) {
+      return;
+    }
+    const handleClick = (event: MouseEvent) => {
+      const root = userMenuRef.current;
+      if (root && !root.contains(event.target as Node)) {
+        closeUserMenu();
+      }
+    };
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [closeUserMenu, isUserMenuOpen]);
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/login");
+  };
 
   useEffect(() => {
     if (!accessToken || !scopeCompanyId) {
@@ -67,12 +92,80 @@ export default function HubPage() {
   return (
     <AuthGate>
       <div className="hub-page">
-        <PrivateTopbar title="Gateway" />
         <main className="hub-content">
-          <header className="page-header" style={{ marginBottom: "16px" }}>
-            <h2 className="page-title">Добро пожаловать, {user?.login ?? "оператор"}.</h2>
-            <p className="page-note">Выберите рабочий модуль платформы.</p>
+          <div className="hub-floating-topbar">
+            <div className="hub-topbar-zone hub-topbar-left">
+              <span className="hub-brand-mark" aria-hidden />
+              <span className="hub-brand-text">HLS Portal</span>
+            </div>
+
+            <div className="hub-topbar-zone hub-topbar-center">
+              <div className="hub-floating-control hub-theme-control">
+                <ThemeToggleButton />
+              </div>
+            </div>
+
+            <div className="hub-topbar-zone hub-topbar-right">
+              {user?.role === "super_admin" ? (
+                <label className="hub-floating-control hub-company-switcher" htmlFor="hub-active-company-switcher">
+                  <select
+                    id="hub-active-company-switcher"
+                    value={activeCompanyId ?? ""}
+                    onChange={(event) => {
+                      const value = Number.parseInt(event.target.value, 10);
+                      setActiveCompanyId(Number.isFinite(value) ? value : null);
+                    }}
+                    aria-label="Выбор компании (контекст)"
+                  >
+                    {companies.length === 0 ? <option value="">Нет компаний</option> : null}
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
+              <button
+                type="button"
+                className="hub-floating-control hub-icon-control"
+                aria-label="Уведомления"
+                title="Уведомления"
+              >
+                <Bell size={15} strokeWidth={1.75} aria-hidden />
+              </button>
+
+              <div className="hub-user-menu" ref={userMenuRef}>
+                <button
+                  type="button"
+                  className="hub-floating-control hub-user-trigger"
+                  onClick={() => setIsUserMenuOpen((previous) => !previous)}
+                  aria-expanded={isUserMenuOpen}
+                  aria-haspopup="true"
+                  aria-controls="hub-user-menu-panel"
+                >
+                  <span>{user?.login ?? "user"}</span>
+                  <ChevronDown size={14} strokeWidth={1.75} aria-hidden />
+                </button>
+
+                {isUserMenuOpen ? (
+                  <div id="hub-user-menu-panel" className="hub-user-menu-panel" role="menu">
+                    <p>{user?.email}</p>
+                    <button type="button" className="hub-user-logout" onClick={() => void handleLogout()}>
+                      <LogOut size={14} strokeWidth={1.75} aria-hidden />
+                      <span>Выход</span>
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <header className="hub-welcome">
+            <h1>Добро пожаловать</h1>
           </header>
+
           <div className="hub-grid">
             {MODULES.map((moduleItem) => (
               <ModuleCard
@@ -85,21 +178,24 @@ export default function HubPage() {
                   moduleItem.href === "/monitoring/streams" ? (
                     <div className="hub-status-row">
                       <StatusCountBadge
+                        icon={Activity}
+                        name="Activity"
+                        count={summary.total}
+                        label={`${summary.total} потоков всего`}
+                      />
+                      <StatusCountBadge
                         icon={AlertTriangle}
+                        name="AlertTriangle"
                         count={summary.warn}
                         tone="warn"
                         label={`${summary.warn} потоков требуют внимания (WARN)`}
                       />
                       <StatusCountBadge
-                        icon={AlertTriangle}
+                        icon={XCircle}
+                        name="XCircle"
                         count={summary.fail}
                         tone="fail"
                         label={`${summary.fail} потоков недоступны (FAIL)`}
-                      />
-                      <StatusCountBadge
-                        icon={Activity}
-                        count={summary.total}
-                        label={`${summary.total} потоков всего`}
                       />
                     </div>
                   ) : null
