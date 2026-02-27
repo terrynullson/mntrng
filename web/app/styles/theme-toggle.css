@@ -1,0 +1,45 @@
+/* Lightbulb theme toggle: https://toggles.dev/lightbulb — видна только иконка, без кнопки и hover */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.theme-toggle__lightbulb {
+  width: 1.5rem;
+  height: 1.5rem;
+  transform: rotate(180deg);
+}
+
+/* Светлая тема = лампочка «включена» (спираль и лучи видны), тёмная = «выключена» */
+.theme-toggle__lightbulb__coil,
+.theme-toggle__lightbulb__rays path {
+  stroke: currentColor;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+[data-theme="dark"] .theme-toggle__lightbulb__coil,
+[data-theme="dark"] .theme-toggle__lightbulb__rays path {
+  stroke-dashoffset: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle__lightbulb__coil,
+  .theme-toggle__lightbulb__rays path {
+    transition-duration: 0.01ms !important;
+  }
+}

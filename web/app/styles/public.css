@@ -1,0 +1,19 @@
+.public-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  background: #f3f5f8;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.public-theme-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+}

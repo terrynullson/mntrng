@@ -1,0 +1,126 @@
+﻿.button-primary,
+.button-secondary,
+.button-danger,
+.button-ghost {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  min-height: 40px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out,
+    border-color 150ms ease-out, transform 180ms ease-out;
+}
+
+.button-primary,
+.button-secondary,
+.button-danger,
+.button-ghost {
+  position: relative;
+  overflow: hidden;
+}
+
+.button-label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.button-primary[data-loading="true"]::after,
+.button-secondary[data-loading="true"]::after,
+.button-danger[data-loading="true"]::after,
+.button-ghost[data-loading="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.18) 20%,
+    rgba(255, 255, 255, 0.08) 40%,
+    transparent 60%
+  );
+  opacity: 0.7;
+  transform: translateX(-120%);
+  animation: button-loading-shimmer 1.4s ease-out infinite;
+}
+
+@keyframes button-loading-shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(140%);
+  }
+}
+
+.button-primary {
+  color: #ffffff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.button-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .button-primary:not(:disabled):hover,
+  .button-secondary:not(:disabled):hover,
+  .button-danger:not(:disabled):hover,
+  .button-ghost:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+  .button-primary:not(:disabled):active,
+  .button-secondary:not(:disabled):active,
+  .button-danger:not(:disabled):active,
+  .button-ghost:not(:disabled):active {
+    transform: translateY(0) scale(0.985);
+  }
+}
+
+.button-secondary {
+  color: #1f2937;
+  background: #ecf2f8;
+  border-color: #d5e0ea;
+}
+
+.button-secondary:hover:not(:disabled) {
+  background: #e2ebf4;
+}
+
+.button-danger {
+  color: #ffffff;
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.button-danger:hover:not(:disabled) {
+  background: #9d2119;
+}
+
+.button-ghost {
+  color: var(--text-muted);
+  background: transparent;
+  border-color: var(--border);
+}
+
+.button-ghost:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-soft);
+}
+
+.button-primary:disabled,
+.button-secondary:disabled,
+.button-danger:disabled,
+.button-ghost:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+

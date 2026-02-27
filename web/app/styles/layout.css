@@ -1,0 +1,144 @@
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow-soft);
+}
+
+.page-header {
+  margin-bottom: 14px;
+}
+
+.page-header.compact {
+  margin-bottom: 12px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.page-note {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.overview-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--surface-soft);
+}
+
+.overview-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.overview-card p {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.landing-primary-card {
+  display: grid;
+  gap: 12px;
+  align-content: flex-start;
+}
+
+.landing-primary-button {
+  margin-top: 6px;
+  min-height: 56px;
+  padding: 0 20px;
+  font-size: 1rem;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.streams-v2-filters {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.users-filters {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.analytics-filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.landing-primary-cta {
+  width: 100%;
+  max-width: 640px;
+  border-radius: 10px;
+  border: 1px solid rgba(123, 150, 255, 0.2);
+}
+
+@media (max-width: 1080px) {
+  .filters-grid,
+  .streams-v2-filters,
+  .users-filters,
+  .analytics-filters,
+  .role-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-grid,
+  .summary-grid,
+  .stream-details-grid,
+  .core-launchpad-grid,
+  .core-launchpad-meta,
+  .watch-layout,
+  .overlay-grid,
+  .embed-whitelist-add {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .secure-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .secure-sidebar {
+    width: 100% !important;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .secure-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .secure-topbar-right {
+    justify-content: space-between;
+  }
+
+  .filters-grid,
+  .streams-v2-filters,
+  .users-filters,
+  .analytics-filters,
+  .role-form {
+    grid-template-columns: 1fr;
+  }
+}

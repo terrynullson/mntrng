@@ -52,6 +52,16 @@ Summary:
 Notes:
 Смоук-тесты прошли, регрессий в runtime не найдено.
 
+[2026-02-22] [web-globals-css-refactor]
+Agent: FrontendAgent
+Commit: 6a416f5
+Summary:
+- Удалён мёртвый блок стилей .theme-switcher-grid (dottereldesign) из globals.css.
+- Стили разнесены по частичным файлам в web/app/styles/: tokens, base, public, theme-toggle, auth, secure-shell, layout, forms, tables, buttons, components, hub.
+- globals.css содержит только @import в порядке каскада; визуал и поведение без изменений.
+Notes:
+npm run build успешен; порядок правил и [data-theme="dark"]/@media сохранены в соответствующих частичных файлах.
+
 [2026-02-15] [api-auth-baseline]
 Agent: BackendAgent
 Commit: 268cbc7eea7ddb6df73bc02d20b4cea46472a4f8
