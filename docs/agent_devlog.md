@@ -840,3 +840,14 @@ Summary:
 - /hub: theme-toggle окончательно закреплён как центральный fixed watermark над страницей (fixed top-center, единая позиция для light/dark), без фона и с мягким hover-glow в тёмной теме.
 Notes:
 `web npm run build` PASS; layering проверен: орбы не перекрываются лишними слоями, карточки не выглядят «бетоном».
+
+[2026-02-28] [HUB-DARK-GRAPHITE-ORBS-006]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- /hub (dark): базовый фон заменён на глубокий холодный градиент #050816 → #0B1024 без сине-серых overlay.
+- /hub (dark): карточки переведены в нейтральный графит (rgba(24,28,40,0.65)), убран синий верхний градиент и затемняющий ::before, border/backdrop-blur сохранены.
+- /hub (dark): 5 фоновых шаров с палитрой 3 синих (#1E3A8A, #1D4ED8, #2563EB) + 2 холодных фиолетовых (#7C3AED, #A855F7), распределены по экрану, blur 180–240px, один шар ярче (opacity +0.1), добавлено лёгкое scale breathing.
+- /hub: лампочка без halo/квадрата, цвет rgba(255,255,255,0.7), hover rgba(255,255,255,1), только лёгкий drop-shadow glow rgba(124,58,237,0.4).
+Notes:
+Layering: base gradient → orbs (z-index 0) → content; glow заметен на статичном скрине.
