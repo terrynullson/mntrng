@@ -54,7 +54,7 @@ Notes:
 
 [2026-02-22] [web-globals-css-refactor]
 Agent: FrontendAgent
-Commit: 6a416f5
+Commit: bba712b
 Summary:
 - Удалён мёртвый блок стилей .theme-switcher-grid (dottereldesign) из globals.css.
 - Стили разнесены по частичным файлам в web/app/styles/: tokens, base, public, theme-toggle, auth, secure-shell, layout, forms, tables, buttons, components, hub.
