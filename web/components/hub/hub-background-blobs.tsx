@@ -1,83 +1,164 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
-type BlobSpec = {
+type BlobLayer = "near" | "far";
+
+type BlobAnimState = {
+  layer: BlobLayer;
   size: number;
+  color: string;
+  // animation state
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  startTime: number;
   duration: number;
-  name: string;
-  keyframes: string;
-  left: number;
-  top: number;
 };
+
+const BLOB_COLORS: string[] = [
+  "rgba(99, 102, 241, 0.5)",
+  "rgba(79, 70, 229, 0.45)",
+  "rgba(56, 189, 248, 0.4)",
+  "rgba(59, 130, 246, 0.42)",
+  "rgba(99, 102, 241, 0.38)"
+];
 
 function randomBetween(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-function generateKeyframes(name: string): string {
-  const steps = [0, 20, 40, 60, 80, 100];
-  const keyframeBlocks = steps
-    .map((pct) => {
-      const tx = randomBetween(-30, 30);
-      const ty = randomBetween(-24, 24);
-      const scale = randomBetween(0.9, 1.1);
-      return `  ${pct}% { transform: translate3d(${tx}%, ${ty}%, 0) scale(${scale.toFixed(2)}); opacity: ${randomBetween(0.78, 1).toFixed(2)}; }`;
-    })
-    .join("\n");
-  return `@keyframes ${name} { ${keyframeBlocks} }`;
+function createInitialBlobs(now: number): BlobAnimState[] {
+  // 3 дальних, 2 ближних
+  const layers: BlobLayer[] = ["far", "far", "far", "near", "near"];
+
+  return layers.map((layer, index) => {
+    const size = randomBetween(240, 520);
+    const x = randomBetween(-20, 20);
+    const y = randomBetween(-16, 16);
+    const duration =
+      layer === "far" ? randomBetween(5500, 9000) : randomBetween(3200, 6500);
+
+    return {
+      layer,
+      size,
+      color: BLOB_COLORS[index % BLOB_COLORS.length],
+      fromX: x,
+      fromY: y,
+      toX: randomBetween(-26, 26),
+      toY: randomBetween(-20, 20),
+      startTime: now,
+      duration
+    };
+  });
 }
 
-function generateBlobConfig(): { keyframes: string; blobs: BlobSpec[] } {
-  const keyframeNames = ["hub-orb-1", "hub-orb-2", "hub-orb-3", "hub-orb-4", "hub-orb-5"];
-  const blobs: BlobSpec[] = keyframeNames.map((name) => ({
-    size: Math.round(randomBetween(220, 520)),
-    duration: randomBetween(9, 16),
-    name,
-    keyframes: generateKeyframes(name),
-    left: randomBetween(0, 80),
-    top: randomBetween(0, 75)
-  }));
-  const keyframes = blobs.map((b) => b.keyframes).join("\n");
-  return { keyframes, blobs };
+function easeInOutQuad(t: number): number {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 }
-
-const ORB_COLORS = [
-  "rgba(99, 102, 241, 0.35)",
-  "rgba(79, 70, 229, 0.32)",
-  "rgba(67, 56, 202, 0.3)",
-  "rgba(129, 140, 248, 0.28)",
-  "rgba(99, 102, 241, 0.25)"
-];
 
 export function HubBackgroundBlobs() {
-  const [config, setConfig] = useState<ReturnType<typeof generateBlobConfig> | null>(null);
+  const blobRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const animStateRef = useRef<BlobAnimState[] | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    setConfig(generateBlobConfig());
+    const now = performance.now();
+    animStateRef.current = createInitialBlobs(now);
+
+    const frame = () => {
+      const blobs = animStateRef.current;
+      if (!blobs) {
+        return;
+      }
+
+      const time = performance.now();
+
+      animStateRef.current = blobs.map((blob, index) => {
+        let { fromX, fromY, toX, toY, startTime, duration } = blob;
+        let t = (time - startTime) / duration;
+
+        if (t >= 1) {
+          // новая цель каждые ~3–7 секунд
+          const nextFromX = toX;
+          const nextFromY = toY;
+          const nextToX = randomBetween(-26, 26);
+          const nextToY = randomBetween(-20, 20);
+          const nextDuration =
+            blob.layer === "far"
+              ? randomBetween(5500, 9000)
+              : randomBetween(3200, 6500);
+
+          fromX = nextFromX;
+          fromY = nextFromY;
+          toX = nextToX;
+          toY = nextToY;
+          startTime = time;
+          duration = nextDuration;
+          t = 0;
+        }
+
+        const eased = easeInOutQuad(Math.max(0, Math.min(1, t)));
+        const x = fromX + (toX - fromX) * eased;
+        const y = fromY + (toY - fromY) * eased;
+
+        const el = blobRefs.current[index];
+        if (el) {
+          const scale = blob.layer === "near" ? 1.04 : 1;
+          el.style.transform = `translate3d(${x}%, ${y}%, 0) scale(${scale})`;
+        }
+
+        return {
+          ...blob,
+          fromX,
+          fromY,
+          toX,
+          toY,
+          startTime,
+          duration
+        };
+      });
+
+      rafRef.current = requestAnimationFrame(frame);
+    };
+
+    rafRef.current = requestAnimationFrame(frame);
+
+    return () => {
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
   }, []);
 
-  if (!config) return null;
+  const blobs = animStateRef.current ?? createInitialBlobs(performance.now());
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: config.keyframes }} />
-      <div className="hub-bg-blobs" aria-hidden>
-        {config.blobs.map((blob, i) => (
-          <div
-            key={blob.name}
-            className="hub-bg-blob"
-            style={{
-              width: blob.size,
-              height: blob.size,
-              left: `${blob.left}%`,
-              top: `${blob.top}%`,
-              background: `radial-gradient(circle at 50% 50%, ${ORB_COLORS[i] ?? ORB_COLORS[0]}, transparent 58%)`,
-              animation: `${blob.name} ${blob.duration.toFixed(1)}s ease-in-out infinite`
-            }}
-          />
-        ))}
-      </div>
-    </>
+    <div className="hub-bg-blobs" aria-hidden>
+      {blobs.map((blob, index) => (
+        <div
+          // ровно 5 элементов
+          // eslint-disable-next-line react/no-array-index-key
+          key={index}
+          ref={(el) => {
+            blobRefs.current[index] = el;
+          }}
+          className="hub-bg-blob"
+          style={{
+            width: blob.size,
+            height: blob.size,
+            background: `radial-gradient(circle at 50% 50%, ${blob.color}, transparent 60%)`,
+            opacity: blob.layer === "near" ? 0.5 : 0.38,
+            filter:
+              blob.layer === "near"
+                ? "blur(140px)"
+                : "blur(180px)",
+            zIndex: blob.layer === "near" ? 0 : -1
+          }}
+        />
+      ))}
+    </div>
   );
 }
+

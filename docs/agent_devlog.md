@@ -795,3 +795,13 @@ Summary:
 - UI tokens/CSS: обновлены surface/hover/active слои и поведение для новых layout, сохранена совместимость текущей бизнес-логики/API.
 Notes:
 `web npm run lint` PASS, `web npm run build` PASS.
+
+[2026-02-26] [HUB-DARK-POLAR-NIGHT-001]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- /hub (dark): реализован «Полярная ночь» — фон на 5 плавающих орбах (3 far, 2 near) с хаотичными траекториями через rAF + ease-in-out, без setState по кадру.
+- /hub (dark): карточки модулей стали более стеклянными и полупрозрачными, иконки приведены к чистым монохромным svg без квадратных контейнеров, company switcher ужат до компактного popover.
+- /hub (dark): лампочка theme-toggle переведена в роль атмосферного светового элемента (абсолютное позиционирование top-center, мягкий glow), статусы Monitoring сведены к минималистичным icon+number без цветных капсул.
+Notes:
+`web npm run build` PASS, перфоманс фона проверен на /hub (движение плавное, без рывков).

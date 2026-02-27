@@ -1910,7 +1910,6 @@ tbody tr:last-child td {
 }
 
 .hub-theme-control {
-  width: 36px;
   padding: 0;
   justify-content: center;
   background: transparent;
@@ -1930,15 +1929,39 @@ tbody tr:last-child td {
   box-shadow: 0 0 18px color-mix(in srgb, var(--text) 20%, transparent);
 }
 
+[data-theme="dark"] .hub-theme-control {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+[data-theme="dark"] .hub-theme-control .theme-toggle {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .hub-theme-control .theme-toggle:hover {
+  opacity: 0.9;
+  box-shadow: 0 0 24px rgba(148, 163, 184, 0.45);
+}
+
 .hub-company-popover {
   position: relative;
 }
 
 .hub-company-trigger {
-  min-height: 36px;
+  min-height: 32px;
   border-radius: 12px;
-  padding: 0 12px;
-  max-width: 200px;
+  padding: 0 8px;
+  max-width: 160px;
   cursor: pointer;
 }
 
@@ -1953,8 +1976,9 @@ tbody tr:last-child td {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 180px;
-  max-width: 280px;
+  min-width: 0;
+  width: max-content;
+  max-width: 260px;
   max-height: 320px;
   overflow-y: auto;
   border-radius: 14px;
@@ -2168,6 +2192,28 @@ tbody tr:last-child td {
   position: relative;
 }
 
+[data-theme="dark"] .module-card-icon-wrap {
+  width: auto;
+  height: auto;
+}
+
+[data-theme="dark"] .module-card-icon-glow {
+  display: none;
+}
+
+[data-theme="dark"] .module-card-icon {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .module-card-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
 .module-card-middle {
   display: flex;
   align-items: center;
@@ -2320,13 +2366,12 @@ tbody tr:last-child td {
 [data-theme="dark"] .module-card {
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.06) 50%,
-    rgba(255, 255, 255, 0.04) 100%
+    rgba(15, 23, 42, 0.65) 0%,
+    rgba(15, 23, 42, 0.58) 100%
   );
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 16px 34px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 14px 32px rgba(0, 0, 0, 0.35);
 }
 
 [data-theme="dark"] .module-card::before {
@@ -2340,13 +2385,12 @@ tbody tr:last-child td {
 [data-theme="dark"] .module-card:hover {
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(15, 23, 42, 0.7) 0%,
+    rgba(15, 23, 42, 0.62) 100%
   );
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 20px 40px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 28px rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 18px 38px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(148, 163, 184, 0.3),
+    0 0 22px rgba(148, 163, 184, 0.22);
 }
 
 @media (max-width: 1080px) {
