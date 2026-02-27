@@ -485,9 +485,30 @@ textarea:focus-visible {
   opacity: 0.32;
 }
 
+.orbs-background--hub .auth-blob-1 {
+  background: radial-gradient(circle at 24% 12%, rgba(96, 165, 250, 0.5), transparent 60%);
+}
+
+.orbs-background--hub .auth-blob-2 {
+  background: radial-gradient(circle at 76% 18%, rgba(59, 130, 246, 0.46), transparent 58%);
+}
+
+.orbs-background--hub .auth-blob-3 {
+  background: radial-gradient(circle at 18% 82%, rgba(37, 99, 235, 0.48), transparent 60%);
+}
+
+/* accent orbs: cold violet / magenta, not neon */
+.orbs-background--hub .auth-blob-4 {
+  background: radial-gradient(circle at 82% 78%, rgba(147, 51, 234, 0.38), transparent 60%);
+}
+
+.orbs-background--hub .auth-blob-5 {
+  background: radial-gradient(circle at 52% 46%, rgba(168, 85, 247, 0.36), transparent 62%);
+}
+
 [data-theme="dark"] .orbs-background--hub .auth-animated-blob {
-  filter: blur(180px);
-  opacity: 0.46;
+  filter: blur(190px);
+  opacity: 0.48;
 }
 
 .orbs-noise-layer {
@@ -1816,9 +1837,10 @@ tbody tr:last-child td {
   min-height: 100vh;
   position: relative;
   overflow: hidden;
-  background: radial-gradient(circle at 16% 10%, rgba(148, 163, 184, 0.16), transparent 42%),
-    radial-gradient(circle at 84% 6%, rgba(100, 116, 139, 0.14), transparent 38%),
-    linear-gradient(160deg, color-mix(in srgb, var(--bg) 94%, #0f172a 6%) 0%, var(--bg) 48%, color-mix(in srgb, var(--bg) 93%, #020617 7%) 100%);
+  background:
+    radial-gradient(circle at 14% 0%, rgba(191, 219, 254, 0.45), transparent 46%),
+    radial-gradient(circle at 86% 12%, rgba(221, 239, 253, 0.42), transparent 46%),
+    linear-gradient(165deg, #e5f0ff 0%, #f6fbff 48%, #e2f3ff 100%);
 }
 
 .hub-page::before,
@@ -2145,10 +2167,21 @@ tbody tr:last-child td {
   overflow: hidden;
   color: inherit;
   cursor: pointer;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, transparent) 0%, color-mix(in srgb, var(--surface) 78%, transparent) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 16px 34px rgba(2, 6, 23, 0.2);
-  backdrop-filter: blur(14px);
-  transition: box-shadow 0.2s ease-out;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(248, 250, 252, 0.98) 48%,
+    rgba(241, 245, 249, 0.96) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 14px 32px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition:
+    box-shadow 0.2s ease-out,
+    transform 0.22s ease-out,
+    background-color 0.2s ease-out;
 }
 
 .module-card::before {
@@ -2171,7 +2204,11 @@ tbody tr:last-child td {
 }
 
 .module-card:hover {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 20px 38px rgba(2, 6, 23, 0.28), 0 0 0 1px color-mix(in srgb, var(--text) 15%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 18px 38px rgba(15, 23, 42, 0.22),
+    0 0 0 1px color-mix(in srgb, var(--border) 75%, transparent);
+  transform: translateY(-2px);
 }
 
 .module-card:focus-visible {
@@ -2217,16 +2254,16 @@ tbody tr:last-child td {
   position: relative;
 }
 
-[data-theme="dark"] .module-card-icon-wrap {
+.hub-page .module-card-icon-wrap {
   width: auto;
   height: auto;
 }
 
-[data-theme="dark"] .module-card-icon-glow {
+.hub-page .module-card-icon-glow {
   display: none;
 }
 
-[data-theme="dark"] .module-card-icon {
+.hub-page .module-card-icon {
   width: auto;
   height: auto;
   border-radius: 0;
@@ -2234,7 +2271,7 @@ tbody tr:last-child td {
   box-shadow: none;
 }
 
-[data-theme="dark"] .module-card-icon svg {
+.hub-page .module-card-icon svg {
   width: 22px;
   height: 22px;
 }
@@ -2264,7 +2301,7 @@ tbody tr:last-child td {
 }
 
 [data-theme="dark"] .module-card h3 {
-  font-size: 1.2rem;
+  font-size: 1.14rem;
   font-weight: 600;
   line-height: 1.35;
   letter-spacing: 0.02em;
@@ -2347,9 +2384,9 @@ tbody tr:last-child td {
 [data-theme="dark"] .hub-page {
   background: linear-gradient(
     165deg,
-    #0f172a 0%,
-    #0c1222 40%,
-    #070b14 100%
+    #020617 0%,
+    #020617 26%,
+    #020617 100%
   );
 }
 

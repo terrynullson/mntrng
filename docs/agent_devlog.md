@@ -822,3 +822,12 @@ Summary:
 - /hub: эмблема theme-toggle превращена в лёгкий «водяной знак» по центру сверху (без background/shadow, только opacity 0.35/0.5), company popover и карточки остались в существующей структуре.
 Notes:
 `web npm run build` PASS; фоновые орбы видны под стеклянными карточками и не мешают читаемости.
+
+[2026-02-27] [HUB-DARK-LIGHT-SURFACES-004]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- /hub: обновлены поверхности карточек под концепты «Полярная ночь 2.0» (dark графитовый glass с большей прозрачностью) и «Морозное утро» (light frosted бело-ледяные cards с мягкой тенью и более высоким контрастом).
+- /hub: фоновым орбам для варианта hub заданы отдельные цветовые акценты (3 синие/индиго + 2 холодных violet/magenta) и уровень blur/opacity для light vs dark, без затрагивания других страниц.
+Notes:
+`web npm run build` PASS; шары заметно читаются под карточками в dark, а light получил более объёмный ледяной фон.
