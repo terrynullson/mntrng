@@ -813,3 +813,12 @@ Summary:
 - /hub (dark): подчистил типизацию `HubBackgroundBlobs` (blobRefs.current с non-null assertion), устранив ts-ошибки без изменения поведения анимации.
 Notes:
 Минимальный правочный коммит, только TS-guard для rAF орбит.
+
+[2026-02-27] [HUB-DARK-ORBS-BACKGROUND-003]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- /hub: вынесён общий компонент фоновых орб `OrbsBackground` (variant=hub) на базе auth-анимаций, добавлен мягкий noise-слой и подключён под карточками через абсолютный слой.
+- /hub: эмблема theme-toggle превращена в лёгкий «водяной знак» по центру сверху (без background/shadow, только opacity 0.35/0.5), company popover и карточки остались в существующей структуре.
+Notes:
+`web npm run build` PASS; фоновые орбы видны под стеклянными карточками и не мешают читаемости.

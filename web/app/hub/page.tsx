@@ -18,7 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AuthGate } from "@/components/auth/auth-gate";
-import { HubBackgroundBlobs } from "@/components/hub/hub-background-blobs";
+import { OrbsBackground } from "@/components/background/orbs-background";
 import { ModuleCard } from "@/components/navigation/module-card";
 import { StatusCountBadge } from "@/components/navigation/status-count-badge";
 import { ThemeToggleButton } from "@/components/theme/theme-toggle-button";
@@ -115,7 +115,7 @@ export default function HubPage() {
   return (
     <AuthGate>
       <div className="hub-page">
-        <HubBackgroundBlobs />
+        <OrbsBackground variant="hub" />
         <main className="hub-content">
           <div className="hub-floating-topbar">
             <div className="hub-topbar-zone hub-topbar-left">

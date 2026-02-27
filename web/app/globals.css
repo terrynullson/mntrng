@@ -467,6 +467,38 @@ textarea:focus-visible {
   mix-blend-mode: soft-light;
 }
 
+.orbs-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.orbs-background .orbs-inner {
+  position: absolute;
+  inset: -16%;
+}
+
+.orbs-background--hub .auth-animated-blob {
+  filter: blur(140px);
+  opacity: 0.32;
+}
+
+[data-theme="dark"] .orbs-background--hub .auth-animated-blob {
+  filter: blur(180px);
+  opacity: 0.46;
+}
+
+.orbs-noise-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.04;
+  mix-blend-mode: soft-light;
+}
+
 @keyframes auth-blob-move-1 {
   0% {
     transform: translate3d(-20%, -10%, 0) scale(1);
@@ -1910,47 +1942,40 @@ tbody tr:last-child td {
 }
 
 .hub-theme-control {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
   padding: 0;
   justify-content: center;
   background: transparent;
   box-shadow: none;
-  backdrop-filter: blur(2px);
+  backdrop-filter: none;
 }
 
 .hub-theme-control .theme-toggle {
   width: 2rem;
   height: 2rem;
   color: color-mix(in srgb, var(--text) 72%, transparent);
-  border-radius: 10px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  opacity: 0.35;
 }
 
 .hub-theme-control .theme-toggle:hover {
   color: var(--text);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--text) 20%, transparent);
-}
-
-[data-theme="dark"] .hub-theme-control {
-  position: absolute;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: auto;
-  background: transparent;
+  opacity: 0.5;
   box-shadow: none;
-  backdrop-filter: none;
 }
 
 [data-theme="dark"] .hub-theme-control .theme-toggle {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 999px;
-  opacity: 0.6;
-  box-shadow: none;
+  opacity: 0.5;
 }
 
 [data-theme="dark"] .hub-theme-control .theme-toggle:hover {
-  opacity: 0.9;
-  box-shadow: 0 0 24px rgba(148, 163, 184, 0.45);
+  opacity: 0.65;
+  box-shadow: none;
 }
 
 .hub-company-popover {
