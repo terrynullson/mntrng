@@ -103,7 +103,7 @@ export function HubBackgroundBlobs() {
         const x = fromX + (toX - fromX) * eased;
         const y = fromY + (toY - fromY) * eased;
 
-        const el = blobRefs.current[index];
+        const el = blobRefs.current![index];
         if (el) {
           const scale = blob.layer === "near" ? 1.04 : 1;
           el.style.transform = `translate3d(${x}%, ${y}%, 0) scale(${scale})`;
@@ -142,7 +142,7 @@ export function HubBackgroundBlobs() {
           // eslint-disable-next-line react/no-array-index-key
           key={index}
           ref={(el) => {
-            blobRefs.current[index] = el;
+            blobRefs.current![index] = el;
           }}
           className="hub-bg-blob"
           style={{

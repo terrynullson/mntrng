@@ -805,3 +805,11 @@ Summary:
 - /hub (dark): лампочка theme-toggle переведена в роль атмосферного светового элемента (абсолютное позиционирование top-center, мягкий glow), статусы Monitoring сведены к минималистичным icon+number без цветных капсул.
 Notes:
 `web npm run build` PASS, перфоманс фона проверен на /hub (движение плавное, без рывков).
+
+[2026-02-27] [HUB-DARK-POLAR-NIGHT-002]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- /hub (dark): подчистил типизацию `HubBackgroundBlobs` (blobRefs.current с non-null assertion), устранив ts-ошибки без изменения поведения анимации.
+Notes:
+Минимальный правочный коммит, только TS-guard для rAF орбит.
