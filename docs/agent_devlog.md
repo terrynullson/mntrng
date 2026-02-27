@@ -54,7 +54,7 @@ Notes:
 
 [2026-02-26] [hub-ui-polish]
 Agent: FrontendAgent
-Commit: 11043db
+Commit: bab1ada
 Summary:
 - /hub: 5 орбов (HubBackgroundBlobs), палитра розовый/сирень/циан, размеры 420–680px, движение ~3× быстрее, хаотичные траектории, prefers-reduced-motion.
 - Карточки: dark — нейтральный графит rgba(22,24,28,0.62); light — морозное утро, карточки rgba(255,255,255,0.78).
