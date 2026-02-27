@@ -18,7 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AuthGate } from "@/components/auth/auth-gate";
-import { OrbsBackground } from "@/components/background/orbs-background";
+import { HubBackgroundBlobs } from "@/components/hub/hub-background-blobs";
 import { ModuleCard } from "@/components/navigation/module-card";
 import { StatusCountBadge } from "@/components/navigation/status-count-badge";
 import { ThemeToggleButton } from "@/components/theme/theme-toggle-button";
@@ -115,7 +115,7 @@ export default function HubPage() {
   return (
     <AuthGate>
       <div className="hub-page">
-        <OrbsBackground variant="hub" />
+        <HubBackgroundBlobs />
         <main className="hub-content">
           <div className="hub-floating-topbar">
             <div className="hub-topbar-zone hub-topbar-left">
@@ -131,53 +131,64 @@ export default function HubPage() {
 
             <div className="hub-topbar-zone hub-topbar-right">
               {user?.role === "super_admin" ? (
-                <div className="hub-company-popover" ref={companyMenuRef}>
-                  <button
-                    type="button"
-                    className="hub-floating-control hub-company-trigger"
-                    onClick={() => setIsCompanyOpen((prev) => !prev)}
-                    aria-expanded={isCompanyOpen}
-                    aria-haspopup="listbox"
-                    aria-label="Выбор компании (контекст)"
-                    id="hub-company-switcher-trigger"
+                companies.length === 1 ? (
+                  <span
+                    className="hub-floating-control hub-company-single"
+                    title={activeCompany?.name ?? "Компания"}
                   >
                     <span className="hub-company-trigger-label">
-                      {companies.length === 0 ? "Нет компаний" : activeCompany?.name ?? "Компания"}
+                      {activeCompany?.name ?? "Компания"}
                     </span>
-                    <ChevronDown size={14} strokeWidth={1.75} aria-hidden />
-                  </button>
-                  {isCompanyOpen ? (
-                    <div
-                      id="hub-company-listbox"
-                      className="hub-company-popover-panel"
-                      role="listbox"
-                      aria-labelledby="hub-company-switcher-trigger"
+                  </span>
+                ) : (
+                  <div className="hub-company-popover" ref={companyMenuRef}>
+                    <button
+                      type="button"
+                      className="hub-floating-control hub-company-trigger"
+                      onClick={() => setIsCompanyOpen((prev) => !prev)}
+                      aria-expanded={isCompanyOpen}
+                      aria-haspopup="listbox"
+                      aria-label="Выбор компании (контекст)"
+                      id="hub-company-switcher-trigger"
                     >
-                      {companies.length === 0 ? (
-                        <div className="hub-company-popover-item hub-company-popover-item-empty">Нет компаний</div>
-                      ) : (
-                        companies.map((company) => (
-                          <button
-                            key={company.id}
-                            type="button"
-                            role="option"
-                            aria-selected={activeCompanyId === company.id}
-                            className="hub-company-popover-item"
-                            onClick={() => {
-                              setActiveCompanyId(company.id);
-                              closeCompanyMenu();
-                            }}
-                          >
-                            {activeCompanyId === company.id ? (
-                              <span className="hub-company-popover-item-marker" aria-hidden />
-                            ) : null}
-                            <span>{company.name}</span>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  ) : null}
-                </div>
+                      <span className="hub-company-trigger-label">
+                        {companies.length === 0 ? "Нет компаний" : activeCompany?.name ?? "Компания"}
+                      </span>
+                      <ChevronDown size={14} strokeWidth={1.75} aria-hidden />
+                    </button>
+                    {isCompanyOpen ? (
+                      <div
+                        id="hub-company-listbox"
+                        className="hub-company-popover-panel"
+                        role="listbox"
+                        aria-labelledby="hub-company-switcher-trigger"
+                      >
+                        {companies.length === 0 ? (
+                          <div className="hub-company-popover-item hub-company-popover-item-empty">Нет компаний</div>
+                        ) : (
+                          companies.map((company) => (
+                            <button
+                              key={company.id}
+                              type="button"
+                              role="option"
+                              aria-selected={activeCompanyId === company.id}
+                              className="hub-company-popover-item"
+                              onClick={() => {
+                                setActiveCompanyId(company.id);
+                                closeCompanyMenu();
+                              }}
+                            >
+                              {activeCompanyId === company.id ? (
+                                <span className="hub-company-popover-item-marker" aria-hidden />
+                              ) : null}
+                              <span>{company.name}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                )
               ) : null}
 
               <button

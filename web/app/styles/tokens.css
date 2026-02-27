@@ -1,6 +1,9 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap");
+
 :root {
   color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Inter Tight", system-ui, sans-serif;
   --bg: #f3f5f8;
   --surface: #ffffff;
   --surface-soft: #f8fafc;

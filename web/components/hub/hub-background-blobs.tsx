@@ -1,14 +1,38 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-type BlobLayer = "near" | "far";
+const DARK_PALETTE = [
+  "rgba(255, 77, 216, 0.22)",
+  "rgba(255, 122, 182, 0.18)",
+  "rgba(242, 181, 255, 0.14)",
+  "rgba(86, 224, 255, 0.14)",
+  "rgba(160, 174, 255, 0.1)"
+];
 
-type BlobAnimState = {
-  layer: BlobLayer;
+const LIGHT_PALETTE = [
+  "rgba(125, 211, 252, 0.28)",
+  "rgba(244, 179, 230, 0.18)",
+  "rgba(125, 211, 252, 0.2)",
+  "rgba(244, 179, 230, 0.12)",
+  "rgba(125, 211, 252, 0.18)"
+];
+
+function randomBetween(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+const SPREAD_POSITIONS: [number, number][] = [
+  [8, 12],
+  [78, 18],
+  [15, 72],
+  [82, 75],
+  [48, 42]
+];
+
+type BlobState = {
   size: number;
   color: string;
-  // animation state
   fromX: number;
   fromY: number;
   toX: number;
@@ -17,41 +41,19 @@ type BlobAnimState = {
   duration: number;
 };
 
-const BLOB_COLORS: string[] = [
-  "rgba(99, 102, 241, 0.5)",
-  "rgba(79, 70, 229, 0.45)",
-  "rgba(56, 189, 248, 0.4)",
-  "rgba(59, 130, 246, 0.42)",
-  "rgba(99, 102, 241, 0.38)"
-];
-
-function randomBetween(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
-
-function createInitialBlobs(now: number): BlobAnimState[] {
-  // 3 дальних, 2 ближних
-  const layers: BlobLayer[] = ["far", "far", "far", "near", "near"];
-
-  return layers.map((layer, index) => {
-    const size = randomBetween(240, 520);
-    const x = randomBetween(-20, 20);
-    const y = randomBetween(-16, 16);
-    const duration =
-      layer === "far" ? randomBetween(5500, 9000) : randomBetween(3200, 6500);
-
-    return {
-      layer,
-      size,
-      color: BLOB_COLORS[index % BLOB_COLORS.length],
-      fromX: x,
-      fromY: y,
-      toX: randomBetween(-26, 26),
-      toY: randomBetween(-20, 20),
-      startTime: now,
-      duration
-    };
-  });
+function createBlobs(isDark: boolean): BlobState[] {
+  const palette = isDark ? DARK_PALETTE : LIGHT_PALETTE;
+  const now = performance.now();
+  return SPREAD_POSITIONS.map(([sx, sy], i) => ({
+    size: randomBetween(420, 680),
+    color: palette[i]!,
+    fromX: sx,
+    fromY: sy,
+    toX: randomBetween(15, 82),
+    toY: randomBetween(15, 78),
+    startTime: now,
+    duration: randomBetween(1100, 2200)
+  }));
 }
 
 function easeInOutQuad(t: number): number {
@@ -60,42 +62,46 @@ function easeInOutQuad(t: number): number {
 
 export function HubBackgroundBlobs() {
   const blobRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const animStateRef = useRef<BlobAnimState[] | null>(null);
+  const stateRef = useRef<BlobState[] | null>(null);
   const rafRef = useRef<number | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
 
   useEffect(() => {
-    const now = performance.now();
-    animStateRef.current = createInitialBlobs(now);
+    const root = document.documentElement;
+    const sync = () => {
+      const isDark = root.getAttribute("data-theme") === "dark";
+      setTheme(isDark ? "dark" : "light");
+      stateRef.current = createBlobs(isDark);
+    };
+    sync();
+    const obs = new MutationObserver(sync);
+    obs.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced || !stateRef.current) return;
 
     const frame = () => {
-      const blobs = animStateRef.current;
-      if (!blobs) {
-        return;
-      }
+      const blobs = stateRef.current;
+      if (!blobs) return;
 
       const time = performance.now();
 
-      animStateRef.current = blobs.map((blob, index) => {
+      stateRef.current = blobs.map((blob, index) => {
         let { fromX, fromY, toX, toY, startTime, duration } = blob;
         let t = (time - startTime) / duration;
 
         if (t >= 1) {
-          // новая цель каждые ~3–7 секунд
-          const nextFromX = toX;
-          const nextFromY = toY;
-          const nextToX = randomBetween(-26, 26);
-          const nextToY = randomBetween(-20, 20);
-          const nextDuration =
-            blob.layer === "far"
-              ? randomBetween(5500, 9000)
-              : randomBetween(3200, 6500);
-
-          fromX = nextFromX;
-          fromY = nextFromY;
-          toX = nextToX;
-          toY = nextToY;
+          fromX = toX;
+          fromY = toY;
+          toX = randomBetween(15, 82);
+          toY = randomBetween(15, 78);
           startTime = time;
-          duration = nextDuration;
+          duration = randomBetween(1100, 2200);
           t = 0;
         }
 
@@ -103,62 +109,51 @@ export function HubBackgroundBlobs() {
         const x = fromX + (toX - fromX) * eased;
         const y = fromY + (toY - fromY) * eased;
 
-        const el = blobRefs.current![index];
+        const el = blobRefs.current?.[index];
         if (el) {
-          const scale = blob.layer === "near" ? 1.04 : 1;
-          el.style.transform = `translate3d(${x}%, ${y}%, 0) scale(${scale})`;
+          el.style.transform = `translate3d(${x}%, ${y}%, 0)`;
         }
 
-        return {
-          ...blob,
-          fromX,
-          fromY,
-          toX,
-          toY,
-          startTime,
-          duration
-        };
+        return { ...blob, fromX, fromY, toX, toY, startTime, duration };
       });
 
       rafRef.current = requestAnimationFrame(frame);
     };
 
     rafRef.current = requestAnimationFrame(frame);
-
     return () => {
-      if (rafRef.current != null) {
-        cancelAnimationFrame(rafRef.current);
-      }
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     };
-  }, []);
+  }, [theme]);
 
-  const blobs = animStateRef.current ?? createInitialBlobs(performance.now());
+  const blobs = stateRef.current ?? createBlobs(true);
 
   return (
     <div className="hub-bg-blobs" aria-hidden>
       {blobs.map((blob, index) => (
         <div
-          // ровно 5 элементов
-          // eslint-disable-next-line react/no-array-index-key
           key={index}
           ref={(el) => {
-            blobRefs.current![index] = el;
+            const arr = blobRefs.current ?? [];
+            blobRefs.current = arr;
+            arr[index] = el;
           }}
           className="hub-bg-blob"
           style={{
             width: blob.size,
             height: blob.size,
-            background: `radial-gradient(circle at 50% 50%, ${blob.color}, transparent 60%)`,
-            opacity: blob.layer === "near" ? 0.5 : 0.38,
-            filter:
-              blob.layer === "near"
-                ? "blur(140px)"
-                : "blur(180px)",
-            zIndex: blob.layer === "near" ? 0 : -1
+            left: 0,
+            top: 0,
+            marginLeft: -blob.size / 2,
+            marginTop: -blob.size / 2,
+            background: `radial-gradient(circle, ${blob.color} 0%, transparent 70%)`,
+            opacity: theme === "dark" ? 1 : 0.85,
+            filter: theme === "dark" ? "blur(200px)" : "blur(160px)",
+            zIndex: 0,
+            transform: `translate3d(${blob.fromX}%, ${blob.fromY}%, 0)`
           }}
         />
       ))}
     </div>
   );
 }
-

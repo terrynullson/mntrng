@@ -52,6 +52,16 @@ Summary:
 Notes:
 Смоук-тесты прошли, регрессий в runtime не найдено.
 
+[2026-02-26] [hub-ui-polish]
+Agent: FrontendAgent
+Commit: 11043db
+Summary:
+- /hub: 5 орбов (HubBackgroundBlobs), палитра розовый/сирень/циан, размеры 420–680px, движение ~3× быстрее, хаотичные траектории, prefers-reduced-motion.
+- Карточки: dark — нейтральный графит rgba(22,24,28,0.62); light — морозное утро, карточки rgba(255,255,255,0.78).
+- Лампочка без фиолетового drop-shadow; при одной компании — статичный pill без chevron; Inter Tight для заголовков.
+Notes:
+Правки только в hub/page.tsx, hub-background-blobs.tsx, hub.css, tokens.css.
+
 [2026-02-22] [web-globals-css-refactor]
 Agent: FrontendAgent
 Commit: bba712b
