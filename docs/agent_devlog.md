@@ -831,3 +831,12 @@ Summary:
 - /hub: фоновым орбам для варианта hub заданы отдельные цветовые акценты (3 синие/индиго + 2 холодных violet/magenta) и уровень blur/opacity для light vs dark, без затрагивания других страниц.
 Notes:
 `web npm run build` PASS; шары заметно читаются под карточками в dark, а light получил более объёмный ледяной фон.
+
+[2026-02-27] [HUB-DARK-ORBS-LAMP-005]
+Agent: UniversalAgent (Full-Stack Delivery)
+Commit: pending
+Summary:
+- /hub (dark): усилен glow фоновых орб (больше blur и opacity, один фиолетовый орб заметно ярче остальных) при сохранении читаемости текста под стеклянными карточками.
+- /hub: theme-toggle окончательно закреплён как центральный fixed watermark над страницей (fixed top-center, единая позиция для light/dark), без фона и с мягким hover-glow в тёмной теме.
+Notes:
+`web npm run build` PASS; layering проверен: орбы не перекрываются лишними слоями, карточки не выглядят «бетоном».

@@ -481,34 +481,35 @@ textarea:focus-visible {
 }
 
 .orbs-background--hub .auth-animated-blob {
-  filter: blur(140px);
-  opacity: 0.32;
+  filter: blur(150px);
+  opacity: 0.42;
 }
 
 .orbs-background--hub .auth-blob-1 {
-  background: radial-gradient(circle at 24% 12%, rgba(96, 165, 250, 0.5), transparent 60%);
+  background: radial-gradient(circle at 24% 12%, rgba(96, 165, 250, 0.52), transparent 60%);
 }
 
 .orbs-background--hub .auth-blob-2 {
-  background: radial-gradient(circle at 76% 18%, rgba(59, 130, 246, 0.46), transparent 58%);
+  background: radial-gradient(circle at 76% 18%, rgba(59, 130, 246, 0.48), transparent 60%);
 }
 
 .orbs-background--hub .auth-blob-3 {
-  background: radial-gradient(circle at 18% 82%, rgba(37, 99, 235, 0.48), transparent 60%);
+  background: radial-gradient(circle at 18% 82%, rgba(37, 99, 235, 0.5), transparent 62%);
 }
 
 /* accent orbs: cold violet / magenta, not neon */
 .orbs-background--hub .auth-blob-4 {
-  background: radial-gradient(circle at 82% 78%, rgba(147, 51, 234, 0.38), transparent 60%);
+  background: radial-gradient(circle at 82% 78%, rgba(147, 51, 234, 0.4), transparent 62%);
 }
 
+/* accent and slightly brighter orb */
 .orbs-background--hub .auth-blob-5 {
-  background: radial-gradient(circle at 52% 46%, rgba(168, 85, 247, 0.36), transparent 62%);
+  background: radial-gradient(circle at 52% 46%, rgba(168, 85, 247, 0.6), transparent 65%);
 }
 
 [data-theme="dark"] .orbs-background--hub .auth-animated-blob {
-  filter: blur(190px);
-  opacity: 0.48;
+  filter: blur(200px);
+  opacity: 0.6;
 }
 
 .orbs-noise-layer {
@@ -1964,8 +1965,8 @@ tbody tr:last-child td {
 }
 
 .hub-theme-control {
-  position: absolute;
-  top: 14px;
+  position: fixed;
+  top: 12px;
   left: 50%;
   transform: translateX(-50%);
   padding: 0;
@@ -1973,6 +1974,7 @@ tbody tr:last-child td {
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
+  z-index: 6;
 }
 
 .hub-theme-control .theme-toggle {
@@ -1992,12 +1994,12 @@ tbody tr:last-child td {
 }
 
 [data-theme="dark"] .hub-theme-control .theme-toggle {
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 [data-theme="dark"] .hub-theme-control .theme-toggle:hover {
-  opacity: 0.65;
-  box-shadow: none;
+  opacity: 0.82;
+  box-shadow: 0 0 26px rgba(148, 163, 184, 0.45);
 }
 
 .hub-company-popover {
@@ -2428,8 +2430,8 @@ tbody tr:last-child td {
 [data-theme="dark"] .module-card {
   background: linear-gradient(
     180deg,
-    rgba(15, 23, 42, 0.65) 0%,
-    rgba(15, 23, 42, 0.58) 100%
+    rgba(15, 23, 42, 0.6) 0%,
+    rgba(15, 23, 42, 0.52) 100%
   );
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
