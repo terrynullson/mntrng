@@ -146,7 +146,7 @@
   background: radial-gradient(circle at 40% 40%, rgba(148, 163, 184, 0.08), transparent 55%);
   filter: blur(34px);
   animation: hub-space-drift 42s ease-in-out infinite alternate;
-  z-index: 0;
+  z-index: -1;
 }
 
 .hub-page::after {
@@ -222,13 +222,21 @@
   color: color-mix(in srgb, var(--text) 86%, transparent);
   background: color-mix(in srgb, var(--surface) 72%, transparent);
   backdrop-filter: blur(10px);
-  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.14);
-  transition: box-shadow 0.2s ease-out, color 0.2s ease-out, background-color 0.2s ease-out;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 60%, transparent);
+  transition:
+    box-shadow 0.2s ease-out,
+    color 0.2s ease-out,
+    background-color 0.2s ease-out;
 }
 
 .hub-floating-control:hover {
   color: var(--text);
-  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.2);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-strong) 65%, transparent);
+}
+
+[data-theme="dark"] .hub-floating-control {
+  background: color-mix(in srgb, rgba(15, 23, 42, 0.9) 70%, transparent);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.55);
 }
 
 .hub-icon-control {
@@ -511,6 +519,13 @@
   inset: 0;
   border-radius: inherit;
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+  /* micro-noise / texture layer */
+  background-image:
+    linear-gradient(0deg, rgba(255, 255, 255, 0.04) 1px, transparent 0),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.06) 1px, transparent 0);
+  background-size: 4px 4px;
+  mix-blend-mode: soft-light;
+  opacity: 0.35;
   pointer-events: none;
 }
 
@@ -741,7 +756,10 @@
 }
 
 [data-theme="dark"] .hub-page .module-card::before {
-  display: none;
+  display: block;
+  height: 44%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent);
+  opacity: 0.9;
 }
 
 [data-theme="dark"] .hub-page .module-card::after {
