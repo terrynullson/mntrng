@@ -900,3 +900,13 @@ Summary:
 - /hub: ModuleCard получил variant primary/secondary; «Смотреть» и «Мониторинг» визуально подняты в иерархии, остальные модули читаются как второстепенные зоны.
 Notes:
 Docker compose --profile screenshot недоступен на агентной ноде (нет Docker Engine), скриншот будет добит позже; self-score Hub UI = 9/10.
+
+[2026-03-04] [CORE-UX-HUB-WATCH-STREAMS-SMOKE]
+Agent: FrontendAgent
+Commit: pending
+Summary:
+- Smoke-прогон цепочки Hub → Watch → Monitoring/Streams: по коду подтверждена непрерывность сценария, общие токены scopeCompanyId и использование summary/streams/инцидентов.
+- Ролевая модель viewer vs company_admin/super_admin соблюдена: viewer всегда в read-only (нет CRUD/Run check), admin-ролям доступны создание/редактирование/удаление потоков и запуск проверок из Streams и Watch.
+- Docker compose ps на агентной ноде падает из-за отсутствия Docker Engine, поэтому рантайм-проверка цепочки выполнена только статически по коду и маршрутам.
+Notes:
+Сценарии A/B/C и привязка к инцидентам выглядят целостно на уровне фронтовой логики; регрессии в UX-цепочке по коду не найдены, отдельные улучшения можно планировать как P2-тикеты.
