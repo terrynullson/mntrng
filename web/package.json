@@ -6,6 +6,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "screenshot:m3-lite": "node scripts/screenshot-m3-lite.mjs",
     "screenshot:settings": "node scripts/screenshot-settings.mjs",
     "screenshot:analytics": "node scripts/screenshot-analytics.mjs",
     "screenshot:streams": "node scripts/screenshot-streams.mjs",

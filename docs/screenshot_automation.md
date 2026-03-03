@@ -94,7 +94,17 @@ docker compose up --build -d
 docker compose --profile screenshot run --rm screenshot
 ```
 
-Скриншот появится в `screenshots/telegram-delivery-settings/<timestamp>.png`. Ручных шагов не требуется (нужен только `.env` с `POSTGRES_PASSWORD`).
+В режиме Milestone 3-lite сервис `screenshot` запускает `npm run screenshot:m3-lite` и снимает набор PNG:
+
+- `screenshots/login/<timestamp>.png` — экран логина.
+- `screenshots/hub-portal/<timestamp>.png` — Hub / Portal после логина.
+- `screenshots/watch/<timestamp>.png` — операторский режим Watch.
+- `screenshots/monitoring-streams/<timestamp>.png` — Monitoring / Streams.
+- `screenshots/incidents/<timestamp>.png` — список инцидентов.
+- `screenshots/incidents-detail/<timestamp>.png` — карточка одного инцидента.
+- `screenshots/telegram-delivery-settings/<timestamp>.png` — секция Telegram в Settings.
+
+Ручных шагов не требуется (нужен только `.env` с `POSTGRES_PASSWORD` и рабочий Docker Engine); если данных для потоков/инцидентов мало, скрины будут отражать текущий state БД.
 
 ## Безопасность
 

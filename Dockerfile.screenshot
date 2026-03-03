@@ -9,5 +9,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-# When run via docker-compose, repo is mounted at /app; install deps and run script
-CMD ["sh", "-c", "cd /app/web && (test -d node_modules || npm ci) && npx playwright install chromium 2>/dev/null; npm run screenshot:settings"]
+# When run via docker-compose, repo is mounted at /app; install deps and run M3-lite core UX screenshots
+CMD ["sh", "-c", "cd /app/web && (test -d node_modules || npm ci) && npx playwright install chromium 2>/dev/null; npm run screenshot:m3-lite"]

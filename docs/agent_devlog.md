@@ -910,3 +910,13 @@ Summary:
 - Docker compose ps на агентной ноде падает из-за отсутствия Docker Engine, поэтому рантайм-проверка цепочки выполнена только статически по коду и маршрутам.
 Notes:
 Сценарии A/B/C и привязка к инцидентам выглядят целостно на уровне фронтовой логики; регрессии в UX-цепочке по коду не найдены, отдельные улучшения можно планировать как P2-тикеты.
+
+[2026-03-04] [M3-LITE-SCREENSHOT-DIAGNOSTICS]
+Agent: FrontendAgent
+Commit: f0f097a
+Summary:
+- Добавлен Playwright-пайплайн `npm run screenshot:m3-lite`, который снимает PNG для /login, /hub, /watch, /monitoring/streams, /incidents, /incidents/[id] и /settings (Telegram) в отдельные директории screenshots/*/{timestamp}.png.
+- Dockerfile.screenshot обновлён под Milestone 3-lite: `docker compose --profile screenshot run --rm screenshot` теперь запускает этот пайплайн в контейнере screenshot.
+- Документация screenshot_automation.md дополнена описанием набора M3-lite и единой команды запуска.
+Notes:
+На агентной ноде Docker Engine отсутствует (compose падает на подключении к dockerDesktopLinuxEngine), поэтому фактический прогон M3-lite не выполнен; пайплайн проверен через web npm run build и логически готов к запуску в рабочем окружении.

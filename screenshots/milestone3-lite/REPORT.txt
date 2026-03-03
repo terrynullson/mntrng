@@ -10,3 +10,14 @@ DATE: 2026-02-24
 Блокер:
 - Docker engine недоступен в текущем окружении (pipe dockerDesktopLinuxEngine не найден),
   поэтому автоматические UI-скриншоты не сняты в этом запуске агента.
+
+MS3L-SCREENSHOT-DIAG-002
+STATUS: READY (pipeline implemented, runtime blocked on this node)
+DATE: 2026-03-04
+
+Что сделано:
+- Добавлен Playwright-пайплайн `web/scripts/screenshot-m3-lite.mjs`, снимающий PNG для /login, /hub, /watch, /monitoring/streams, /incidents, /incidents/[id], /settings (Telegram).
+- Dockerfile.screenshot обновлён для запуска `npm run screenshot:m3-lite` внутри сервиса `screenshot` (docker compose --profile screenshot run --rm screenshot).
+
+Блокер:
+- На агентной ноде по-прежнему нет Docker Engine (ошибка подключения к dockerDesktopLinuxEngine), поэтому фактический прогон пайплайна не выполнен; запуск ожидается на CI/локальной dev-машине.
