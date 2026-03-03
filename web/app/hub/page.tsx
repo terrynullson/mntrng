@@ -22,6 +22,7 @@ import { HubBackgroundBlobs } from "@/components/hub/hub-background-blobs";
 import { ModuleCard } from "@/components/navigation/module-card";
 import { StatusCountBadge } from "@/components/navigation/status-count-badge";
 import { ThemeToggleButton } from "@/components/theme/theme-toggle-button";
+import { NoiseLayer } from "@/components/ui/noise-layer";
 import { apiRequest, toErrorMessage } from "@/lib/api/client";
 import { resolveCompanyScope } from "@/lib/auth/tenant-scope";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -33,13 +34,28 @@ type MonitoringSummary = {
   fail: number;
 };
 
-const MODULES = [
-  { href: "/watch", title: "Смотреть", subtitle: "Операторский режим", icon: Tv },
+type ModuleConfig = {
+  href: string;
+  title: string;
+  subtitle?: string;
+  icon: any;
+  variant?: "primary" | "secondary";
+};
+
+const MODULES: ModuleConfig[] = [
+  {
+    href: "/watch",
+    title: "Смотреть",
+    subtitle: "Операторский режим",
+    icon: Tv,
+    variant: "primary" as const
+  },
   {
     href: "/monitoring/streams",
     title: "Мониторинг",
     subtitle: "Потоки и инциденты",
-    icon: Radar
+    icon: Radar,
+    variant: "primary" as const
   },
   {
     href: "/admin/users",
@@ -126,6 +142,7 @@ export default function HubPage() {
     <AuthGate>
       <div className="hub-page">
         <HubBackgroundBlobs />
+        <NoiseLayer />
         <main className="hub-content">
           <div className="hub-floating-topbar">
             <div className="hub-topbar-zone hub-topbar-left">
@@ -236,6 +253,40 @@ export default function HubPage() {
             </div>
           </div>
 
+          <section className="hub-hero">
+            <div className="hub-hero-text">
+              <h1 className="hub-hero-title">Портал мониторинга HLS‑потоков</h1>
+              <p className="hub-hero-subtitle">
+                Единая точка входа: от просмотра потоков до инцидентов, отчётов и AI‑инструментов.
+              </p>
+            </div>
+            <div className="hub-hero-metrics" aria-label="Сводка по потокам и инцидентам">
+              <StatusCountBadge
+                icon={Activity}
+                name="Всего потоков"
+                count={summary.total}
+                label={`${summary.total} активных потоков`}
+                iconNumberOnly
+              />
+              <StatusCountBadge
+                icon={AlertTriangle}
+                name="Требуют внимания"
+                count={summary.warn}
+                tone="warn"
+                label={`${summary.warn} потоков в статусе WARN`}
+                iconNumberOnly
+              />
+              <StatusCountBadge
+                icon={XCircle}
+                name="Недоступны"
+                count={summary.fail}
+                tone="fail"
+                label={`${summary.fail} потоков в статусе FAIL`}
+                iconNumberOnly
+              />
+            </div>
+          </section>
+
           <div className="hub-grid">
             {MODULES.map((moduleItem) => (
               <ModuleCard
@@ -244,6 +295,7 @@ export default function HubPage() {
                 title={moduleItem.title}
                 subtitle={moduleItem.subtitle}
                 icon={moduleItem.icon}
+                variant={moduleItem.variant}
                 meta={
                   moduleItem.href === "/monitoring/streams" ? (
                     <div className="hub-status-row">

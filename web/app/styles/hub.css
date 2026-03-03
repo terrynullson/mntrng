@@ -178,6 +178,39 @@
   margin-bottom: 22px;
 }
 
+.hub-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.hub-hero-text {
+  max-width: 520px;
+}
+
+.hub-hero-title {
+  margin: 0 0 6px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.hub-hero-subtitle {
+  margin: 0;
+  color: color-mix(in srgb, var(--text) 68%, transparent);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.hub-hero-metrics {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 8px;
+}
+
 .hub-topbar-zone {
   display: flex;
   align-items: center;
@@ -503,6 +536,19 @@
     border-color 0.2s ease-out;
 }
 
+.hub-page .module-card--primary {
+  min-height: 236px;
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(15, 23, 42, 0.14);
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.16);
+}
+
+.hub-page .module-card--secondary {
+  min-height: 206px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
+}
+
 .module-card::before {
   content: "";
   position: absolute;
@@ -736,6 +782,20 @@
   will-change: transform;
 }
 
+[data-theme="light"] .hub-noise-layer {
+  opacity: 0.06;
+}
+
+[data-theme="dark"] .hub-noise-layer {
+  opacity: 0.08;
+}
+
+.hub-page .hub-noise-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
 [data-theme="light"] .hub-bg-blob {
   opacity: 0.7 !important;
 }
@@ -753,6 +813,16 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .hub-page .module-card--primary {
+  background: rgba(24, 28, 38, 0.86);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.42);
+}
+
+[data-theme="dark"] .hub-page .module-card--secondary {
+  background: rgba(18, 22, 32, 0.7);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="dark"] .hub-page .module-card::before {
@@ -787,6 +857,17 @@
   .hub-topbar-zone {
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  .hub-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hub-hero-metrics {
+    grid-auto-flow: row;
+    grid-auto-columns: 1fr;
+    width: 100%;
   }
 
   .hub-grid {
