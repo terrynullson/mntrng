@@ -34,12 +34,22 @@ type MonitoringSummary = {
 };
 
 const MODULES = [
-  { href: "/watch", title: "Watch", subtitle: "Операторский режим", icon: Tv },
-  { href: "/monitoring/streams", title: "Monitoring", subtitle: "Потоки и инциденты", icon: Radar },
-  { href: "/admin/users", title: "Admin", subtitle: "Пользователи и настройки", icon: Settings },
+  { href: "/watch", title: "Смотреть", subtitle: "Операторский режим", icon: Tv },
+  {
+    href: "/monitoring/streams",
+    title: "Мониторинг",
+    subtitle: "Потоки и инциденты",
+    icon: Radar
+  },
+  {
+    href: "/admin/users",
+    title: "Управление",
+    subtitle: "Пользователи и настройки",
+    icon: Settings
+  },
   { href: "/sms", title: "SMS", subtitle: "Модуль уведомлений", icon: MessageSquare },
   { href: "/ai", title: "AI", subtitle: "AI-инструменты", icon: Bot },
-  { href: "/monitoring/analytics", title: "Reports", subtitle: "Сводная аналитика", icon: BarChart3 }
+  { href: "/monitoring/analytics", title: "Отчёты", subtitle: "Сводная аналитика", icon: BarChart3 }
 ] as const;
 
 export default function HubPage() {
