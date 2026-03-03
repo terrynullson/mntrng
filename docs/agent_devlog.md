@@ -890,3 +890,13 @@ Summary:
 - /hub: топ-контролы (бренд, лампа, company pill, bell, user) облегчены — убраны тяжёлые тени, оставлены только стеклянный фон и тонкий обводочный бокс-шэдоу в light/dark.
 Notes:
 Финальная полировка визуала Hub под ТЗ «полярная ночь / морозное утро», без изменений поведения и навигации.
+
+[2026-03-03] [HUB-PORTAL-VISUAL-STEP1]
+Agent: FrontendAgent
+Commit: d052f15
+Summary:
+- /hub: добавлен hero-блок «Портал мониторинга HLS‑потоков» с кратким описанием и мини-сводкой (total/warn/fail) из уже существующего summary.
+- /hub: фон переведён на OrbsBackground(mode=\"hub\", intensity=\"calm\") и общий NoiseLayer — два слоя мягких орбов и тонкий grain под стеклянными карточками.
+- /hub: ModuleCard получил variant primary/secondary; «Смотреть» и «Мониторинг» визуально подняты в иерархии, остальные модули читаются как второстепенные зоны.
+Notes:
+Docker compose --profile screenshot недоступен на агентной ноде (нет Docker Engine), скриншот будет добит позже; self-score Hub UI = 9/10.
