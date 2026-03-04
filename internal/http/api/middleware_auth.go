@@ -47,8 +47,10 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 }
 
 func isPublicPath(path string) bool {
+	// Нормализуем путь (healthcheck и прокси могут слать с завершающим слэшем)
+	path = strings.TrimSuffix(path, "/")
 	switch path {
-	case "/api/v1/health":
+	case "/api/v1/health", "/api/v1/ready":
 		return true
 	case "/api/v1/metrics":
 		return config.GetBool("API_METRICS_PUBLIC", false)
