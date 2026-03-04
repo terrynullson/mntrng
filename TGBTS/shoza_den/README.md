@@ -26,7 +26,24 @@
    - `SHOZA_BOT_TOKEN` — токен бота
    - `SHOZA_CHANNEL_ID` — @shoza_den или `-100xxxxxxxxxx`
    - `SHOZA_ADMIN_CHAT_ID` — твой chat_id (число); если задан, бот отвечает на команду `/status` в личку и постит по расписанию из одного процесса
-3. Установить зависимости: `pip install -r requirements.txt`
+3. Установить зависимости (см. ниже — на многих серверах нужен venv).
+
+**Установка зависимостей на сервере (Ubuntu/Debian с PEP 668)**  
+Если `pip3 install -r requirements.txt` выдаёт `externally-managed-environment`, используй виртуальное окружение — один раз:
+
+```bash
+cd /opt/hls_mntrng/TGBTS/shoza_den   # или твой путь
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+Запуск бота — через Python из venv:
+
+```bash
+.venv/bin/python run.py
+```
+
+Либо `source .venv/bin/activate`, затем `python run.py`.
 
 **Проверка:** если в .env указан `SHOZA_ADMIN_CHAT_ID`, запусти бота и в личку боту отправь команду `/status`. Бот ответит: «Я в порядке, сегодня понедельник» (и т.д.). Ответ приходит только с аккаунта с этим chat_id.
 
