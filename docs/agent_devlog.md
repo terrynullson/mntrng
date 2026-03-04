@@ -62,6 +62,16 @@ Summary:
 Notes:
 Правки только в hub/page.tsx, hub-background-blobs.tsx, hub.css, tokens.css.
 
+[2026-03-04] [hub-p0-ui]
+Agent: FrontendAgent
+Commit: 36216b8
+Summary:
+- Hub: hero-ряд (Watch + Monitoring) + вторичная сетка (Admin, SMS, AI, Reports); glass-карточки, polar night dark, inner glow/hover.
+- hub.css: .hub-hero-row, .hub-modules-grid, primary/secondary варианты карточек, responsive 1080/760.
+- M3-lite: скриншот Hub дополнительно пишется в screenshots/hub/{timestamp}.png; ожидание .hub-hero-row.
+Notes:
+P0 Step 1 — launchpad до 9/10, без изменений backend/DB. Screenshot: screenshots/hub/20260304192603.png. Self-score 9.
+
 [2026-02-22] [web-globals-css-refactor]
 Agent: FrontendAgent
 Commit: bba712b
@@ -920,3 +930,13 @@ Summary:
 - Документация screenshot_automation.md дополнена описанием набора M3-lite и единой команды запуска.
 Notes:
 На агентной ноде Docker Engine отсутствует (compose падает на подключении к dockerDesktopLinuxEngine), поэтому фактический прогон M3-lite не выполнен; пайплайн проверен через web npm run build и логически готов к запуску в рабочем окружении.
+
+[2026-03-04] [docs-microservices-audit]
+Agent: Auto
+Commit: pending
+Summary:
+- Проведён глубокий аудит проекта для разбиения на микросервисы.
+- Добавлен docs/microservices_audit.md: текущая архитектура (API, Worker, Scheduler, очередь в БД, Redis только rate limit), домены, цели разбиения.
+- Рекомендации: (1) AI-микросервис — приоритет 1, (2) Notification/Telegram service — приоритет 2, (3) Stream Checker — приоритет 3; поэтапный план и зависимости.
+Notes:
+Аудит опирается на explore-агента, arch_overview, ai_incident_contract, decisions; ADR и код не менялись.

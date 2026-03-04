@@ -66,7 +66,10 @@ const MODULES: ModuleConfig[] = [
   { href: "/sms", title: "SMS", subtitle: "Модуль уведомлений", icon: MessageSquare },
   { href: "/ai", title: "AI", subtitle: "AI-инструменты", icon: Bot },
   { href: "/monitoring/analytics", title: "Отчёты", subtitle: "Сводная аналитика", icon: BarChart3 }
-] as const;
+];
+
+const HERO_MODULES = MODULES.filter((m) => m.variant === "primary");
+const SECONDARY_MODULES = MODULES.filter((m) => !m.variant || m.variant === "secondary");
 
 export default function HubPage() {
   const router = useRouter();
@@ -287,15 +290,15 @@ export default function HubPage() {
             </div>
           </section>
 
-          <div className="hub-grid">
-            {MODULES.map((moduleItem) => (
+          <div className="hub-hero-row" aria-label="Главные разделы">
+            {HERO_MODULES.map((moduleItem) => (
               <ModuleCard
                 key={moduleItem.href}
                 href={moduleItem.href}
                 title={moduleItem.title}
                 subtitle={moduleItem.subtitle}
                 icon={moduleItem.icon}
-                variant={moduleItem.variant}
+                variant="primary"
                 meta={
                   moduleItem.href === "/monitoring/streams" ? (
                     <div className="hub-status-row">
@@ -325,6 +328,18 @@ export default function HubPage() {
                     </div>
                   ) : null
                 }
+              />
+            ))}
+          </div>
+          <div className="hub-modules-grid" aria-label="Дополнительные разделы">
+            {SECONDARY_MODULES.map((moduleItem) => (
+              <ModuleCard
+                key={moduleItem.href}
+                href={moduleItem.href}
+                title={moduleItem.title}
+                subtitle={moduleItem.subtitle}
+                icon={moduleItem.icon}
+                variant="secondary"
               />
             ))}
           </div>

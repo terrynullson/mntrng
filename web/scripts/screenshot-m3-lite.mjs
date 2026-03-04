@@ -24,6 +24,7 @@ const ROOT_DIR = path.resolve(WEB_DIR, "..");
 
 const LOGIN_DIR = path.join(ROOT_DIR, "screenshots", "login");
 const HUB_DIR = path.join(ROOT_DIR, "screenshots", "hub-portal");
+const HUB_ARTIFACT_DIR = path.join(ROOT_DIR, "screenshots", "hub");
 const WATCH_DIR = path.join(ROOT_DIR, "screenshots", "watch");
 const MONITORING_STREAMS_DIR = path.join(ROOT_DIR, "screenshots", "monitoring-streams");
 const INCIDENTS_DIR = path.join(ROOT_DIR, "screenshots", "incidents");
@@ -34,6 +35,11 @@ const M3_REPORT = path.join(ROOT_DIR, "screenshots", "milestone3-lite", "REPORT.
 const LOGIN = process.env.SCREENSHOT_LOGIN || "test_screenshot_admin";
 const PASSWORD = process.env.SCREENSHOT_PASSWORD || "TestScreenshot1";
 const BASE_URL = process.env.SCREENSHOT_BASE_URL || "http://localhost:3000";
+const API_URL = process.env.SCREENSHOT_API_URL || (() => {
+  const u = new URL(BASE_URL);
+  if (u.hostname === "frontend" || u.hostname.includes("frontend")) return "http://api:8080";
+  return u.port === "3000" ? "http://localhost:8080" : `${u.protocol}//${u.hostname}:8080`;
+})();
 
 function log(msg) {
   const ts = new Date().toISOString().slice(11, 23);
@@ -84,6 +90,7 @@ async function ensureDirs() {
   await Promise.all([
     mkdir(LOGIN_DIR, { recursive: true }),
     mkdir(HUB_DIR, { recursive: true }),
+    mkdir(HUB_ARTIFACT_DIR, { recursive: true }),
     mkdir(WATCH_DIR, { recursive: true }),
     mkdir(MONITORING_STREAMS_DIR, { recursive: true }),
     mkdir(INCIDENTS_DIR, { recursive: true }),
@@ -106,12 +113,27 @@ async function captureLogin(page, timestamp) {
 }
 
 async function loginAsAdmin(page) {
-  log("Logging in as screenshot admin ...");
+  log("Logging in as screenshot admin (API via Playwright) ...");
+  const ctx = page.context();
+  const loginRes = await ctx.request.post(API_URL + "/api/v1/auth/login", {
+    data: { login_or_email: LOGIN, password: PASSWORD },
+    headers: { "Content-Type": "application/json" },
+    failOnStatusCode: false
+  });
+  if (loginRes.ok()) {
+    log("API login OK, cookies stored in context.");
+    await page.goto("/hub", { waitUntil: "networkidle", timeout: 30000 });
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-theme", "dark");
+    });
+    return;
+  }
+  log("API login failed: status=" + loginRes.status() + ", falling back to UI login ...");
   await page.goto("/login", { waitUntil: "networkidle", timeout: 30000 });
   await page.fill("#login-or-email", LOGIN);
   await page.fill("#login-password", PASSWORD);
   await page.click('button[type="submit"]');
-  await page.waitForURL((url) => url.pathname !== "/login", { timeout: 15000 });
+  await page.waitForURL((url) => url.pathname !== "/login", { timeout: 25000 });
   await page.evaluate(() => {
     document.documentElement.setAttribute("data-theme", "dark");
   });
@@ -121,10 +143,13 @@ async function captureHub(page, timestamp) {
   log("Capturing /hub ...");
   await page.goto("/hub", { waitUntil: "networkidle", timeout: 30000 });
   await page.waitForSelector(".hub-hero-title", { timeout: 10000 }).catch(() => {});
-  await page.waitForSelector(".hub-grid", { timeout: 10000 }).catch(() => {});
-  const screenshotPath = path.join(HUB_DIR, `${timestamp}.png`);
-  await page.screenshot({ path: screenshotPath, fullPage: true });
-  log("Hub screenshot: " + path.relative(ROOT_DIR, screenshotPath));
+  await page.waitForSelector(".hub-hero-row", { timeout: 10000 }).catch(() => {});
+  const buf = await page.screenshot({ fullPage: true });
+  const hubPortalPath = path.join(HUB_DIR, `${timestamp}.png`);
+  const hubArtifactPath = path.join(HUB_ARTIFACT_DIR, `${timestamp}.png`);
+  await writeFile(hubPortalPath, buf);
+  await writeFile(hubArtifactPath, buf);
+  log("Hub screenshot: " + path.relative(ROOT_DIR, hubPortalPath) + ", " + path.relative(ROOT_DIR, hubArtifactPath));
 }
 
 async function captureWatch(page, timestamp) {
