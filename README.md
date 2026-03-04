@@ -6,6 +6,7 @@
 
 - `api` (Go)
 - `worker` (Go)
+- `scheduler` (Go) — опционально: периодически создаёт check-jobs для активных потоков через API (см. ниже).
 - `postgres` (PostgreSQL)
 - `redis` (Redis)
 - `frontend` (Next.js + TypeScript)
@@ -17,7 +18,7 @@
 ## Реализованные возможности
 
 - **HLS-мониторинг:** Worker выполняет проверки (playlist, segments, freshness, freeze, blackframe, declared_bitrate, effective_bitrate), статусы OK/WARN/FAIL, сохранение результатов и скриншотов.
-- **Потоки и проекты:** tenant-scoped CRUD компаний, проектов, потоков; постановка check-jobs в очередь, история проверок и результатов.
+- **Потоки и проекты:** tenant-scoped CRUD компаний, проектов, потоков; постановка check-jobs в очередь (вручную или через Scheduler), история проверок и результатов.
 - **Админка:** controlled registration (pending → approve/reject только super_admin), список пользователей и заявок, смена ролей и статусов, audit log.
 - **Telegram:** алерты при переходах OK→WARN, WARN→FAIL и recovered (cooldown, streak); настройки доставки по компании (chat_id, send_recovered); DevLog в Telegram после каждого коммита (post-commit hook); «настроение» в сообщении — из `.devlog_mood.txt` в корне (опционально).
 - **Аналитика:** отображение состояний потоков, тренды, фильтрация по FAIL/WARN в UI.
@@ -155,11 +156,13 @@ docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod
 
 **Проверка после старта:** liveness — `GET /api/v1/health` (200, JSON `{"status":"ok","service":"api",...}`). Для readiness оркестратор (Kubernetes, Docker Swarm) может использовать `GET /api/v1/ready`: при доступности БД — 200 и `{"ready":true}`, при ошибке — 503 и `{"ready":false}`.
 
+**Scheduler (автопроверка потоков):** сервис `scheduler` раз в `SCHEDULER_INTERVAL_MIN` минут (по умолчанию 30) запрашивает у API список компаний и активных потоков и для каждого вызывает `POST .../check-jobs` с `planned_at=now`. Таким образом все активные потоки проверяются по расписанию без ручного запуска. Требуется `SCHEDULER_ACCESS_TOKEN` — Bearer-токен пользователя с доступом к списку компаний и потоков (например super_admin: один раз залогиниться, получить `access_token` и прописать в `.env`). Переменные: `SCHEDULER_API_BASE_URL` (в docker: `http://api:8080`), `SCHEDULER_INTERVAL_MIN`, `SCHEDULER_ENABLED`. Если токен не задан, контейнер при старте завершится с ошибкой; чтобы не выполнять автопроверки (контейнер при этом остаётся запущенным), задайте `SCHEDULER_ENABLED=false`.
+
 **CI:** на каждый push (ветки `master`/`main`) запускается [GitHub Actions](.github/workflows/ci.yml): `go test ./...` и в `web/` — `npm ci` и `npm run build`. Убедитесь, что оба шага проходят перед мержем.
 
 ### Мониторинг
 
-Рекомендуется проверять: (1) **liveness** — `GET /api/v1/health` (200); (2) **readiness** — `GET /api/v1/ready` (200 при доступности БД); (3) **worker metrics** — `GET /metrics` на `WORKER_METRICS_PORT` (по умолчанию 9091) c bearer-токеном `WORKER_METRICS_TOKEN`, если он задан; (4) **логи контейнеров** — `docker compose logs -f api`, `docker compose logs -f worker` и т.д.; (5) **место на диске** — для логов, volume БД и локальных скриншотов (при хранении на том же хосте).
+Рекомендуется проверять: (1) **liveness** — `GET /api/v1/health` (200); (2) **readiness** — `GET /api/v1/ready` (200 при доступности БД); (3) **worker metrics** — `GET /metrics` на `WORKER_METRICS_PORT` (по умолчанию 9091) c bearer-токеном `WORKER_METRICS_TOKEN`, если он задан; (4) **логи контейнеров** — `docker compose logs -f api`, `docker compose logs -f worker`, `docker compose logs -f scheduler` и т.д.; (5) **место на диске** — для логов, volume БД и локальных скриншотов (при хранении на том же хосте).
 
 ### Быстрая диагностика `internal_error`
 

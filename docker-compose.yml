@@ -93,6 +93,20 @@ services:
     ports:
       - "127.0.0.1:${WORKER_METRICS_PORT:-9091}:${WORKER_METRICS_PORT:-9091}"
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.scheduler
+    environment:
+      SCHEDULER_API_BASE_URL: ${SCHEDULER_API_BASE_URL:-http://api:8080}
+      SCHEDULER_ACCESS_TOKEN: ${SCHEDULER_ACCESS_TOKEN:-}
+      SCHEDULER_INTERVAL_MIN: ${SCHEDULER_INTERVAL_MIN:-30}
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-true}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./web

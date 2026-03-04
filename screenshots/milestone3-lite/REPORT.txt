@@ -1,23 +1,12 @@
-MS3L-SCREENSHOT-DIAG-001
-STATUS: BLOCKED
-DATE: 2026-02-24
-
-Что сделано:
-- Реализована backend+worker+UI логика screenshot diagnostics для инцидентов.
-- Добавлены новые поля инцидента (diag_code/diag_details/screenshot_taken_at).
-- Добавлен API endpoint выдачи JPEG скриншота инцидента.
-
-Блокер:
-- Docker engine недоступен в текущем окружении (pipe dockerDesktopLinuxEngine не найден),
-  поэтому автоматические UI-скриншоты не сняты в этом запуске агента.
-
 MS3L-SCREENSHOT-DIAG-002
-STATUS: READY (pipeline implemented, runtime blocked on this node)
-DATE: 2026-03-04
-
-Что сделано:
-- Добавлен Playwright-пайплайн `web/scripts/screenshot-m3-lite.mjs`, снимающий PNG для /login, /hub, /watch, /monitoring/streams, /incidents, /incidents/[id], /settings (Telegram).
-- Dockerfile.screenshot обновлён для запуска `npm run screenshot:m3-lite` внутри сервиса `screenshot` (docker compose --profile screenshot run --rm screenshot).
-
-Блокер:
-- На агентной ноде по-прежнему нет Docker Engine (ошибка подключения к dockerDesktopLinuxEngine), поэтому фактический прогон пайплайна не выполнен; запуск ожидается на CI/локальной dev-машине.
+STATUS: READY (runtime-tested: unknown-env)
+DATE: 2026-03-04T19:27:33.776Z
+Screens:
+- login: screenshots\login\20260304192603.png
+- hub-portal: screenshots\hub-portal\20260304192603.png
+- watch: screenshots\watch\20260304192603.png
+- monitoring-streams: screenshots\monitoring-streams\20260304192603.png
+- incidents: screenshots\incidents\20260304192603.png
+- incidents-detail: screenshots\incidents-detail\20260304192603.png
+- settings-telegram: screenshots\telegram-delivery-settings\20260304192603.png
+Note: pipeline assumes seeded test data (see docs/screenshot_automation.md).
