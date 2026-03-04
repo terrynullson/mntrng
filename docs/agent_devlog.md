@@ -64,7 +64,7 @@ Notes:
 
 [2026-03-04] [hub-p0-ui]
 Agent: FrontendAgent
-Commit: 36216b8
+Commit: 2a69dc3
 Summary:
 - Hub: hero-ряд (Watch + Monitoring) + вторичная сетка (Admin, SMS, AI, Reports); glass-карточки, polar night dark, inner glow/hover.
 - hub.css: .hub-hero-row, .hub-modules-grid, primary/secondary варианты карточек, responsive 1080/760.
