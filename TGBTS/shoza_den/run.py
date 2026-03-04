@@ -7,10 +7,11 @@
 import asyncio
 import logging
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time
 
 from dotenv import load_dotenv
 from telegram import Bot
+from telegram.ext import Application, CommandHandler, ContextTypes
 
 load_dotenv()
 
@@ -33,6 +34,15 @@ WEEKDAYS = [
 
 def today_weekday_ru() -> str:
     return WEEKDAYS[date.today().weekday()]
+
+
+async def cmd_status(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Ответ только тому, чей chat_id совпадает с SHOZA_ADMIN_CHAT_ID."""
+    if not update.effective_chat or not update.message:
+        return
+    if str(update.effective_chat.id) != config.ADMIN_CHAT_ID:
+        return
+    await update.message.reply_text(f"Я в порядке, сегодня {today_weekday_ru()}.")
 
 
 async def run_today_post() -> None:
@@ -89,6 +99,14 @@ async def scheduler_loop() -> None:
             log.exception("Ошибка при отправке поста: %s", e)
 
 
+async def daily_job(context) -> None:
+    """Ежедневный пост по расписанию (для режима с Application)."""
+    try:
+        await run_today_post()
+    except Exception as e:
+        log.exception("Ошибка при отправке поста: %s", e)
+
+
 def main() -> None:
     if not config.BOT_TOKEN or not config.CHANNEL_ID:
         log.error("Задайте SHOZA_BOT_TOKEN и SHOZA_CHANNEL_ID в .env")
@@ -97,8 +115,30 @@ def main() -> None:
     # Запуск один раз (для теста): python run.py once
     if len(sys.argv) > 1 and sys.argv[1].strip().lower() == "once":
         asyncio.run(_run_once())
+        return
+    # С админом: бот слушает команды и по расписанию постит (одна точка входа)
+    if config.ADMIN_CHAT_ID:
+        _run_with_bot()
     else:
         asyncio.run(scheduler_loop())
+
+
+def _run_with_bot() -> None:
+    """Polling + команда /status для админа + ежедневный пост по расписанию."""
+    app = (
+        Application.builder()
+        .token(config.BOT_TOKEN)
+        .post_init(_post_init)
+        .build()
+    )
+    app.add_handler(CommandHandler("status", cmd_status))
+    app.job_queue.run_daily(daily_job, time=time(config.POST_HOUR, config.POST_MINUTE))
+    log.info("Бот запущен. Команда /status в личку — проверка (только для SHOZA_ADMIN_CHAT_ID).")
+    app.run_polling(drop_pending_updates=True)
+
+
+async def _post_init(app: Application) -> None:
+    await repository.ensure_db(config.DB_PATH)
 
 
 async def _run_once() -> None:
