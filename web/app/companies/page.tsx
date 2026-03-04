@@ -67,10 +67,12 @@ export default function CompaniesPage() {
   }, [companies, search]);
 
   return (
-    <section className="panel">
+    <section className="panel premium-panel">
       <header className="page-header compact">
-        <h2 className="page-title">Companies</h2>
-        <p className="page-note">Super-admin company inventory.</p>
+        <div>
+          <h2 className="page-title">Companies</h2>
+          <p className="page-note">Super-admin company inventory.</p>
+        </div>
       </header>
 
       {!isSuperAdmin ? (
@@ -136,11 +138,10 @@ export default function CompaniesPage() {
 
       {!isLoading && !error && isSuperAdmin && filtered.length > 0 ? (
         <motion.div
-          className="table-wrap"
+          className="card-table-wrap"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
-          style={{ marginTop: "12px" }}
         >
           <table>
             <thead>

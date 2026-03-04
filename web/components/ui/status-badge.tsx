@@ -1,4 +1,4 @@
-﻿import type { CheckStatus } from "@/lib/api/types";
+import type { CheckStatus } from "@/lib/api/types";
 
 type StatusBadgeProps = {
   status: CheckStatus;
@@ -16,10 +16,10 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   const normalized = normalizeStatus(status);
   const className =
     normalized === "OK"
-      ? "status-badge status-ok"
+      ? "status-chip status-chip-ok"
       : normalized === "WARN"
-        ? "status-badge status-warn"
-        : "status-badge status-fail";
+        ? "status-chip status-chip-warn"
+        : "status-chip status-chip-fail";
 
   return <span className={className}>{normalized}</span>;
 }

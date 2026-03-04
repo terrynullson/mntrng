@@ -1,4 +1,4 @@
-﻿.button-primary,
+.button-primary,
 .button-secondary,
 .button-danger,
 .button-ghost {
@@ -86,13 +86,14 @@
 }
 
 .button-secondary {
-  color: #1f2937;
-  background: #ecf2f8;
-  border-color: #d5e0ea;
+  color: var(--text);
+  background: var(--surface-soft);
+  border-color: var(--border);
 }
 
 .button-secondary:hover:not(:disabled) {
-  background: #e2ebf4;
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
 }
 
 .button-danger {
@@ -102,7 +103,7 @@
 }
 
 .button-danger:hover:not(:disabled) {
-  background: #9d2119;
+  filter: brightness(1.08);
 }
 
 .button-ghost {

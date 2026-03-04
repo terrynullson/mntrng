@@ -278,21 +278,22 @@ export default function SettingsPage() {
   };
 
   return (
-    <section className="panel">
+    <section className="panel premium-panel">
       <header className="page-header compact">
-        <h2 className="page-title">Настройки</h2>
-        <p className="page-note">
-          Настройки Telegram и Embed whitelist.
-        </p>
+        <div>
+          <h2 className="page-title">Настройки</h2>
+          <p className="page-note">
+            Настройки Telegram и Embed whitelist.
+          </p>
+        </div>
       </header>
 
-      <div className="settings-card">
+      <div className="settings-section">
         <h3>Привязка Telegram аккаунта</h3>
         <p>
           Вставьте JSON payload из Telegram Login Widget (включая поле <code>hash</code>),
           чтобы привязать или перепривязать аккаунт.
         </p>
-
         <form className="telegram-form" onSubmit={handleLink}>
           <label className="form-field" htmlFor="telegram-payload">
             <span>Telegram payload JSON</span>
@@ -300,20 +301,19 @@ export default function SettingsPage() {
               id="telegram-payload"
               value={payloadValue}
               onChange={(event) => setPayloadValue(event.target.value)}
-              rows={8}
+              rows={5}
               disabled={isSubmitting}
+              placeholder='{"id": 123, "hash": "…"}'
             />
           </label>
-
           <AppButton type="submit" disabled={isSubmitting} aria-label={linkStatus === "idle" ? "Подключить Telegram аккаунт" : "Переподключить Telegram аккаунт"}>
             {isSubmitting
-              ? "Обработка..."
+              ? "Обработка…"
               : linkStatus === "idle"
                 ? "Подключить Telegram"
-                : "Переподключить Telegram"}
+                : "Переподключить"}
           </AppButton>
         </form>
-
         {linkStatus === "connected" ? (
           <StatePanel>Telegram аккаунт успешно подключен.</StatePanel>
         ) : null}
@@ -325,8 +325,7 @@ export default function SettingsPage() {
 
       {canManageTelegram ? (
         <motion.div
-          className="settings-card"
-          style={{ marginTop: "16px" }}
+          className="settings-section"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.24, ease: "easeOut" }}
@@ -373,9 +372,8 @@ export default function SettingsPage() {
               <form
                 className="telegram-form"
                 onSubmit={handleTelegramSettingsSubmit}
-                style={{ marginTop: "12px" }}
               >
-                <label className="form-field toggle-row" style={{ flexDirection: "row", alignItems: "center", gap: "10px" }}>
+                <label className="form-field form-check toggle-row">
                   <input
                     type="checkbox"
                     checked={tgForm.is_enabled}
@@ -383,6 +381,7 @@ export default function SettingsPage() {
                       setTgForm((prev) => ({ ...prev, is_enabled: e.target.checked }))
                     }
                     disabled={tgSubmitting}
+                    aria-label="Оповещения включены"
                   />
                   <span>Оповещения включены</span>
                 </label>
@@ -399,7 +398,7 @@ export default function SettingsPage() {
                     disabled={tgSubmitting}
                   />
                 </label>
-                <label className="form-field toggle-row" style={{ flexDirection: "row", alignItems: "center", gap: "10px" }}>
+                <label className="form-field form-check toggle-row">
                   <input
                     type="checkbox"
                     checked={tgForm.send_recovered}
@@ -407,6 +406,7 @@ export default function SettingsPage() {
                       setTgForm((prev) => ({ ...prev, send_recovered: e.target.checked }))
                     }
                     disabled={tgSubmitting}
+                    aria-label="Отправлять уведомления о восстановлении"
                   />
                   <span>Отправлять уведомления о восстановлении</span>
                 </label>
@@ -424,8 +424,7 @@ export default function SettingsPage() {
 
       {canManageEmbedWhitelist ? (
         <motion.div
-          className="settings-card"
-          style={{ marginTop: "16px" }}
+          className="settings-section"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.24, ease: "easeOut" }}
@@ -465,7 +464,7 @@ export default function SettingsPage() {
               {embedItems.length === 0 ? (
                 <StatePanel>Whitelist пуст — добавьте первый домен.</StatePanel>
               ) : (
-                <div className="table-wrap" style={{ marginTop: "12px" }}>
+                <div className="card-table-wrap" style={{ marginTop: "12px" }}>
                   <table>
                     <thead>
                       <tr>

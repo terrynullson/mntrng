@@ -112,10 +112,12 @@ export default function AdminRequestsPage() {
   };
 
   return (
-    <section className="panel">
+    <section className="panel premium-panel">
       <header className="page-header compact">
-        <h2 className="page-title">Pending Registration Requests</h2>
-        <p className="page-note">Approve or reject controlled sign-up requests.</p>
+        <div>
+          <h2 className="page-title">Pending Registration Requests</h2>
+          <p className="page-note">Approve or reject controlled sign-up requests.</p>
+        </div>
       </header>
 
       {!isSuperAdmin ? (
@@ -164,11 +166,10 @@ export default function AdminRequestsPage() {
 
       {!isLoading && !error && isSuperAdmin && items.length > 0 ? (
         <motion.div
-          className="table-wrap"
+          className="card-table-wrap"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
-          style={{ marginTop: "12px" }}
         >
           <table>
             <thead>

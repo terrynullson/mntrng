@@ -440,13 +440,15 @@ export default function StreamsPage() {
   };
 
   return (
-    <section className="panel">
+    <section className="panel premium-panel">
       <header className="page-header compact">
-        <h2 className="page-title">Мониторинг потоков</h2>
-        <p className="page-note">
-          CRUD потоков, статусы, избранное/закрепление и ручной запуск проверки.
-        </p>
-        <div style={{ marginTop: "8px" }}>
+        <div>
+          <h2 className="page-title">Мониторинг потоков</h2>
+          <p className="page-note">
+            CRUD потоков, статусы, избранное/закрепление и ручной запуск проверки.
+          </p>
+        </div>
+        <div className="page-header-actions">
           <AppButton
             type="button"
             disabled={isViewer || !scopeCompanyId}
@@ -469,7 +471,7 @@ export default function StreamsPage() {
         </motion.div>
       ) : null}
 
-      <div className="filters-grid streams-v2-filters">
+      <div className="premium-filters">
         <label className="form-field" htmlFor="streams-search">
           <span>Поиск</span>
           <input
@@ -480,7 +482,6 @@ export default function StreamsPage() {
             disabled={!scopeCompanyId || isLoading}
           />
         </label>
-
         <label className="form-field" htmlFor="streams-project-filter">
           <span>Проект</span>
           <select
@@ -497,7 +498,6 @@ export default function StreamsPage() {
             ))}
           </select>
         </label>
-
         <label className="form-field" htmlFor="streams-active-filter">
           <span>Активен</span>
           <select
@@ -513,7 +513,6 @@ export default function StreamsPage() {
             <option value="false">Неактивные</option>
           </select>
         </label>
-
         <label className="form-field" htmlFor="streams-status-filter">
           <span>Статус</span>
           <select
@@ -604,11 +603,10 @@ export default function StreamsPage() {
 
       {!isLoading && !error && scopeCompanyId && filteredStreams.length > 0 ? (
         <motion.div
-          className="table-wrap"
+          className="card-table-wrap"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
-          style={{ marginTop: "12px" }}
         >
           <table>
             <thead>
@@ -685,7 +683,7 @@ export default function StreamsPage() {
                           aria-label={`Смотреть поток ${stream.name}`}
                           title="Смотреть"
                         >
-                          <Eye size={16} />
+                          <Eye size={16} aria-hidden />
                         </Link>
                         <IconButton
                           disabled={isViewer || busyStreamID === stream.id}

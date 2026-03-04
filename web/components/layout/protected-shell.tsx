@@ -100,7 +100,9 @@ export function ProtectedShell({ children }: { children?: ReactNode }) {
   } = useAuth();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
+  const [isCompanyOpen, setIsCompanyOpen] = useState<boolean>(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const companyRef = useRef<HTMLDivElement | null>(null);
 
   const isPublicRoute = isPublicPath(pathname);
 
@@ -117,6 +119,18 @@ export function ProtectedShell({ children }: { children?: ReactNode }) {
     document.addEventListener("click", handleClick, true);
     return () => document.removeEventListener("click", handleClick, true);
   }, [isUserMenuOpen, closeUserMenu]);
+
+  useEffect(() => {
+    if (!isCompanyOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      const el = companyRef.current;
+      if (el && !el.contains(event.target as Node)) {
+        setIsCompanyOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [isCompanyOpen]);
 
   useEffect(() => {
     if (!isReady) {
@@ -201,27 +215,47 @@ export function ProtectedShell({ children }: { children?: ReactNode }) {
           <div className="secure-topbar-right">
             <ThemeToggleButton />
             {user.role === "super_admin" ? (
-              <label className="company-switcher" htmlFor="active-company-switcher">
-                <span>Компания</span>
-                <select
-                  id="active-company-switcher"
-                  value={activeCompanyId ?? ""}
-                  onChange={(event: { target: { value: string } }) => {
-                    const value = Number.parseInt(event.target.value, 10);
-                    setActiveCompanyId(Number.isFinite(value) ? value : null);
-                  }}
+              <div className="company-switcher" ref={companyRef}>
+                <button
+                  type="button"
+                  className="company-switcher-trigger"
+                  onClick={() => setIsCompanyOpen((prev) => !prev)}
+                  aria-expanded={isCompanyOpen}
+                  aria-haspopup="listbox"
                   aria-label="Выбор компании (контекст)"
                 >
-                  {companies.length === 0 ? (
-                    <option value="">Нет компаний</option>
-                  ) : null}
-                  {companies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.name} ({company.id})
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <span>
+                    {activeCompanyId != null
+                      ? companies.find((c) => c.id === activeCompanyId)?.name ?? `Компания #${activeCompanyId}`
+                      : "Компания"}
+                  </span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+                {isCompanyOpen ? (
+                  <div className="company-switcher-panel" role="listbox">
+                    {companies.length === 0 ? (
+                      <div className="company-switcher-item" role="option" aria-selected="false">Нет компаний</div>
+                    ) : null}
+                    {companies.map((company) => (
+                      <button
+                        key={company.id}
+                        type="button"
+                        className="company-switcher-item"
+                        role="option"
+                        aria-selected={activeCompanyId === company.id}
+                        onClick={() => {
+                          setActiveCompanyId(company.id);
+                          setIsCompanyOpen(false);
+                        }}
+                      >
+                        {company.name} ({company.id})
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             ) : null}
 
             <div className="user-menu-root" ref={userMenuRef}>

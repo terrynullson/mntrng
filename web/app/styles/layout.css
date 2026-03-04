@@ -12,6 +12,15 @@
 
 .page-header.compact {
   margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.page-header-actions {
+  flex-shrink: 0;
 }
 
 .page-title {

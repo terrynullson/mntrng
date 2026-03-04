@@ -1,21 +1,27 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap");
 
 :root {
   color-scheme: light;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Inter Tight", system-ui, sans-serif;
-  --bg: #f3f5f8;
-  --surface: #ffffff;
-  --surface-soft: #f8fafc;
-  --text: #0f172a;
-  --text-muted: #475569;
-  --border: #d8e0ea;
-  --border-strong: #bcc9d8;
-  --accent: #0f766e;
-  --accent-strong: #0d675f;
-  --danger: #b42318;
-  --warn: #b45309;
-  --ok: #15803d;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Inter Tight", "Inter", system-ui, sans-serif;
+  /* Frosty morning (light) */
+  --bg: #EAF4FF;
+  --bg-mid: #F7FBFF;
+  --bg-end: #E6F2FF;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-soft: rgba(255, 255, 255, 0.86);
+  --surface-hover: rgba(255, 255, 255, 0.9);
+  --text: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --border: rgba(15, 23, 42, 0.10);
+  --border-strong: rgba(15, 23, 42, 0.18);
+  --accent: #0EA5A4;
+  --accent-strong: #0d9488;
+  --danger: #FB7185;
+  --warn: #FBBF24;
+  --ok: #2DD4BF;
+  --info: #60A5FA;
   --shadow-soft: 0 6px 20px rgba(15, 23, 42, 0.06);
   /* theme switcher (reference) */
   --border-color-light: #1c2135;
@@ -30,25 +36,27 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --surface-soft: #334155;
-  --text: #f1f5f9;
-  --text-muted: #94a3b8;
-  --border: #334155;
-  --border-strong: #475569;
-  --accent: #2dd4bf;
-  --accent-strong: #5eead4;
-  --danger: #f87171;
-  --warn: #fbbf24;
-  --ok: #4ade80;
+  /* Polar night */
+  --bg: #050816;
+  --bg-mid: #080d1a;
+  --bg-end: #0B1024;
+  --surface: rgba(10, 14, 28, 0.70);
+  --surface-soft: rgba(22, 24, 28, 0.62);
+  --surface-hover: rgba(28, 30, 34, 0.70);
+  --text: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-muted: rgba(255, 255, 255, 0.45);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --accent: #3FD3C6;
+  --accent-strong: #66F2E4;
+  --danger: #FB7185;
+  --warn: #FBBF24;
+  --ok: #3FD3C6;
+  --info: #60A5FA;
   --shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
-[data-theme="dark"] .secure-nav a.is-active {
-  background: rgba(45, 212, 191, 0.18);
-  color: var(--accent-strong);
-}
 
 [data-theme="dark"] .button-secondary {
   color: var(--text);
@@ -82,4 +90,14 @@
 [data-theme="dark"] .form-field textarea:disabled {
   background: var(--border);
   color: var(--text-muted);
+}
+
+/* Legacy aliases for compatibility */
+:root {
+  --surface-1: var(--surface);
+  --surface-2: var(--surface-soft);
+}
+[data-theme="dark"] {
+  --surface-1: rgba(10, 14, 28, 0.70);
+  --surface-2: rgba(22, 24, 28, 0.62);
 }

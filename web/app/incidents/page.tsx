@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Eye } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { IconButton } from "@/components/navigation/icon-button";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { StatePanel } from "@/components/ui/state-panel";
 import { apiRequest, toErrorMessage } from "@/lib/api/client";
@@ -92,12 +94,14 @@ export default function IncidentsPage() {
   }, [search, searchApplied]);
 
   return (
-    <section className="panel">
+    <section className="panel premium-panel">
       <header className="page-header compact">
-        <h2 className="page-title">Инциденты</h2>
-        <p className="page-note">
-          Список инцидентов мониторинга: открытые и закрытые, с фильтрами по статусу и серьёзности.
-        </p>
+        <div>
+          <h2 className="page-title">Инциденты</h2>
+          <p className="page-note">
+            Список инцидентов мониторинга: открытые и закрытые, с фильтрами по статусу и серьёзности.
+          </p>
+        </div>
       </header>
 
       {!scopeCompanyId ? (
@@ -112,7 +116,7 @@ export default function IncidentsPage() {
 
       {scopeCompanyId ? (
         <>
-          <div className="filters-grid streams-v2-filters">
+          <div className="premium-filters">
             <label className="form-field" htmlFor="incidents-search">
               <span>Поиск</span>
               <input
@@ -163,56 +167,55 @@ export default function IncidentsPage() {
 
           {data && !isLoading ? (
             <motion.div
-              className="incidents-summary"
+              className="severity-chips"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2 }}
-              style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "12px", alignItems: "center" }}
             >
               <span className="summary-total">Всего: {data.total}</span>
               <button
                 type="button"
-                className="summary-card"
+                className="severity-chip"
                 onClick={() => {
                   setStatusFilter("open");
                   setPage(0);
                 }}
                 aria-pressed={statusFilter === "open"}
               >
-                <span className="summary-label">Открытые</span>
+                Открытые
               </button>
               <button
                 type="button"
-                className="summary-card"
+                className="severity-chip"
                 onClick={() => {
                   setStatusFilter("resolved");
                   setPage(0);
                 }}
                 aria-pressed={statusFilter === "resolved"}
               >
-                <span className="summary-label">Закрытые</span>
+                Закрытые
               </button>
               <button
                 type="button"
-                className="summary-card summary-warn"
+                className="severity-chip severity-warn"
                 onClick={() => {
                   setSeverityFilter("warn");
                   setPage(0);
                 }}
                 aria-pressed={severityFilter === "warn"}
               >
-                <span className="summary-label">WARN</span>
+                WARN
               </button>
               <button
                 type="button"
-                className="summary-card summary-fail"
+                className="severity-chip severity-fail"
                 onClick={() => {
                   setSeverityFilter("fail");
                   setPage(0);
                 }}
                 aria-pressed={severityFilter === "fail"}
               >
-                <span className="summary-label">FAIL</span>
+                FAIL
               </button>
             </motion.div>
           ) : null}
@@ -252,77 +255,55 @@ export default function IncidentsPage() {
 
           {!isLoading && !error && scopeCompanyId && data && data.items.length > 0 ? (
             <motion.div
-              className="table-wrap"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.28 }}
-              style={{ marginTop: "12px" }}
             >
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Статус</th>
-                    <th>Серьёзность</th>
-                    <th>Диагноз</th>
-                    <th>Поток</th>
-                    <th>Начало</th>
-                    <th>Последнее событие</th>
-                    <th>Закрыт</th>
-                    <th>Причина</th>
-                    <th>Действие</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.items.map((inc) => (
-                    <tr key={inc.id}>
-                      <td>{inc.id}</td>
-                      <td>
-                        <span
-                          className={
-                            inc.status === "open"
-                              ? "incident-badge incident-badge-open"
-                              : "incident-badge incident-badge-resolved"
-                          }
-                        >
-                          {inc.status === "open" ? "Открыт" : "Закрыт"}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={
-                            inc.severity === "fail"
-                              ? "incident-badge incident-badge-fail"
-                              : "incident-badge incident-badge-warn"
-                          }
-                        >
-                          {inc.severity === "fail" ? "FAIL" : "WARN"}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="incident-badge">{diagLabel(inc.diag_code)}</span>
-                      </td>
-                      <td>
+              <div className="incident-list">
+                {data.items.map((inc) => (
+                  <div key={inc.id} className="incident-card">
+                    <div
+                      className={`incident-card-severity ${inc.severity === "fail" ? "fail" : "warn"}`}
+                      aria-hidden
+                    >
+                      {inc.severity === "fail" ? (
+                        <AlertTriangle size={14} strokeWidth={2.5} />
+                      ) : (
+                        <AlertTriangle size={14} strokeWidth={2.5} />
+                      )}
+                    </div>
+                    <div className="incident-card-body">
+                      <div className="incident-card-title">
+                        {diagLabel(inc.diag_code)}
+                        {inc.fail_reason ? ` — ${inc.fail_reason}` : ""}
+                      </div>
+                      <div className="incident-card-meta">
                         <Link
                           className="stream-link"
                           href={`/monitoring/streams/${inc.stream_id}`}
                         >
                           {inc.stream_name ?? `Поток #${inc.stream_id}`}
                         </Link>
-                      </td>
-                      <td>{formatTimestamp(inc.started_at)}</td>
-                      <td>{formatTimestamp(inc.last_event_at)}</td>
-                      <td>{formatTimestamp(inc.resolved_at)}</td>
-                      <td>{inc.fail_reason ?? "—"}</td>
-                      <td>
-                        <Link className="stream-link" href={`/monitoring/incidents/${inc.id}`}>
-                          Открыть
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        {" · "}
+                        {formatTimestamp(inc.started_at)}
+                        {inc.status === "resolved" && inc.resolved_at
+                          ? ` · Закрыт ${formatTimestamp(inc.resolved_at)}`
+                          : ""}
+                      </div>
+                    </div>
+                    <div className="incident-card-actions">
+                      <Link
+                        href={`/monitoring/incidents/${inc.id}`}
+                        className="icon-button"
+                        aria-label={`Открыть инцидент #${inc.id}`}
+                        title="Открыть"
+                      >
+                        <Eye size={16} aria-hidden />
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
               {data.next_cursor ? (
                 <div style={{ marginTop: "12px" }}>
                   <button

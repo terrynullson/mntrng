@@ -281,12 +281,14 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <section className="panel">
+    <section className="panel premium-panel">
       <header className="page-header compact">
-        <h2 className="page-title">Users</h2>
-        <p className="page-note">
-          Admin users list with filters and RBAC-limited management actions.
-        </p>
+        <div>
+          <h2 className="page-title">Users</h2>
+          <p className="page-note">
+            Admin users list with filters and RBAC-limited management actions.
+          </p>
+        </div>
       </header>
 
       {!isSuperAdmin ? (
@@ -300,7 +302,7 @@ export default function AdminUsersPage() {
           </StatePanel>
         </motion.div>
       ) : (
-        <form className="filters-grid users-filters" onSubmit={applyFilters}>
+        <form className="premium-filters users-filters" onSubmit={applyFilters}>
           <label className="form-field" htmlFor="users-company-filter">
             <span>Company</span>
             <select
@@ -430,11 +432,10 @@ export default function AdminUsersPage() {
 
       {!isLoading && !error && items.length > 0 ? (
         <motion.div
-          className="table-wrap"
+          className="card-table-wrap"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
-          style={{ marginTop: "12px" }}
         >
           <table>
             <thead>
