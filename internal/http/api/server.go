@@ -2,14 +2,10 @@ package api
 
 import (
 	"database/sql"
-	"net/http"
 	"time"
 
-	"github.com/terrynullson/mntrng/internal/config"
 	"github.com/terrynullson/mntrng/internal/domain"
-	"github.com/terrynullson/mntrng/internal/repo/postgres"
 	serviceapi "github.com/terrynullson/mntrng/internal/service/api"
-	"github.com/terrynullson/mntrng/internal/telegram"
 )
 
 type healthResponse = domain.HealthResponse
@@ -47,6 +43,26 @@ type changeUserRoleRequest = domain.ChangeUserRoleRequest
 type changeUserStatusRequest = domain.ChangeUserStatusRequest
 type adminUserListResponse = domain.AdminUserListResponse
 
+type ServiceSet struct {
+	CompanyService          *serviceapi.CompanyService
+	ProjectService          *serviceapi.ProjectService
+	StreamService           *serviceapi.StreamService
+	CheckJobService         *serviceapi.CheckJobService
+	CheckResultService      *serviceapi.CheckResultService
+	AIIncidentService       *serviceapi.AIIncidentService
+	StreamFavoriteService   *serviceapi.StreamFavoriteService
+	IncidentService         *serviceapi.IncidentService
+	TelegramSettingsService *serviceapi.TelegramSettingsService
+	EmbedWhitelistService   *serviceapi.EmbedWhitelistService
+	AuthService             *serviceapi.AuthService
+	RegistrationService     *serviceapi.RegistrationService
+}
+
+type AuthTTLConfig struct {
+	AccessTTL  time.Duration
+	RefreshTTL time.Duration
+}
+
 type Server struct {
 	db                      *sql.DB
 	companyService          *serviceapi.CompanyService
@@ -65,44 +81,23 @@ type Server struct {
 	registrationService     *serviceapi.RegistrationService
 }
 
-func NewServer(db *sql.DB) *Server {
-	authRepo := postgres.NewAPIAuthRepo(db)
-	registrationRepo := postgres.NewAPIRegistrationRepo(db)
-
-	telegramHTTPTimeoutMS := config.GetInt("TELEGRAM_HTTP_TIMEOUT_MS", 5000)
-	if telegramHTTPTimeoutMS <= 0 {
-		telegramHTTPTimeoutMS = 5000
-	}
-	telegramClient := telegram.NewClient(&http.Client{Timeout: time.Duration(telegramHTTPTimeoutMS) * time.Millisecond})
-	registrationNotifier := newRegistrationNotifier(
-		telegramClient,
-		config.GetString("TELEGRAM_BOT_TOKEN_DEFAULT", ""),
-		config.GetString("SUPER_ADMIN_TELEGRAM_CHAT_ID", ""),
-	)
-
-	authAccessTTL := time.Duration(config.IntAtLeast(config.GetInt("AUTH_ACCESS_TTL_MIN", 15), 1)) * time.Minute
-	authRefreshTTL := time.Duration(config.IntAtLeast(config.GetInt("AUTH_REFRESH_TTL_DAYS", 30), 1)) * 24 * time.Hour
+func NewServer(db *sql.DB, services ServiceSet, authTTL AuthTTLConfig) *Server {
 	return &Server{
 		db:                      db,
-		companyService:          serviceapi.NewCompanyService(postgres.NewAPICompanyRepo(db)),
-		projectService:          serviceapi.NewProjectService(postgres.NewAPIProjectRepo(db)),
-		streamService:           serviceapi.NewStreamService(postgres.NewAPIStreamRepo(db)),
-		checkJobService:         serviceapi.NewCheckJobService(postgres.NewAPICheckJobRepo(db)),
-		checkResultService:      serviceapi.NewCheckResultService(postgres.NewAPICheckResultRepo(db)),
-		aiIncidentService:       serviceapi.NewAIIncidentService(postgres.NewAPIAIIncidentRepo(db)),
-		streamFavoriteService:   serviceapi.NewStreamFavoriteService(postgres.NewAPIStreamFavoriteRepo(db)),
-		incidentService:         serviceapi.NewIncidentService(postgres.NewAPIIncidentRepo(db)),
-		telegramSettingsService: serviceapi.NewTelegramSettingsService(postgres.NewAPITelegramSettingsRepo(db)),
-		embedWhitelistService:   serviceapi.NewEmbedWhitelistService(postgres.NewAPIEmbedWhitelistRepo(db)),
-		authService: serviceapi.NewAuthService(authRepo, serviceapi.AuthConfig{
-			AccessTTL:          authAccessTTL,
-			RefreshTTL:         authRefreshTTL,
-			TelegramBotToken:   config.GetString("TELEGRAM_BOT_TOKEN_DEFAULT", ""),
-			TelegramAuthMaxAge: time.Duration(config.GetInt("AUTH_TELEGRAM_MAX_AGE_SEC", 600)) * time.Second,
-		}),
-		authAccessTTL:       authAccessTTL,
-		authRefreshTTL:      authRefreshTTL,
-		registrationService: serviceapi.NewRegistrationService(registrationRepo, registrationNotifier),
+		companyService:          services.CompanyService,
+		projectService:          services.ProjectService,
+		streamService:           services.StreamService,
+		checkJobService:         services.CheckJobService,
+		checkResultService:      services.CheckResultService,
+		aiIncidentService:       services.AIIncidentService,
+		streamFavoriteService:   services.StreamFavoriteService,
+		incidentService:         services.IncidentService,
+		telegramSettingsService: services.TelegramSettingsService,
+		embedWhitelistService:   services.EmbedWhitelistService,
+		authService:             services.AuthService,
+		authAccessTTL:           authTTL.AccessTTL,
+		authRefreshTTL:          authTTL.RefreshTTL,
+		registrationService:     services.RegistrationService,
 	}
 }
 

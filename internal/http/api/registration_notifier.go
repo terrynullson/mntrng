@@ -27,6 +27,10 @@ func newRegistrationNotifier(telegramClient *telegram.Client, botToken string, c
 	}
 }
 
+func NewRegistrationNotifier(telegramClient *telegram.Client, botToken string, chatID string) *registrationNotifier {
+	return newRegistrationNotifier(telegramClient, botToken, chatID)
+}
+
 func (n *registrationNotifier) NotifyNewRegistrationRequest(ctx context.Context, request domain.RegistrationRequest) error {
 	if n == nil || n.telegramClient == nil || n.botToken == "" || n.chatID == "" {
 		return nil

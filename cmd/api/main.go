@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/terrynullson/mntrng/internal/bootstrap/apiapp"
 	"github.com/terrynullson/mntrng/internal/config"
-	httpapi "github.com/terrynullson/mntrng/internal/http/api"
 	"github.com/terrynullson/mntrng/internal/ratelimit"
 	"github.com/terrynullson/mntrng/internal/telemetry"
 	"github.com/redis/go-redis/v9"
@@ -68,7 +68,7 @@ func main() {
 		_ = telemetry.Shutdown(shutdownCtx)
 	}()
 
-	server := httpapi.NewHTTPServer(":"+port, db, limiter)
+	server := apiapp.NewHTTPServer(":"+port, db, limiter)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

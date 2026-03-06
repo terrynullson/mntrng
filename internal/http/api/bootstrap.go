@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"net/http"
 	"time"
 
@@ -11,8 +10,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-func NewHTTPServer(addr string, db *sql.DB, limiter ratelimit.Limiter) *http.Server {
-	server := NewServer(db)
+func NewHTTPServer(addr string, server *Server, limiter ratelimit.Limiter) *http.Server {
 	router := NewRouter(server.RouterHandlers())
 	handler := securityHeaders(router)
 	handler = corsMiddleware(handler)
