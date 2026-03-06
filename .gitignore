@@ -11,6 +11,9 @@ backups/
 # Документация и конфиг агентов (не пушить на GitHub)
 .cursor/
 PROMPTS/
+PROMTS/
+docs/
+_archive/
 
 # Локальные бинарники
 *.exe
