@@ -8,6 +8,9 @@ import (
 	"github.com/terrynullson/mntrng/internal/domain"
 )
 
+// ProcessSingleJobCycle runs one job: claim (with lock), process under jobTimeout, persist with retry,
+// alert state with retry, optional AI (if enabled), then finalize with retry. Idempotency: persist
+// uses ON CONFLICT (job_id) DO NOTHING; finalize updates only when status=running.
 func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {
 	if err := w.requeueStaleRunningJobs(ctx); err != nil {
 		return err

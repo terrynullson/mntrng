@@ -133,12 +133,16 @@ func (r *APICheckJobRepo) ListCheckJobs(
 		nextPlaceholder++
 	}
 
+	// Cap list size for production scalability; avoids unbounded reads.
+	const maxCheckJobsList = 100
 	query := fmt.Sprintf(
 		`SELECT id, company_id, stream_id, planned_at, status, created_at, started_at, finished_at, error_message
          FROM check_jobs
          WHERE %s
-         ORDER BY planned_at DESC, id DESC`,
+         ORDER BY planned_at DESC, id DESC
+         LIMIT %d`,
 		strings.Join(conditions, " AND "),
+		maxCheckJobsList,
 	)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)

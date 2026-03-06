@@ -2,10 +2,11 @@
 
 Контракт интеграции AI по инцидентам мониторинга HLS. Источник: **PROMPTS/architecture_master.md** (B6).
 
-Текущее состояние на Phase 1:
-- Worker wiring есть и вызывается на WARN/FAIL.
-- Сейчас используется `internal/ai.StubAnalyzer` (без внешнего AI provider).
+Текущее состояние (Phase 3, production-safe):
+- **Feature flag:** `AI_INCIDENT_ENABLED` (default `false`). По умолчанию AI не вызывается — честный non-production default.
+- При `AI_INCIDENT_ENABLED=true` Worker вызывает только `internal/ai.StubAnalyzer` (без внешнего AI provider).
 - Поля `cause/summary` сохраняются, но при stub обычно остаются пустыми.
+- Реальный provider планируется подключать позже; до этого AI считается partial/stubbed и не позиционируется как production-ready.
 
 ---
 

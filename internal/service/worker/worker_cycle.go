@@ -58,6 +58,7 @@ func newJobProcessingState(freezeFailSec float64) jobProcessingState {
 	}
 }
 
+// processJob runs all checks for one job. jobCtx is bounded by jobTimeout; external HTTP (playlist/segments) use their own timeouts.
 func (w *worker) processJob(ctx context.Context, job claimedJob) (checkJobEvaluation, error) {
 	jobCtx, cancel := context.WithTimeout(ctx, w.jobTimeout)
 	defer cancel()

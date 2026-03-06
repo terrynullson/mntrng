@@ -831,6 +831,7 @@ Telegram **alerts** (when and how the Worker sends notifications) are defined in
 ## 6. Consistency with schema and ADR
 
 - Tenant contract aligns with ADR-0002 and ADR-0006: no tenant endpoint without `company_id` scope.
+- **List response caps (Phase 3):** `GET /companies/{id}/streams` returns at most 500 items; `GET .../streams/{id}/check-jobs` and `GET .../streams/{id}/check-results` at most 100 items. Pagination params (limit/cursor) are not yet exposed; clients that need more must use filters or accept the cap.
 - Job lifecycle (`queued/running/done/failed`) aligns with `check_jobs.status` constraint from schema.
 - Results are read-only at API contract level, aligned with immutable `check_results` rows in schema.
 - Retention policy is Worker responsibility (ADR-0005); API contract does not expose retention execution endpoints. Подробности cleanup (TTL, батчи, tenant scope): **`docs/retention_cleanup.md`**.

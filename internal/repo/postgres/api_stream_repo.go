@@ -106,12 +106,16 @@ func (r *APIStreamRepo) ListStreams(ctx context.Context, companyID int64, filter
 		nextPlaceholder++
 	}
 
+	// Cap list size for production scalability; no pagination params yet to avoid contract change.
+	const maxStreamsList = 500
 	query := fmt.Sprintf(
 		`SELECT id, company_id, project_id, name, source_type, source_url, url, is_active, created_at, updated_at
          FROM streams
          WHERE %s
-         ORDER BY id ASC`,
+         ORDER BY id ASC
+         LIMIT %d`,
 		strings.Join(conditions, " AND "),
+		maxStreamsList,
 	)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)

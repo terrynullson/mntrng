@@ -29,7 +29,7 @@ Production-oriented репозиторий мониторинга HLS с API, Wo
 ## Статус реализации (честно)
 
 - **Реализовано:** API, auth/registration, CRUD компаний/проектов/потоков, Worker checks, Scheduler, Telegram alerts, frontend, migrations.
-- **Partial / stubbed:** AI incident analysis сейчас работает через `internal/ai.StubAnalyzer` (без внешнего LLM/provider).
+- **Partial / stubbed:** AI incident analysis отключён по умолчанию (`AI_INCIDENT_ENABLED=false`). При включении используется только `internal/ai.StubAnalyzer` (без внешнего LLM/provider). См. `docs/ai_incident_contract.md`.
 - **Перед production вручную обязательно:** заполнить секреты (`POSTGRES_PASSWORD`, `WORKER_METRICS_TOKEN`, auth/telegram токены), проверить cookie/CORS/TLS настройки и отключить ненужные опции (`BOOTSTRAP_SEED_ENABLED`, `SCHEDULER_ENABLED` при отсутствии токена).
 
 ## Документация

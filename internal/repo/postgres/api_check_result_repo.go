@@ -19,6 +19,7 @@ func NewAPICheckResultRepo(db *sql.DB) *APICheckResultRepo {
 	return &APICheckResultRepo{db: db}
 }
 
+// GetCheckResultByID returns a single result; tenant isolation enforced by company_id in WHERE.
 func (r *APICheckResultRepo) GetCheckResultByID(ctx context.Context, companyID int64, resultID int64) (domain.CheckResult, error) {
 	row := r.db.QueryRowContext(
 		ctx,
@@ -100,12 +101,16 @@ func (r *APICheckResultRepo) ListCheckResults(
 		nextPlaceholder++
 	}
 
+	// Cap list size for production scalability; avoids unbounded reads.
+	const maxCheckResultsList = 100
 	query := fmt.Sprintf(
 		`SELECT id, company_id, job_id, stream_id, status, checks, screenshot_path, created_at
          FROM check_results
          WHERE %s
-         ORDER BY created_at DESC, id DESC`,
+         ORDER BY created_at DESC, id DESC
+         LIMIT %d`,
 		strings.Join(conditions, " AND "),
+		maxCheckResultsList,
 	)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)

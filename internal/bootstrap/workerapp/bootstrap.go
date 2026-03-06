@@ -71,6 +71,14 @@ func LoadRuntimeConfig() RuntimeConfig {
 	workerMetricsPort := config.IntAtLeast(config.GetInt("WORKER_METRICS_PORT", 9091), 1)
 	workerMetricsToken := config.GetString("WORKER_METRICS_TOKEN", "")
 	appEnv := strings.ToLower(strings.TrimSpace(config.GetString("APP_ENV", "development")))
+	aiIncidentEnabled := config.GetBool("AI_INCIDENT_ENABLED", false)
+
+	var incidentAnalyzer ai.Analyzer
+	if aiIncidentEnabled {
+		// Stub only; real provider not integrated. When enabled, stub runs and writes empty cause/summary.
+		incidentAnalyzer = &ai.LogAnalyzer{Inner: ai.NewStubAnalyzer()}
+	}
+	// When AI_INCIDENT_ENABLED=false (default): no AI call, no stub. Honest non-production default.
 
 	return RuntimeConfig{
 		Worker: workerservice.Config{
@@ -99,7 +107,7 @@ func LoadRuntimeConfig() RuntimeConfig {
 			TelegramBotTokenDefault:       telegramBotTokenDefault,
 			RetryMax:                      retryMax,
 			RetryBackoff:                  retryBackoff,
-			IncidentAnalyzer:              &ai.LogAnalyzer{Inner: ai.NewStubAnalyzer()},
+			IncidentAnalyzer:              incidentAnalyzer,
 			DataDir:                       dataDir,
 			IncidentScreenshotInterval:    incidentScreenshotInterval,
 			DiagnosticCaptureTimeout:      diagnosticCaptureTimeout,
@@ -133,7 +141,7 @@ func LogRuntimeConfig(cfg RuntimeConfig) {
 	}
 
 	log.Printf(
-		"worker skeleton started: poll_interval=%s, retention_ttl=%s, retention_cleanup_interval=%s, retention_cleanup_batch_size=%d, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, blackframe_warn_ratio=%.2f, blackframe_fail_ratio=%.2f, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, alert_fail_streak=%d, alert_cooldown=%s, alert_send_recovered=%t, telegram_http_timeout=%s, telegram_retry_max=%d, telegram_retry_backoff=%s, telegram_default_token_set=%t, retry_max=%d, retry_backoff=%s, data_dir=%s, incident_screenshot_interval=%s, diag_capture_timeout=%s, diag_freeze_interval=%s, diag_freeze_diff_threshold=%.4f, running_job_stale_timeout=%s, allow_private_stream_urls=%t",
+		"worker skeleton started: poll_interval=%s, retention_ttl=%s, retention_cleanup_interval=%s, retention_cleanup_batch_size=%d, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, blackframe_warn_ratio=%.2f, blackframe_fail_ratio=%.2f, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, alert_fail_streak=%d, alert_cooldown=%s, alert_send_recovered=%t, telegram_http_timeout=%s, telegram_retry_max=%d, telegram_retry_backoff=%s, telegram_default_token_set=%t, retry_max=%d, retry_backoff=%s, ai_incident_enabled=%t, data_dir=%s, incident_screenshot_interval=%s, diag_capture_timeout=%s, diag_freeze_interval=%s, diag_freeze_diff_threshold=%.4f, running_job_stale_timeout=%s, allow_private_stream_urls=%t",
 		workerConfig.PollInterval,
 		workerConfig.RetentionTTL,
 		workerConfig.RetentionCleanupInterval,
@@ -159,6 +167,7 @@ func LogRuntimeConfig(cfg RuntimeConfig) {
 		workerConfig.TelegramBotTokenDefault != "",
 		workerConfig.RetryMax,
 		workerConfig.RetryBackoff,
+		workerConfig.IncidentAnalyzer != nil,
 		workerConfig.DataDir,
 		workerConfig.IncidentScreenshotInterval,
 		workerConfig.DiagnosticCaptureTimeout,
