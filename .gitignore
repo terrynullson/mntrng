@@ -2,6 +2,9 @@ node_modules/
 web/node_modules/
 web/.next/
 web/tsconfig.tsbuildinfo
+web/test-results/
+web/playwright-report/
+web/blob-report/
 .env
 .env.*
 !.env.example

@@ -18,7 +18,9 @@
     "screenshot:login": "node scripts/screenshot-login.mjs",
     "screenshot:register": "node scripts/screenshot-register.mjs",
     "screenshot:auth": "node scripts/screenshot-auth.mjs",
-    "screenshot:all": "node scripts/screenshot-all.mjs"
+    "screenshot:all": "node scripts/screenshot-all.mjs",
+    "test": "playwright test",
+    "test:ci": "playwright test --project=chromium"
   },
   "dependencies": {
     "framer-motion": "11.3.19",
@@ -34,6 +36,7 @@
     "@types/react-dom": "18.3.1",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.35",
+    "@playwright/test": "1.49.1",
     "playwright": "1.49.1",
     "typescript": "5.6.3"
   }

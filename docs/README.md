@@ -25,6 +25,7 @@
 
 Эти документы нужны для процесса разработки, но не являются source-of-truth для runtime/API:
 
+- `quality.md` — система качества, green build, что проверяет CI.
 - `agents_and_responsibilities.md`
 - `agent_devlog.md`
 - `frontend_ui_rules.md`

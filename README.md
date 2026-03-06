@@ -55,15 +55,14 @@ Production-oriented репозиторий мониторинга HLS с API, Wo
 
 Пошаговый запуск и smoke-проверка: [docs/phase1_baseline_checklist.md](docs/phase1_baseline_checklist.md).
 
-## Тесты
+## Тесты и качество
 
-Запуск всех Go-тестов из корня репозитория:
+- **Green build:** все проверки CI должны быть зелёными до merge. Подробнее — [docs/quality.md](docs/quality.md).
+- **Backend:** из корня репозитория — `go build ./cmd/api ./cmd/worker` и `go test ./...`.
+- **Frontend:** в `web/` — `npm run lint`, `npm run build`, `npm run test` (e2e smoke на Playwright).
+- **Docker sanity:** сборка образов `Dockerfile.api` и `Dockerfile.worker` проверяется в CI.
 
-```bash
-go test ./...
-```
-
-Быстрый production-smoke (health/readiness/auth/tenant-guard):
+Быстрый production-smoke (health/readiness/auth/tenant-guard) вручную:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-prod.ps1 `
@@ -73,7 +72,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-prod.ps1 `
   -ExpectedRole super_admin
 ```
 
-Тесты, требующие БД, используют `DATABASE_URL` из окружения (например из `.env` или `env_dev`); при отсутствии подключения такие тесты можно пропускать.
+Тесты, требующие БД, используют `TEST_DATABASE_URL` (или `DATABASE_URL`); при отсутствии переменной такие тесты пропускаются.
 
 ## Переменные окружения
 
