@@ -17,6 +17,10 @@ func (m *mockJobRepoNoJob) ClaimNextQueuedJob(ctx context.Context) (domain.Worke
 	return domain.WorkerClaimedJob{}, false, nil
 }
 
+func (m *mockJobRepoNoJob) RequeueStaleRunningJobs(ctx context.Context, staleAfter time.Duration) (int64, error) {
+	return 0, nil
+}
+
 func (m *mockJobRepoNoJob) FinalizeJob(ctx context.Context, job domain.WorkerClaimedJob, status string, errorMessage string) (int64, error) {
 	return 0, nil
 }

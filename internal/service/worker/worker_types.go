@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	PollInterval                  time.Duration
+	RunningJobStaleTimeout        time.Duration
 	RetentionTTL                  time.Duration
 	RetentionCleanupInterval      time.Duration
 	RetentionCleanupBatchSize     int
@@ -39,6 +40,7 @@ type Config struct {
 	DiagnosticCaptureTimeout      time.Duration
 	DiagnosticFreezeInterval      time.Duration
 	DiagnosticFreezeDiffThreshold float64
+	AllowPrivateStreamURLs        bool
 }
 
 type claimedJob = domain.WorkerClaimedJob
@@ -54,6 +56,7 @@ type worker struct {
 	incidentRepo                  IncidentRepository
 	incidentAnalyzer              ai.Analyzer
 	retentionTTL                  time.Duration
+	runningJobStaleTimeout        time.Duration
 	retentionCleanupBatchSize     int
 	jobTimeout                    time.Duration
 	playlistTimeout               time.Duration
@@ -81,6 +84,7 @@ type worker struct {
 	diagnosticCaptureTimeout      time.Duration
 	diagnosticFreezeInterval      time.Duration
 	diagnosticFreezeDiffThreshold float64
+	allowPrivateStreamURLs        bool
 }
 
 type checkJobEvaluation = domain.WorkerCheckJobEvaluation
@@ -113,6 +117,10 @@ func NewWorker(cfg Config, repos Repositories) *worker {
 	if diagnosticFreezeDiffThreshold <= 0 {
 		diagnosticFreezeDiffThreshold = 0.01
 	}
+	runningJobStaleTimeout := cfg.RunningJobStaleTimeout
+	if runningJobStaleTimeout <= 0 {
+		runningJobStaleTimeout = 5 * time.Minute
+	}
 	return &worker{
 		jobRepo:                       repos.JobRepo,
 		streamRepo:                    repos.StreamRepo,
@@ -124,6 +132,7 @@ func NewWorker(cfg Config, repos Repositories) *worker {
 		incidentRepo:                  repos.IncidentRepo,
 		incidentAnalyzer:              cfg.IncidentAnalyzer,
 		retentionTTL:                  cfg.RetentionTTL,
+		runningJobStaleTimeout:        runningJobStaleTimeout,
 		retentionCleanupBatchSize:     cfg.RetentionCleanupBatchSize,
 		jobTimeout:                    cfg.JobTimeout,
 		playlistTimeout:               cfg.PlaylistTimeout,
@@ -151,5 +160,6 @@ func NewWorker(cfg Config, repos Repositories) *worker {
 		diagnosticCaptureTimeout:      diagnosticCaptureTimeout,
 		diagnosticFreezeInterval:      diagnosticFreezeInterval,
 		diagnosticFreezeDiffThreshold: diagnosticFreezeDiffThreshold,
+		allowPrivateStreamURLs:        cfg.AllowPrivateStreamURLs,
 	}
 }

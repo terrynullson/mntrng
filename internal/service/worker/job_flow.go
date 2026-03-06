@@ -9,6 +9,10 @@ import (
 )
 
 func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {
+	if err := w.requeueStaleRunningJobs(ctx); err != nil {
+		return err
+	}
+
 	job, ok, err := w.claimNextQueuedJob(ctx)
 	if err != nil {
 		return err
@@ -65,6 +69,20 @@ func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {
 	}
 	observeFinalizedJob(domain.WorkerJobStatusDone, jobStartedAt)
 	log.Printf("worker finalized job as done: id=%d company_id=%d", job.ID, job.CompanyID)
+	return nil
+}
+
+func (w *worker) requeueStaleRunningJobs(ctx context.Context) error {
+	if w.runningJobStaleTimeout <= 0 {
+		return nil
+	}
+	requeued, err := w.jobRepo.RequeueStaleRunningJobs(ctx, w.runningJobStaleTimeout)
+	if err != nil {
+		return err
+	}
+	if requeued > 0 {
+		log.Printf("worker requeued stale running jobs: count=%d stale_after=%s", requeued, w.runningJobStaleTimeout)
+	}
 	return nil
 }
 

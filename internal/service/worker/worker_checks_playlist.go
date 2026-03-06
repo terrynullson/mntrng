@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/example/hls-monitoring-platform/internal/domain"
 	"github.com/example/hls-monitoring-platform/internal/service/worker/checks"
 )
 
@@ -24,6 +25,11 @@ func (w *worker) checkBlackframe(ctx context.Context, samples []segmentSample) (
 }
 
 func (w *worker) checkSegmentsAvailability(ctx context.Context, segments []playlistSegment) (string, []segmentSample) {
+	for _, segment := range segments {
+		if err := w.validateExternalURL(segment.URL); err != nil {
+			return domain.WorkerStatusFail, nil
+		}
+	}
 	return checks.CheckSegmentsAvailability(ctx, segments, w.segmentTimeout)
 }
 

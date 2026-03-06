@@ -49,6 +49,8 @@ func main() {
 	diagnosticCaptureTimeout := time.Duration(config.IntInRange(config.GetInt("DIAG_CAPTURE_TIMEOUT_SEC", 6), 3, 15)) * time.Second
 	diagnosticFreezeInterval := time.Duration(config.IntInRange(config.GetInt("DIAG_FREEZE_INTERVAL_SEC", 2), 1, 10)) * time.Second
 	diagnosticFreezeDiffThreshold := config.FloatInRange(config.GetFloat("DIAG_FREEZE_DIFF_THRESHOLD", 0.01), 0.0001, 1)
+	runningJobStaleTimeout := time.Duration(config.IntAtLeast(config.GetInt("WORKER_RUNNING_JOB_STALE_SEC", 300), 30)) * time.Second
+	allowPrivateStreamURLs := config.GetBool("WORKER_ALLOW_PRIVATE_STREAM_URLS", false)
 	if freshnessFail < freshnessWarn {
 		freshnessFail = freshnessWarn
 	}
@@ -119,10 +121,12 @@ func main() {
 		DiagnosticCaptureTimeout:      diagnosticCaptureTimeout,
 		DiagnosticFreezeInterval:      diagnosticFreezeInterval,
 		DiagnosticFreezeDiffThreshold: diagnosticFreezeDiffThreshold,
+		RunningJobStaleTimeout:        runningJobStaleTimeout,
+		AllowPrivateStreamURLs:        allowPrivateStreamURLs,
 	}
 
 	log.Printf(
-		"worker skeleton started: poll_interval=%s, retention_ttl=%s, retention_cleanup_interval=%s, retention_cleanup_batch_size=%d, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, blackframe_warn_ratio=%.2f, blackframe_fail_ratio=%.2f, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, alert_fail_streak=%d, alert_cooldown=%s, alert_send_recovered=%t, telegram_http_timeout=%s, telegram_retry_max=%d, telegram_retry_backoff=%s, telegram_default_token_set=%t, retry_max=%d, retry_backoff=%s, data_dir=%s, incident_screenshot_interval=%s, diag_capture_timeout=%s, diag_freeze_interval=%s, diag_freeze_diff_threshold=%.4f",
+		"worker skeleton started: poll_interval=%s, retention_ttl=%s, retention_cleanup_interval=%s, retention_cleanup_batch_size=%d, job_timeout=%s, playlist_timeout=%s, segment_timeout=%s, segments_sample_count=%d, freshness_warn=%s, freshness_fail=%s, freeze_warn=%s, freeze_fail=%s, blackframe_warn_ratio=%.2f, blackframe_fail_ratio=%.2f, effective_warn_ratio=%.2f, effective_fail_ratio=%.2f, alert_fail_streak=%d, alert_cooldown=%s, alert_send_recovered=%t, telegram_http_timeout=%s, telegram_retry_max=%d, telegram_retry_backoff=%s, telegram_default_token_set=%t, retry_max=%d, retry_backoff=%s, data_dir=%s, incident_screenshot_interval=%s, diag_capture_timeout=%s, diag_freeze_interval=%s, diag_freeze_diff_threshold=%.4f, running_job_stale_timeout=%s, allow_private_stream_urls=%t",
 		workerConfig.PollInterval,
 		workerConfig.RetentionTTL,
 		workerConfig.RetentionCleanupInterval,
@@ -153,6 +157,8 @@ func main() {
 		workerConfig.DiagnosticCaptureTimeout,
 		workerConfig.DiagnosticFreezeInterval,
 		workerConfig.DiagnosticFreezeDiffThreshold,
+		workerConfig.RunningJobStaleTimeout,
+		workerConfig.AllowPrivateStreamURLs,
 	)
 
 	workerRepo := postgresrepo.NewWorkerRepo(db)

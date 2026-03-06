@@ -9,6 +9,7 @@ import (
 
 type JobRepository interface {
 	ClaimNextQueuedJob(ctx context.Context) (domain.WorkerClaimedJob, bool, error)
+	RequeueStaleRunningJobs(ctx context.Context, staleAfter time.Duration) (int64, error)
 	FinalizeJob(ctx context.Context, job domain.WorkerClaimedJob, status string, errorMessage string) (int64, error)
 }
 

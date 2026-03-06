@@ -76,7 +76,7 @@ func (w *worker) maybeCaptureIncidentDiagnostic(ctx context.Context, job claimed
 }
 
 func (w *worker) captureAndDiagnose(ctx context.Context, companyID int64, streamID int64, incidentID int64) (*string, string, map[string]interface{}) {
-	streamURL, err := w.streamRepo.LoadStreamURL(ctx, companyID, streamID)
+	streamURL, err := w.loadStreamURL(ctx, companyID, streamID)
 	if err != nil {
 		screenshotCaptureTotal.WithLabelValues("fail").Inc()
 		return nil, diagCodeCaptureFail, map[string]interface{}{"error": err.Error()}
@@ -144,6 +144,9 @@ func (w *worker) captureAndDiagnose(ctx context.Context, companyID int64, stream
 }
 
 func (w *worker) captureFrame(ctx context.Context, streamURL string, outPath string) error {
+	if err := w.validateExternalURL(streamURL); err != nil {
+		return err
+	}
 	captureCtx, cancel := context.WithTimeout(ctx, w.diagnosticCaptureTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(

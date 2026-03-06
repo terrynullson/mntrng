@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"time"
 
 	"github.com/example/hls-monitoring-platform/internal/domain"
 )
@@ -65,6 +67,40 @@ func (r *WorkerRepo) FinalizeJob(ctx context.Context, job domain.WorkerClaimedJo
 		job.ID,
 		job.CompanyID,
 		domain.WorkerJobStatusRunning,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return rowsAffected, nil
+}
+
+func (r *WorkerRepo) RequeueStaleRunningJobs(ctx context.Context, staleAfter time.Duration) (int64, error) {
+	if staleAfter <= 0 {
+		return 0, fmt.Errorf("staleAfter must be positive")
+	}
+
+	result, err := r.db.ExecContext(
+		ctx,
+		`UPDATE check_jobs AS j
+         SET status = $1,
+             started_at = NULL,
+             finished_at = NULL,
+             error_message = $2
+         WHERE j.status = $3
+           AND j.started_at IS NOT NULL
+           AND j.started_at <= NOW() - $4::interval
+           AND NOT EXISTS (
+               SELECT 1 FROM check_results cr WHERE cr.job_id = j.id
+           )`,
+		domain.WorkerJobStatusQueued,
+		"requeued stale running job",
+		domain.WorkerJobStatusRunning,
+		fmt.Sprintf("%f seconds", staleAfter.Seconds()),
 	)
 	if err != nil {
 		return 0, err

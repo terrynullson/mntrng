@@ -154,5 +154,8 @@ func (w *worker) loadStreamURL(ctx context.Context, companyID int64, streamID in
 	if streamURL == "" {
 		return "", errors.New("stream url is empty")
 	}
+	if err := w.validateExternalURL(streamURL); err != nil {
+		return "", err
+	}
 	return streamURL, nil
 }
