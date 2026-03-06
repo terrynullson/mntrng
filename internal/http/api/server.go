@@ -21,6 +21,7 @@ type patchProjectRequest = domain.PatchProjectRequest
 type stream = domain.Stream
 type streamListResponse = domain.StreamListResponse
 type streamLatestStatusListResponse = domain.StreamLatestStatusListResponse
+type streamWithLatestStatusListResponse = domain.StreamWithLatestStatusListResponse
 type createStreamRequest = domain.CreateStreamRequest
 type createCompanyStreamRequest = domain.CreateCompanyStreamRequest
 type patchStreamRequest = domain.PatchStreamRequest
@@ -63,6 +64,7 @@ type ProjectPort interface {
 type StreamPort interface {
 	CreateStream(ctx context.Context, input serviceapi.CreateStreamInput) (domain.Stream, error)
 	ListStreams(ctx context.Context, input serviceapi.ListStreamsInput) ([]domain.Stream, error)
+	ListStreamsWithLatestStatus(ctx context.Context, input serviceapi.ListStreamsInput) ([]domain.StreamWithLatestStatus, error)
 	ListLatestStatuses(ctx context.Context, companyID int64) ([]domain.StreamLatestStatus, error)
 	GetStream(ctx context.Context, companyID int64, streamID int64) (domain.Stream, error)
 	PatchStream(ctx context.Context, input serviceapi.PatchStreamRequest) (domain.Stream, error)
@@ -208,6 +210,7 @@ func (s *Server) RouterHandlers() RouterHandlers {
 		HandleCreateStreamInCompany:         s.handleCreateStreamInCompany,
 		HandleListStreams:                   s.handleListStreams,
 		HandleListStreamLatestStatuses:      s.handleListStreamLatestStatuses,
+		HandleListStreamsWithLatestStatus:   s.handleListStreamsWithLatestStatus,
 		HandleGetStream:                     s.handleGetStream,
 		HandlePatchStream:                   s.handlePatchStream,
 		HandleDeleteStream:                  s.handleDeleteStream,

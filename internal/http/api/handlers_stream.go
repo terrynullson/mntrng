@@ -106,6 +106,29 @@ func (s *Server) handleListStreamLatestStatuses(w http.ResponseWriter, r *http.R
 	}
 }
 
+func (s *Server) handleListStreamsWithLatestStatus(w http.ResponseWriter, r *http.Request, companyID int64) {
+	if r.Method != http.MethodGet {
+		WriteMethodNotAllowed(w, r, http.MethodGet)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	items, err := s.streamService.ListStreamsWithLatestStatus(ctx, serviceapi.ListStreamsInput{
+		CompanyID:    companyID,
+		ProjectIDRaw: r.URL.Query().Get("project_id"),
+		IsActiveRaw:  r.URL.Query().Get("is_active"),
+	})
+	if err != nil {
+		writeServiceError(w, r, "list streams with latest status", err)
+		return
+	}
+
+	if err := WriteJSON(w, http.StatusOK, streamWithLatestStatusListResponse{Items: items}); err != nil {
+		log.Printf("list streams with latest status response encode error: %v", err)
+	}
+}
+
 func (s *Server) handleGetStream(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()

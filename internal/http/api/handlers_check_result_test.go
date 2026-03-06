@@ -130,3 +130,55 @@ func TestCheckResults_403_TenantEscape(t *testing.T) {
 	}
 	assertErrorCode(t, rec.Body.Bytes(), "tenant_scope_required")
 }
+
+func TestCheckResults_403_TenantEscape_GetByID(t *testing.T) {
+	companyID := int64(1)
+	hash := sha256.Sum256([]byte("result-tenant-get-id-token"))
+	authStore := &middlewareAuthStore{
+		sessionByAccess: map[string]domain.AuthSessionUser{
+			hex.EncodeToString(hash[:]): {
+				Session: domain.AuthSession{ID: 1, AccessExpiresAt: time.Now().Add(15 * time.Minute), RefreshExpiresAt: time.Now().Add(24 * time.Hour)},
+				User:    domain.AuthUser{ID: 1, CompanyID: &companyID, Role: domain.RoleViewer, Status: domain.UserStatusActive},
+			},
+		},
+	}
+	srv := &Server{
+		authService:        serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
+		checkResultService: serviceapi.NewCheckResultService(&mockCheckResultStore{}),
+	}
+	router := NewRouter(srv.RouterHandlers())
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/companies/2/check-results/1", nil)
+	req.Header.Set("Authorization", "Bearer result-tenant-get-id-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+	assertErrorCode(t, rec.Body.Bytes(), "tenant_scope_required")
+}
+
+func TestCheckResults_403_TenantEscape_GetByJob(t *testing.T) {
+	companyID := int64(1)
+	hash := sha256.Sum256([]byte("result-tenant-get-job-token"))
+	authStore := &middlewareAuthStore{
+		sessionByAccess: map[string]domain.AuthSessionUser{
+			hex.EncodeToString(hash[:]): {
+				Session: domain.AuthSession{ID: 1, AccessExpiresAt: time.Now().Add(15 * time.Minute), RefreshExpiresAt: time.Now().Add(24 * time.Hour)},
+				User:    domain.AuthUser{ID: 1, CompanyID: &companyID, Role: domain.RoleViewer, Status: domain.UserStatusActive},
+			},
+		},
+	}
+	srv := &Server{
+		authService:        serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
+		checkResultService: serviceapi.NewCheckResultService(&mockCheckResultStore{}),
+	}
+	router := NewRouter(srv.RouterHandlers())
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/companies/2/check-jobs/1/result", nil)
+	req.Header.Set("Authorization", "Bearer result-tenant-get-job-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+	assertErrorCode(t, rec.Body.Bytes(), "tenant_scope_required")
+}

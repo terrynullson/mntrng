@@ -23,21 +23,26 @@ func assertErrorCode(t *testing.T, body []byte, code string) {
 }
 
 type mockStreamStore struct {
-	listResp   []domain.Stream
-	listErr    error
-	latestResp []domain.StreamLatestStatus
-	latestErr  error
-	getResp    domain.Stream
-	getErr     error
-	createResp domain.Stream
-	createErr  error
-	patchResp  domain.Stream
-	patchErr   error
-	deleteErr  error
+	listResp            []domain.Stream
+	listErr             error
+	listWithStatusResp  []domain.StreamWithLatestStatus
+	listWithStatusErr   error
+	latestResp          []domain.StreamLatestStatus
+	latestErr           error
+	getResp             domain.Stream
+	getErr              error
+	createResp          domain.Stream
+	createErr           error
+	patchResp           domain.Stream
+	patchErr            error
+	deleteErr           error
 }
 
 func (m *mockStreamStore) ListStreams(ctx context.Context, companyID int64, filter domain.StreamListFilter) ([]domain.Stream, error) {
 	return m.listResp, m.listErr
+}
+func (m *mockStreamStore) ListStreamsWithLatestStatus(ctx context.Context, companyID int64, filter domain.StreamListFilter) ([]domain.StreamWithLatestStatus, error) {
+	return m.listWithStatusResp, m.listWithStatusErr
 }
 func (m *mockStreamStore) ListLatestStatuses(ctx context.Context, companyID int64) ([]domain.StreamLatestStatus, error) {
 	return m.latestResp, m.latestErr

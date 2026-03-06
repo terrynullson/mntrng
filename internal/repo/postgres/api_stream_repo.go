@@ -139,6 +139,81 @@ func (r *APIStreamRepo) ListStreams(ctx context.Context, companyID int64, filter
 	return items, nil
 }
 
+// ListStreamsWithLatestStatus returns streams with embedded latest check status in one query (operational read model).
+// Same filter and cap as ListStreams; reduces UI fan-out from two requests to one.
+func (r *APIStreamRepo) ListStreamsWithLatestStatus(ctx context.Context, companyID int64, filter domain.StreamListFilter) ([]domain.StreamWithLatestStatus, error) {
+	args := []interface{}{companyID}
+	conditions := []string{"s.company_id = $1"}
+	nextPlaceholder := 2
+
+	if filter.ProjectID != nil {
+		conditions = append(conditions, fmt.Sprintf("s.project_id = $%d", nextPlaceholder))
+		args = append(args, *filter.ProjectID)
+		nextPlaceholder++
+	}
+
+	if filter.IsActive != nil {
+		conditions = append(conditions, fmt.Sprintf("s.is_active = $%d", nextPlaceholder))
+		args = append(args, *filter.IsActive)
+		nextPlaceholder++
+	}
+
+	const maxStreamsList = 500
+	query := fmt.Sprintf(
+		`SELECT s.id, s.company_id, s.project_id, s.name, s.source_type, s.source_url, s.url, s.is_active, s.created_at, s.updated_at,
+                cr.status, cr.created_at
+         FROM streams s
+         LEFT JOIN LATERAL (
+             SELECT c.status, c.created_at
+             FROM check_results c
+             WHERE c.company_id = s.company_id AND c.stream_id = s.id
+             ORDER BY c.created_at DESC, c.id DESC
+             LIMIT 1
+         ) cr ON TRUE
+         WHERE %s
+         ORDER BY s.id ASC
+         LIMIT %d`,
+		strings.Join(conditions, " AND "),
+		maxStreamsList,
+	)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]domain.StreamWithLatestStatus, 0)
+	for rows.Next() {
+		var stream domain.Stream
+		var status sql.NullString
+		var lastCheckAt sql.NullTime
+		if err := rows.Scan(
+			&stream.ID, &stream.CompanyID, &stream.ProjectID, &stream.Name, &stream.SourceType, &stream.SourceURL, &stream.URL, &stream.IsActive, &stream.CreatedAt, &stream.UpdatedAt,
+			&status, &lastCheckAt,
+		); err != nil {
+			return nil, err
+		}
+		row := domain.StreamWithLatestStatus{Stream: stream}
+		if status.Valid || lastCheckAt.Valid {
+			row.LatestStatus = &domain.StreamLatestStatus{StreamID: stream.ID}
+			if status.Valid {
+				formatted := formatCheckResultStatus(status.String)
+				row.LatestStatus.Status = &formatted
+			}
+			if lastCheckAt.Valid {
+				t := lastCheckAt.Time.UTC()
+				row.LatestStatus.LastCheckAt = &t
+			}
+		}
+		items = append(items, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 func (r *APIStreamRepo) ListLatestStatuses(ctx context.Context, companyID int64) ([]domain.StreamLatestStatus, error) {
 	rows, err := r.db.QueryContext(
 		ctx,

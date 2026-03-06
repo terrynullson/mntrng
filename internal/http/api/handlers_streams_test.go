@@ -34,6 +34,35 @@ func TestHandleListStreams_200(t *testing.T) {
 	}
 }
 
+func TestHandleListStreamsWithLatestStatus_200(t *testing.T) {
+	okStatus := "OK"
+	store := &mockStreamStore{
+		listWithStatusResp: []domain.StreamWithLatestStatus{
+			{
+				Stream:       domain.Stream{ID: 1, CompanyID: 10, ProjectID: 1, Name: "S1", URL: "https://a/b.m3u8", IsActive: true, CreatedAt: testTime, UpdatedAt: testTime},
+				LatestStatus: &domain.StreamLatestStatus{StreamID: 1, Status: &okStatus, LastCheckAt: ptrTime(testTime)},
+			},
+		},
+	}
+	srv := &Server{streamService: serviceapi.NewStreamService(store)}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/companies/10/streams/operational-summary", nil)
+	rec := httptest.NewRecorder()
+	srv.handleListStreamsWithLatestStatus(rec, req, 10)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d %s", rec.Code, rec.Body.String())
+	}
+	var out domain.StreamWithLatestStatusListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(out.Items) != 1 || out.Items[0].Stream.Name != "S1" {
+		t.Fatalf("unexpected items: %+v", out.Items)
+	}
+	if out.Items[0].LatestStatus == nil || *out.Items[0].LatestStatus.Status != "OK" {
+		t.Fatalf("unexpected latest_status: %+v", out.Items[0].LatestStatus)
+	}
+}
+
 func TestHandleListStreamLatestStatuses_200(t *testing.T) {
 	okStatus := "OK"
 	store := &mockStreamStore{
@@ -245,6 +274,32 @@ func TestStreams_403_TenantEscape(t *testing.T) {
 	router := NewRouter(srv.RouterHandlers())
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/companies/2/streams", nil)
 	req.Header.Set("Authorization", "Bearer stream-tenant-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+	assertErrorCode(t, rec.Body.Bytes(), "tenant_scope_required")
+}
+
+func TestStreams_403_TenantEscape_Get(t *testing.T) {
+	companyID := int64(1)
+	hash := sha256.Sum256([]byte("stream-tenant-get-token"))
+	authStore := &middlewareAuthStore{
+		sessionByAccess: map[string]domain.AuthSessionUser{
+			hex.EncodeToString(hash[:]): {
+				Session: domain.AuthSession{ID: 1, AccessExpiresAt: time.Now().Add(15 * time.Minute), RefreshExpiresAt: time.Now().Add(24 * time.Hour)},
+				User:    domain.AuthUser{ID: 1, CompanyID: &companyID, Role: domain.RoleViewer, Status: domain.UserStatusActive},
+			},
+		},
+	}
+	srv := &Server{
+		authService:   serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
+		streamService: serviceapi.NewStreamService(&mockStreamStore{}),
+	}
+	router := NewRouter(srv.RouterHandlers())
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/companies/2/streams/1", nil)
+	req.Header.Set("Authorization", "Bearer stream-tenant-get-token")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusForbidden {

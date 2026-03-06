@@ -12,7 +12,8 @@ const (
 	projectItemPrefix            = "projects/"
 	streamCollectionPath         = "streams"
 	streamItemPrefix             = "streams/"
-	streamLatestStatusesPath     = "streams/latest-statuses"
+	streamLatestStatusesPath       = "streams/latest-statuses"
+	streamOperationalSummaryPath   = "streams/operational-summary"
 	checkJobsCollectionPath      = "check-jobs"
 	checkJobsItemPrefix          = "check-jobs/"
 	checkResultsCollectionPath   = "check-results"
@@ -48,9 +49,10 @@ type RouterHandlers struct {
 
 	HandleCreateStream             companyResourceHandler
 	HandleCreateStreamInCompany    companyHandler
-	HandleListStreams              companyHandler
-	HandleListStreamLatestStatuses companyHandler
-	HandleGetStream                companyResourceHandler
+	HandleListStreams                companyHandler
+	HandleListStreamLatestStatuses   companyHandler
+	HandleListStreamsWithLatestStatus companyHandler
+	HandleGetStream                  companyResourceHandler
 	HandlePatchStream              companyResourceHandler
 	HandleDeleteStream             companyResourceHandler
 
@@ -254,6 +256,14 @@ func routeCompanyByID(w http.ResponseWriter, r *http.Request, handlers RouterHan
 	if pathRemainder == streamLatestStatusesPath {
 		if r.Method == http.MethodGet {
 			handlers.HandleListStreamLatestStatuses(w, r, companyID)
+		} else {
+			WriteMethodNotAllowed(w, r, http.MethodGet)
+		}
+		return
+	}
+	if pathRemainder == streamOperationalSummaryPath {
+		if r.Method == http.MethodGet {
+			handlers.HandleListStreamsWithLatestStatus(w, r, companyID)
 		} else {
 			WriteMethodNotAllowed(w, r, http.MethodGet)
 		}

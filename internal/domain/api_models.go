@@ -79,6 +79,18 @@ type StreamLatestStatusListResponse struct {
 	Items []StreamLatestStatus `json:"items"`
 }
 
+// StreamWithLatestStatus is an operational read model: stream plus its latest check status in one payload.
+// Reduces UI request fan-out (one call instead of list streams + list latest-statuses).
+type StreamWithLatestStatus struct {
+	Stream       Stream             `json:"stream"`
+	LatestStatus *StreamLatestStatus `json:"latest_status,omitempty"`
+}
+
+// StreamWithLatestStatusListResponse is the response for list streams with embedded latest status.
+type StreamWithLatestStatusListResponse struct {
+	Items []StreamWithLatestStatus `json:"items"`
+}
+
 type CreateStreamRequest struct {
 	Name       string `json:"name"`
 	SourceType string `json:"source_type"`

@@ -613,6 +613,24 @@ All endpoints in this section are tenant-scoped by route `company_id`.
   - `status` is uppercase (`OK|WARN|FAIL`) or `null` when stream has no checks yet.
   - Endpoint is tenant-scoped and requires auth.
 
+### `GET /companies/{company_id}/streams/operational-summary`
+
+- Purpose: **operational read model** — streams and each stream’s latest check status in one response. Reduces UI request fan-out (one call instead of `GET .../streams` + `GET .../streams/latest-statuses`). Same filters as list streams: `project_id`, `is_active`. Cap 500 items.
+- `200`:
+
+```json
+{
+  "items": [
+    {
+      "stream": { "id": 1201, "company_id": 10, "project_id": 301, "name": "Primary HLS", "url": "https://...", "is_active": true, "created_at": "...", "updated_at": "..." },
+      "latest_status": { "stream_id": 1201, "status": "OK", "last_check_at": "2026-02-13T10:05:12Z" }
+    }
+  ]
+}
+```
+
+- `latest_status` is omitted when the stream has no check results yet. Tenant-scoped, auth required.
+
 ### `GET /companies/{company_id}/streams/{stream_id}`
 
 - `200` -> `Stream`.

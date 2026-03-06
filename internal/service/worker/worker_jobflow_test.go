@@ -3,6 +3,8 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net"
 	"testing"
 	"time"
 
@@ -198,5 +200,72 @@ func TestApplyAlertState_PassesTenantAndConfig(t *testing.T) {
 	}
 	if !decision.ShouldSend || decision.EventType != domain.WorkerAlertEventFail {
 		t.Fatalf("unexpected decision: %+v", decision)
+	}
+}
+
+// --- finalizeWithRetry: stops after retryMax ---
+
+func retryableNetError() error {
+	return &net.OpError{Op: "write", Err: errors.New("connection reset")}
+}
+
+type mockJobRepoFinalizeFails struct {
+	claimResp     domain.WorkerClaimedJob
+	claimOk       bool
+	finalizeCalls int
+	finalizeErr   error
+}
+
+func (m *mockJobRepoFinalizeFails) ClaimNextQueuedJob(ctx context.Context) (domain.WorkerClaimedJob, bool, error) {
+	return m.claimResp, m.claimOk, nil
+}
+
+func (m *mockJobRepoFinalizeFails) RequeueStaleRunningJobs(ctx context.Context, staleAfter time.Duration) (int64, error) {
+	return 0, nil
+}
+
+func (m *mockJobRepoFinalizeFails) FinalizeJob(ctx context.Context, job domain.WorkerClaimedJob, status string, errorMessage string) (int64, error) {
+	m.finalizeCalls++
+	return 0, m.finalizeErr
+}
+
+type mockStreamRepoLoadFails struct{ err error }
+
+func (m *mockStreamRepoLoadFails) LoadStreamURL(ctx context.Context, companyID int64, streamID int64) (string, error) {
+	return "", m.err
+}
+
+func TestFinalizeWithRetry_StopsAfterRetryMax(t *testing.T) {
+	t.Parallel()
+
+	job := domain.WorkerClaimedJob{ID: 1, CompanyID: 10, StreamID: 20, PlannedAt: time.Now().UTC()}
+	mockJob := &mockJobRepoFinalizeFails{
+		claimResp:   job,
+		claimOk:    true,
+		finalizeErr: retryableNetError(),
+	}
+
+	// processJob fails (stream load fails), so we hit finalizeWithRetry(failed, ...); FinalizeJob keeps returning retryable error
+	streamRepo := &mockStreamRepoLoadFails{err: errors.New("stream url load failed")}
+
+	cfg := Config{
+		JobTimeout:    5 * time.Second,
+		RetryMax:      2,
+		RetryBackoff:  1 * time.Millisecond,
+	}
+
+	w := NewWorker(cfg, Repositories{
+		JobRepo:    mockJob,
+		StreamRepo: streamRepo,
+	})
+
+	ctx := context.Background()
+	err := w.ProcessSingleJobCycle(ctx)
+	if err == nil {
+		t.Fatal("expected error when FinalizeJob always fails")
+	}
+	// retryMax=2 => attempts 0, 1, 2 => 3 calls then give up
+	if mockJob.finalizeCalls != 3 {
+		t.Fatalf("expected 3 FinalizeJob calls (retryMax=2), got %d", mockJob.finalizeCalls)
 	}
 }

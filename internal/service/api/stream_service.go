@@ -16,6 +16,7 @@ type StreamPatchInput = domain.StreamPatchInput
 type StreamStore interface {
 	CreateStream(ctx context.Context, companyID int64, projectID int64, name string, sourceType string, sourceURL string, isActive bool) (domain.Stream, error)
 	ListStreams(ctx context.Context, companyID int64, filter StreamListFilter) ([]domain.Stream, error)
+	ListStreamsWithLatestStatus(ctx context.Context, companyID int64, filter StreamListFilter) ([]domain.StreamWithLatestStatus, error)
 	ListLatestStatuses(ctx context.Context, companyID int64) ([]domain.StreamLatestStatus, error)
 	GetStream(ctx context.Context, companyID int64, streamID int64) (domain.Stream, error)
 	PatchStream(ctx context.Context, companyID int64, streamID int64, patch StreamPatchInput) (domain.Stream, error)
@@ -123,6 +124,18 @@ func (s *StreamService) GetStream(ctx context.Context, companyID int64, streamID
 		)
 	}
 	return domain.Stream{}, NewInternalError()
+}
+
+func (s *StreamService) ListStreamsWithLatestStatus(ctx context.Context, input ListStreamsInput) ([]domain.StreamWithLatestStatus, error) {
+	filter, err := parseStreamListFilter(input.ProjectIDRaw, input.IsActiveRaw)
+	if err != nil {
+		return nil, err
+	}
+	items, storeErr := s.store.ListStreamsWithLatestStatus(ctx, input.CompanyID, filter)
+	if storeErr != nil {
+		return nil, NewInternalError()
+	}
+	return items, nil
 }
 
 func (s *StreamService) ListLatestStatuses(ctx context.Context, companyID int64) ([]domain.StreamLatestStatus, error) {
