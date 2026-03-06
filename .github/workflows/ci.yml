@@ -58,3 +58,37 @@ jobs:
         run: docker build -f Dockerfile.api -t mntrng-api:sanity .
       - name: Build Worker image
         run: docker build -f Dockerfile.worker -t mntrng-worker:sanity .
+
+  api-smoke:
+    name: API smoke (docker-compose)
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: ci-password
+      APP_ENV: ci
+      API_PORT: 8080
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start minimal stack (postgres, redis, init, api)
+        run: |
+          docker compose -f docker-compose.yml up -d postgres redis init api
+      - name: Wait for API ready
+        run: |
+          for i in {1..30}; do
+            if curl -fsS "http://127.0.0.1:${API_PORT}/api/v1/ready" >/dev/null; then
+              echo "API is ready"
+              exit 0
+            fi
+            echo "Waiting for API..."
+            sleep 5
+          done
+          echo "API did not become ready in time"
+          docker compose -f docker-compose.yml logs api || true
+          exit 1
+      - name: Smoke health and ready
+        run: |
+          curl -fsS "http://127.0.0.1:${API_PORT}/api/v1/health" >/dev/null
+          curl -fsS "http://127.0.0.1:${API_PORT}/api/v1/ready" >/dev/null
+      - name: Shutdown stack
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml down -v
