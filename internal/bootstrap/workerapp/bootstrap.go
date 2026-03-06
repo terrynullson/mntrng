@@ -17,10 +17,12 @@ import (
 )
 
 type RuntimeConfig struct {
-	Worker       workerservice.Config
-	MetricsPort  int
-	MetricsToken string
-	AppEnv       string
+	Worker        workerservice.Config
+	MetricsPort   int
+	MetricsToken  string
+	AppEnv        string
+	DatabaseURL   string
+	DBPingTimeout time.Duration
 }
 
 func LoadRuntimeConfig() RuntimeConfig {
@@ -106,13 +108,18 @@ func LoadRuntimeConfig() RuntimeConfig {
 			RunningJobStaleTimeout:        runningJobStaleTimeout,
 			AllowPrivateStreamURLs:        allowPrivateStreamURLs,
 		},
-		MetricsPort:  workerMetricsPort,
-		MetricsToken: workerMetricsToken,
-		AppEnv:       appEnv,
+		MetricsPort:   workerMetricsPort,
+		MetricsToken:  workerMetricsToken,
+		AppEnv:        appEnv,
+		DatabaseURL:   config.GetString("DATABASE_URL", ""),
+		DBPingTimeout: 5 * time.Second,
 	}
 }
 
 func (cfg RuntimeConfig) Validate() error {
+	if strings.TrimSpace(cfg.DatabaseURL) == "" {
+		return fmt.Errorf("DATABASE_URL is required")
+	}
 	if strings.TrimSpace(cfg.MetricsToken) == "" && cfg.AppEnv == "production" {
 		return fmt.Errorf("WORKER_METRICS_TOKEN is required in production")
 	}
@@ -218,21 +225,6 @@ func StartMetricsServer(ctx context.Context, port int, metricsToken string) {
 			log.Printf("worker metrics server error: %v", err)
 		}
 	}()
-}
-
-func ConfigureDBPool(db *sql.DB) {
-	maxOpen := config.IntAtLeast(config.GetInt("DB_MAX_OPEN_CONNS", 20), 1)
-	maxIdle := config.IntAtLeast(config.GetInt("DB_MAX_IDLE_CONNS", 10), 1)
-	if maxIdle > maxOpen {
-		maxIdle = maxOpen
-	}
-	connMaxLifetime := time.Duration(config.IntAtLeast(config.GetInt("DB_CONN_MAX_LIFETIME_MIN", 30), 1)) * time.Minute
-	connMaxIdleTime := time.Duration(config.IntAtLeast(config.GetInt("DB_CONN_MAX_IDLE_TIME_MIN", 10), 1)) * time.Minute
-
-	db.SetMaxOpenConns(maxOpen)
-	db.SetMaxIdleConns(maxIdle)
-	db.SetConnMaxLifetime(connMaxLifetime)
-	db.SetConnMaxIdleTime(connMaxIdleTime)
 }
 
 func metricsAuthMiddleware(expectedToken string, next http.Handler) http.Handler {

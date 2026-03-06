@@ -1,4 +1,4 @@
-package api
+package registrationnotify
 
 import (
 	"context"
@@ -11,15 +11,15 @@ import (
 	"github.com/terrynullson/mntrng/internal/telegram"
 )
 
-type registrationNotifier struct {
+type TelegramNotifier struct {
 	telegramClient *telegram.Client
 	botToken       string
 	chatID         string
 	timeout        time.Duration
 }
 
-func newRegistrationNotifier(telegramClient *telegram.Client, botToken string, chatID string) *registrationNotifier {
-	return &registrationNotifier{
+func NewTelegramNotifier(telegramClient *telegram.Client, botToken string, chatID string) *TelegramNotifier {
+	return &TelegramNotifier{
 		telegramClient: telegramClient,
 		botToken:       strings.TrimSpace(botToken),
 		chatID:         strings.TrimSpace(chatID),
@@ -27,11 +27,7 @@ func newRegistrationNotifier(telegramClient *telegram.Client, botToken string, c
 	}
 }
 
-func NewRegistrationNotifier(telegramClient *telegram.Client, botToken string, chatID string) *registrationNotifier {
-	return newRegistrationNotifier(telegramClient, botToken, chatID)
-}
-
-func (n *registrationNotifier) NotifyNewRegistrationRequest(ctx context.Context, request domain.RegistrationRequest) error {
+func (n *TelegramNotifier) NotifyNewRegistrationRequest(ctx context.Context, request domain.RegistrationRequest) error {
 	if n == nil || n.telegramClient == nil || n.botToken == "" || n.chatID == "" {
 		return nil
 	}

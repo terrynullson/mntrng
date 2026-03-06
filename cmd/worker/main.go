@@ -2,15 +2,13 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/terrynullson/mntrng/internal/bootstrap/workerapp"
-	"github.com/terrynullson/mntrng/internal/config"
 	_ "github.com/lib/pq"
+	"github.com/terrynullson/mntrng/internal/bootstrap/infra"
+	"github.com/terrynullson/mntrng/internal/bootstrap/workerapp"
 )
 
 func main() {
@@ -20,21 +18,18 @@ func main() {
 	}
 	workerapp.LogRuntimeConfig(runtimeConfig)
 
-	databaseURL := config.GetString("DATABASE_URL", "")
-	if databaseURL == "" {
-		log.Fatal("DATABASE_URL is required")
-	}
-
-	db, err := sql.Open("postgres", databaseURL)
+	db, err := infra.OpenPostgres(runtimeConfig.DatabaseURL)
 	if err != nil {
 		log.Fatalf("failed to open database connection: %v", err)
 	}
 	defer db.Close()
-	workerapp.ConfigureDBPool(db)
-
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer pingCancel()
-	if err := db.PingContext(pingCtx); err != nil {
+	infra.ConfigureDBPoolFromEnv(db, infra.DBPoolDefaults{
+		MaxOpenConns:       20,
+		MaxIdleConns:       10,
+		ConnMaxLifetimeMin: 30,
+		ConnMaxIdleTimeMin: 10,
+	})
+	if err := infra.PingDB(context.Background(), db, runtimeConfig.DBPingTimeout); err != nil {
 		log.Fatalf("failed to ping database: %v", err)
 	}
 

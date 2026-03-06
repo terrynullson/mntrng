@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"net/http"
 	"os/signal"
@@ -10,71 +9,55 @@ import (
 	"time"
 
 	"github.com/terrynullson/mntrng/internal/bootstrap/apiapp"
+	"github.com/terrynullson/mntrng/internal/bootstrap/infra"
 	"github.com/terrynullson/mntrng/internal/config"
-	"github.com/terrynullson/mntrng/internal/ratelimit"
-	"github.com/terrynullson/mntrng/internal/telemetry"
-	"github.com/redis/go-redis/v9"
 )
 
 const apiShutdownTimeout = 15 * time.Second
 
 func main() {
-	port := config.GetString("API_PORT", "8080")
+	runtimeConfig := apiapp.LoadRuntimeConfig()
+	if err := runtimeConfig.Validate(); err != nil {
+		log.Fatal(err)
+	}
+
 	if err := config.ValidateAPIRuntimeSafety(); err != nil {
 		log.Fatalf("api startup config validation failed: %v", err)
 	}
 
-	databaseURL := config.GetString("DATABASE_URL", "")
-	if databaseURL == "" {
-		log.Fatal("DATABASE_URL is required")
-	}
-
-	db, err := sql.Open("postgres", databaseURL)
+	db, err := infra.OpenPostgres(runtimeConfig.DatabaseURL)
 	if err != nil {
 		log.Fatalf("failed to open database connection: %v", err)
 	}
 	defer db.Close()
-	configureDBPool(db)
-
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer pingCancel()
-	if err := db.PingContext(pingCtx); err != nil {
+	infra.ConfigureDBPoolFromEnv(db, infra.DBPoolDefaults{
+		MaxOpenConns:       30,
+		MaxIdleConns:       10,
+		ConnMaxLifetimeMin: 30,
+		ConnMaxIdleTimeMin: 10,
+	})
+	if err := infra.PingDB(context.Background(), db, runtimeConfig.DBPingTimeout); err != nil {
 		log.Fatalf("failed to ping database: %v", err)
 	}
 
-	authPerMin := config.IntAtLeast(config.GetInt("RATE_LIMIT_AUTH_PER_MIN", 10), 1)
-	var limiter ratelimit.Limiter
-	redisAddr := config.GetString("REDIS_ADDR", "")
-	if redisAddr != "" {
-		rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
-		pingCtx2, pingCancel2 := context.WithTimeout(context.Background(), 2*time.Second)
-		defer pingCancel2()
-		if err := rdb.Ping(pingCtx2).Err(); err != nil {
-			log.Printf("redis ping failed, using in-memory rate limiter: %v", err)
-			limiter = ratelimit.NewInMemLimiter(authPerMin)
-		} else {
-			limiter = ratelimit.NewRedisLimiter(rdb, authPerMin)
-		}
-	} else {
-		limiter = ratelimit.NewInMemLimiter(authPerMin)
-	}
+	limiter := infra.NewAuthRateLimiter(runtimeConfig.RedisAddr, runtimeConfig.AuthRateLimitPerMin, runtimeConfig.RedisPingTimeout)
 
-	if err := telemetry.InitTracer(context.Background()); err != nil {
+	if err := infra.InitTelemetry(context.Background()); err != nil {
 		log.Printf("telemetry init (optional): %v", err)
 	}
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = telemetry.Shutdown(shutdownCtx)
+		_ = infra.ShutdownTelemetry(shutdownCtx)
 	}()
 
-	server := apiapp.NewHTTPServer(":"+port, db, limiter)
+	server := apiapp.NewHTTPServer(":"+runtimeConfig.Port, db, limiter, runtimeConfig)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	go func() {
-		log.Printf("api skeleton listening on :%s", port)
+		log.Printf("api skeleton listening on :%s", runtimeConfig.Port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Printf("api server error: %v", err)
 		}
@@ -89,19 +72,4 @@ func main() {
 	} else {
 		log.Printf("api shutdown complete")
 	}
-}
-
-func configureDBPool(db *sql.DB) {
-	maxOpen := config.IntAtLeast(config.GetInt("DB_MAX_OPEN_CONNS", 30), 1)
-	maxIdle := config.IntAtLeast(config.GetInt("DB_MAX_IDLE_CONNS", 10), 1)
-	if maxIdle > maxOpen {
-		maxIdle = maxOpen
-	}
-	connMaxLifetime := time.Duration(config.IntAtLeast(config.GetInt("DB_CONN_MAX_LIFETIME_MIN", 30), 1)) * time.Minute
-	connMaxIdleTime := time.Duration(config.IntAtLeast(config.GetInt("DB_CONN_MAX_IDLE_TIME_MIN", 10), 1)) * time.Minute
-
-	db.SetMaxOpenConns(maxOpen)
-	db.SetMaxIdleConns(maxIdle)
-	db.SetConnMaxLifetime(connMaxLifetime)
-	db.SetConnMaxIdleTime(connMaxIdleTime)
 }
