@@ -61,16 +61,16 @@ func randomMood() string {
 
 func main() {
 	var (
-		agentName        string
-		module           string
-		commit           string
-		mood             string
-		summary          summaryFlags
-		thoughts         thoughtFlags
-		summaryFile      string
-		moodFile         string
+		agentName          string
+		module             string
+		commit             string
+		mood               string
+		summary            summaryFlags
+		thoughts           thoughtFlags
+		summaryFile        string
+		moodFile           string
 		readSummaryFromGit bool
-		testSend          bool
+		testSend           bool
 	)
 
 	flag.StringVar(&agentName, "agent", "BackendAgent", "agent name")

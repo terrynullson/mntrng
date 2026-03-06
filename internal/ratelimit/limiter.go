@@ -59,8 +59,8 @@ func (l *InMemLimiter) Allow(ctx context.Context, key string) (bool, error) {
 
 // RedisLimiter uses Redis for fixed-window rate limiting (shared across API instances).
 type RedisLimiter struct {
-	rdb    *redis.Client
-	perMin int
+	rdb       *redis.Client
+	perMin    int
 	keyPrefix string
 }
 

@@ -92,7 +92,7 @@ func TestHandleListCheckResults_404_StreamMiss(t *testing.T) {
 func TestCheckResults_401_NoAuth(t *testing.T) {
 	authStore := &middlewareAuthStore{sessionByAccess: nil}
 	srv := &Server{
-		authService:       serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
+		authService:        serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
 		checkResultService: serviceapi.NewCheckResultService(&mockCheckResultStore{}),
 	}
 	router := NewRouter(srv.RouterHandlers())
@@ -117,7 +117,7 @@ func TestCheckResults_403_TenantEscape(t *testing.T) {
 		},
 	}
 	srv := &Server{
-		authService:       serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
+		authService:        serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
 		checkResultService: serviceapi.NewCheckResultService(&mockCheckResultStore{}),
 	}
 	router := NewRouter(srv.RouterHandlers())

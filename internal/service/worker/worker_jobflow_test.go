@@ -106,15 +106,15 @@ func TestPersistCheckResult_PersistsTenantAndChecks(t *testing.T) {
 // --- applyAlertState ---
 
 type mockAlertStateRepo struct {
-	called          bool
-	companyID       int64
-	streamID        int64
-	currentStatus   string
-	failThreshold   int
-	alertCooldown   time.Duration
-	sendRecovered   bool
+	called           bool
+	companyID        int64
+	streamID         int64
+	currentStatus    string
+	failThreshold    int
+	alertCooldown    time.Duration
+	sendRecovered    bool
 	decisionToReturn domain.WorkerAlertDecision
-	err             error
+	err              error
 }
 
 func (m *mockAlertStateRepo) ApplyAlertState(
@@ -196,4 +196,3 @@ func TestApplyAlertState_PassesTenantAndConfig(t *testing.T) {
 		t.Fatalf("unexpected decision: %+v", decision)
 	}
 }
-

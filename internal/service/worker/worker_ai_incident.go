@@ -25,8 +25,8 @@ func (w *worker) runAIIncidentIfNeeded(ctx context.Context, job claimedJob, eval
 		Checks:         evaluation.Checks,
 		ScreenshotPath: screenshotPath,
 		CompanyID:      job.CompanyID,
-		StreamID:      job.StreamID,
-		JobID:         job.ID,
+		StreamID:       job.StreamID,
+		JobID:          job.ID,
 	}
 
 	result, err := w.incidentAnalyzer.Analyze(ctx, input)

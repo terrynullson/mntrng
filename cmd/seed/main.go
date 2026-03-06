@@ -16,15 +16,15 @@ import (
 )
 
 const (
-	testCompanyName   = "Screenshot Test Company"
-	testLogin         = "test_screenshot_admin"
-	testEmail         = "test_screenshot@localhost"
-	testPassword      = "TestScreenshot1"
-	testRole          = "company_admin"
-	superAdminLogin   = "test_super_admin"
-	superAdminEmail   = "test_super@localhost"
+	testCompanyName    = "Screenshot Test Company"
+	testLogin          = "test_screenshot_admin"
+	testEmail          = "test_screenshot@localhost"
+	testPassword       = "TestScreenshot1"
+	testRole           = "company_admin"
+	superAdminLogin    = "test_super_admin"
+	superAdminEmail    = "test_super@localhost"
 	superAdminPassword = "TestSuper1"
-	superAdminRole    = "super_admin"
+	superAdminRole     = "super_admin"
 )
 
 func main() {

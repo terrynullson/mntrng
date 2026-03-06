@@ -76,7 +76,7 @@ func TestHandleGetAIIncident_404(t *testing.T) {
 func TestGetAIIncident_401_NoAuth(t *testing.T) {
 	authStore := &middlewareAuthStore{sessionByAccess: nil}
 	server := &Server{
-		authService:     serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
+		authService:       serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
 		aiIncidentService: serviceapi.NewAIIncidentService(&mockAIIncidentStore{}),
 	}
 	router := NewRouter(server.RouterHandlers())
@@ -123,7 +123,7 @@ func TestGetAIIncident_403_TenantEscape(t *testing.T) {
 		},
 	}
 	server := &Server{
-		authService:      serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
+		authService:       serviceapi.NewAuthService(authStore, serviceapi.AuthConfig{}),
 		aiIncidentService: serviceapi.NewAIIncidentService(&mockAIIncidentStore{}),
 	}
 	router := NewRouter(server.RouterHandlers())

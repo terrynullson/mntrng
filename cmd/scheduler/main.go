@@ -107,9 +107,9 @@ type companyListResponse struct {
 }
 
 type streamItem struct {
-	ID        int64  `json:"id"`
-	CompanyID int64  `json:"company_id"`
-	IsActive  bool   `json:"is_active"`
+	ID        int64 `json:"id"`
+	CompanyID int64 `json:"company_id"`
+	IsActive  bool  `json:"is_active"`
 }
 
 type streamListResponse struct {
