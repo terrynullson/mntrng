@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/terrynullson/hls_mntrng/internal/ai"
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/ai"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 // runAIIncidentIfNeeded calls the AI analyzer on WARN/FAIL and persists the result.

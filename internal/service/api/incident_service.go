@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 // IncidentStore for incidents (API, tenant-scoped).

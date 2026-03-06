@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 type APICheckJobRepo struct {

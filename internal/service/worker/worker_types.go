@@ -3,8 +3,8 @@ package worker
 import (
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/ai"
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/ai"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 type Config struct {

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
-	"github.com/terrynullson/hls_mntrng/internal/telegram"
+	"github.com/terrynullson/mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/telegram"
 )
 
 type registrationNotifier struct {

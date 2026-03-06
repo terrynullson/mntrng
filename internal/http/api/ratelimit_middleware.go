@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/terrynullson/hls_mntrng/internal/config"
-	"github.com/terrynullson/hls_mntrng/internal/ratelimit"
+	"github.com/terrynullson/mntrng/internal/config"
+	"github.com/terrynullson/mntrng/internal/ratelimit"
 )
 
 // authRateLimitPaths are the path prefixes that get rate-limited by IP.

@@ -3,7 +3,7 @@ package checks
 import (
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 func FreezeStatusByThreshold(maxFreezeSec float64, warnSec float64, failSec float64) string {

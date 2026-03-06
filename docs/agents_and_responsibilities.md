@@ -1,4 +1,4 @@
-# Agents & Responsibilities — HLS Monitoring Platform
+# Agents & Responsibilities — mntrng
 
 Этот документ — ЕДИНСТВЕННЫЙ источник истины по ролям агентов, процессу и контрактам.
 Если что-то противоречит этому файлу — считается ошибкой.

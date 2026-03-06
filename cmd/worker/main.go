@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/ai"
-	"github.com/terrynullson/hls_mntrng/internal/config"
-	postgresrepo "github.com/terrynullson/hls_mntrng/internal/repo/postgres"
-	workerservice "github.com/terrynullson/hls_mntrng/internal/service/worker"
+	"github.com/terrynullson/mntrng/internal/ai"
+	"github.com/terrynullson/mntrng/internal/config"
+	postgresrepo "github.com/terrynullson/mntrng/internal/repo/postgres"
+	workerservice "github.com/terrynullson/mntrng/internal/service/worker"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 // applyIncidentState creates, updates or resolves an incident based on check result.

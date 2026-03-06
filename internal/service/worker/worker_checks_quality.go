@@ -1,6 +1,6 @@
 package worker
 
-import "github.com/terrynullson/hls_mntrng/internal/service/worker/checks"
+import "github.com/terrynullson/mntrng/internal/service/worker/checks"
 
 func checkDeclaredBitrate(playlistBody string) declaredBitrateResult {
 	return checks.DeclaredBitrate(playlistBody)

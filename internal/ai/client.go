@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/terrynullson/hls_mntrng/internal/config"
+	"github.com/terrynullson/mntrng/internal/config"
 )
 
 // IncidentInput is the input for AI incident analysis (B6 contract).

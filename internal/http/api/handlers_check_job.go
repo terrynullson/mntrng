@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	serviceapi "github.com/terrynullson/hls_mntrng/internal/service/api"
+	serviceapi "github.com/terrynullson/mntrng/internal/service/api"
 )
 
 func (s *Server) handleEnqueueCheckJob(w http.ResponseWriter, r *http.Request, companyID int64, streamID int64) {

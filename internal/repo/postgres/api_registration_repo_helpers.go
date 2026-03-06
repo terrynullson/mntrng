@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 func updateUserRoleTx(ctx context.Context, tx *sql.Tx, userID int64, role string, companyID *int64) (domain.AuthUser, error) {

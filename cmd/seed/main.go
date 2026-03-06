@@ -12,7 +12,7 @@ import (
 	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/terrynullson/hls_mntrng/internal/config"
+	"github.com/terrynullson/mntrng/internal/config"
 )
 
 const (

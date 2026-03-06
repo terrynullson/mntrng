@@ -1,4 +1,4 @@
-# HLS Monitoring Platform
+# mntrng
 
 Production-oriented репозиторий мониторинга HLS с API, Worker, Scheduler и frontend.
 
@@ -17,7 +17,7 @@ Production-oriented репозиторий мониторинга HLS с API, Wo
 
 ## Реализованные возможности
 
-- **HLS-мониторинг:** Worker выполняет проверки (playlist, segments, freshness, freeze, blackframe, declared_bitrate, effective_bitrate), статусы OK/WARN/FAIL, сохранение результатов и скриншотов.
+- **Мониторинг HLS-потоков:** Worker выполняет проверки (playlist, segments, freshness, freeze, blackframe, declared_bitrate, effective_bitrate), статусы OK/WARN/FAIL, сохранение результатов и скриншотов.
 - **Потоки и проекты:** tenant-scoped CRUD компаний, проектов, потоков; постановка check-jobs в очередь (вручную или через Scheduler), история проверок и результатов.
 - **Админка:** controlled registration (pending → approve/reject только super_admin), список пользователей и заявок, смена ролей и статусов, audit log.
 - **Telegram:** алерты при переходах OK→WARN, WARN→FAIL и recovered (cooldown, streak); настройки доставки по компании (chat_id, send_recovered); DevLog в Telegram после каждого коммита (post-commit hook); «настроение» в сообщении — из `.devlog_mood.txt` в корне (опционально).
@@ -34,17 +34,20 @@ Production-oriented репозиторий мониторинга HLS с API, Wo
 
 ## Документация
 
-- [docs/api_contract.md](docs/api_contract.md) — контракт REST API (эндпоинты, форматы, коды ошибок, tenant scope).
-- [docs/schema.md](docs/schema.md) — схема БД и порядок применения/отката миграций.
-- [docs/telegram_alerts_contract.md](docs/telegram_alerts_contract.md) — контракт Telegram Alerts (Worker): переходы статуса, формат сообщения, антиспам (cooldown/streak).
-- [docs/retention_cleanup.md](docs/retention_cleanup.md) — retention cleanup в Worker: TTL, батчи, tenant scope, конфиг ENV.
-- [docs/ai_incident_contract.md](docs/ai_incident_contract.md) — контракт AI incident analysis и текущее ограничение (stub analyzer без provider integration).
-- [docs/decisions.md](docs/decisions.md) — архитектурные решения (ADR).
-- [docs/agents_and_responsibilities.md](docs/agents_and_responsibilities.md) — процесс, роли агентов, JOB→RESULT→ROUTING, источник истины по правилам.
-- [docs/screenshot_automation.md](docs/screenshot_automation.md) — автоматизация скриншотов для UI-модулей (Docker, скрипты).
-- [docs/agent_devlog.md](docs/agent_devlog.md) — журнал работ агентов по модулям, формат записей и ограничения.
-- [docs/incident_runbook.md](docs/incident_runbook.md) — incident/rollback runbook для production-эксплуатации.
-- [docs/deploy_timeweb.md](docs/deploy_timeweb.md) — пошаговый production deploy на Timeweb Cloud (Caddy TLS, backup/restore).
+- Карта документации: [docs/README.md](docs/README.md)
+- Product/runtime docs:
+  - [docs/api_contract.md](docs/api_contract.md) — контракт REST API (эндпоинты, форматы, коды ошибок, tenant scope).
+  - [docs/schema.md](docs/schema.md) — схема БД и порядок применения/отката миграций.
+  - [docs/telegram_alerts_contract.md](docs/telegram_alerts_contract.md) — контракт Telegram Alerts (Worker): переходы статуса, формат сообщения, антиспам (cooldown/streak).
+  - [docs/retention_cleanup.md](docs/retention_cleanup.md) — retention cleanup в Worker: TTL, батчи, tenant scope, конфиг ENV.
+  - [docs/ai_incident_contract.md](docs/ai_incident_contract.md) — контракт AI incident analysis и текущее ограничение (stub analyzer без provider integration).
+  - [docs/decisions.md](docs/decisions.md) — архитектурные решения (ADR).
+  - [docs/incident_runbook.md](docs/incident_runbook.md) — incident/rollback runbook для production-эксплуатации.
+  - [docs/deploy_timeweb.md](docs/deploy_timeweb.md) — пошаговый production deploy на Timeweb Cloud (Caddy TLS, backup/restore).
+- Contributor/process docs:
+  - [docs/agents_and_responsibilities.md](docs/agents_and_responsibilities.md)
+  - [docs/agent_devlog.md](docs/agent_devlog.md)
+  - [docs/screenshot_automation.md](docs/screenshot_automation.md)
 
 Переменные DevLog (`DEV_LOG_*`), retention (`RETENTION_*`) и Telegram Alerts (`TELEGRAM_*`, `ALERT_*`) описаны в [.env.example](.env.example) и в подразделах README ниже.
 

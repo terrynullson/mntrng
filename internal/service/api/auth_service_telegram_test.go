@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 func TestTelegramLoginApprovedActiveSuccess(t *testing.T) {

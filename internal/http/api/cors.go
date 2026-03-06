@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/terrynullson/hls_mntrng/internal/config"
+	"github.com/terrynullson/mntrng/internal/config"
 )
 
 const corsAllowedOriginsKey = "CORS_ALLOWED_ORIGINS"

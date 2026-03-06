@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/config"
-	httpapi "github.com/terrynullson/hls_mntrng/internal/http/api"
-	"github.com/terrynullson/hls_mntrng/internal/ratelimit"
-	"github.com/terrynullson/hls_mntrng/internal/telemetry"
+	"github.com/terrynullson/mntrng/internal/config"
+	httpapi "github.com/terrynullson/mntrng/internal/http/api"
+	"github.com/terrynullson/mntrng/internal/ratelimit"
+	"github.com/terrynullson/mntrng/internal/telemetry"
 	"github.com/redis/go-redis/v9"
 )
 

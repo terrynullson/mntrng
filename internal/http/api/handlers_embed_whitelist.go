@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 type embedWhitelistItem = domain.EmbedWhitelistItem

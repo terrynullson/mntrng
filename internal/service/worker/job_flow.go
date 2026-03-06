@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 func (w *worker) ProcessSingleJobCycle(ctx context.Context) error {

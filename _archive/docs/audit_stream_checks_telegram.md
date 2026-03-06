@@ -1,7 +1,7 @@
 # Аудит: проверки потоков / история / Telegram / ручные проверки
 
 **Дата:** 2026-02-22  
-**Репозиторий:** https://github.com/terrynullson/hls_mntrng  
+**Репозиторий:** https://github.com/terrynullson/mntrng  
 **Фокус:** 4 блока — периодические проверки, хранение/ретеншн, ручная проверка из ЛК, Telegram alerts.
 
 ---

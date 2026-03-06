@@ -174,10 +174,10 @@ flowchart TB
 
 ## 7. Связь с другими документами
 
-- **Текущее состояние кода и план выделения сервисов:** `docs/microservices_audit.md`.
+- **Текущее состояние кода и план выделения сервисов:** `_archive/docs/microservices_audit.md`.
 - **Текущие слои и пакеты в коде:** `docs/arch_overview.md`.
 - **Решения (ADR):** `docs/decisions.md`.
 - **Контракт REST API:** `docs/api_contract.md`.
 - **Контракт AI:** `docs/ai_incident_contract.md`.
 
-Целевая архитектура в этом документе — это «как должно быть»; реализация идёт поэтапно по плану из `microservices_audit.md`.
+Целевая архитектура в этом документе — это «как должно быть»; реализация идёт поэтапно по плану из `_archive/docs/microservices_audit.md`.

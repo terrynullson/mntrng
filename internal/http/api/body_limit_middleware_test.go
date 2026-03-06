@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 func TestRequestBodyLimitMiddlewareRejectsLargePayload(t *testing.T) {

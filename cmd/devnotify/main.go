@@ -16,8 +16,8 @@ import (
 	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/text/transform"
 
-	"github.com/terrynullson/hls_mntrng/internal/config"
-	"github.com/terrynullson/hls_mntrng/internal/telegram"
+	"github.com/terrynullson/mntrng/internal/config"
+	"github.com/terrynullson/mntrng/internal/telegram"
 )
 
 type summaryFlags []string

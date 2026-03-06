@@ -181,7 +181,7 @@ Scheduler уже вынесен: отдельный образ, только HTT
 
 ## 6. Ссылки
 
-- **Целевая архитектура (как должно быть, лучшие практики 2026):** `docs/architecture_target_2026.md`
+- **Целевая архитектура (как должно быть, лучшие практики 2026):** `_archive/docs/architecture_target_2026.md`
 - Контракт AI: `docs/ai_incident_contract.md`
 - Архитектура и границы: `docs/arch_overview.md`, `docs/agents_and_responsibilities.md`
 - Решения: `docs/decisions.md` (ADR-0012 — AI incident: Worker-only, on-demand)

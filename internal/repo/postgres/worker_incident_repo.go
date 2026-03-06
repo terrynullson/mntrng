@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 // WorkerIncidentRepo manages incidents from the worker (create/update/resolve).

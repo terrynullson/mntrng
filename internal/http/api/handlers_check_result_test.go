@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
-	serviceapi "github.com/terrynullson/hls_mntrng/internal/service/api"
+	"github.com/terrynullson/mntrng/internal/domain"
+	serviceapi "github.com/terrynullson/mntrng/internal/service/api"
 )
 
 func TestHandleGetCheckResult_200(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 type APIStreamRepo struct {

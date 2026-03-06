@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 func (r *WorkerRepo) ClaimNextQueuedJob(ctx context.Context) (domain.WorkerClaimedJob, bool, error) {

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/config"
-	"github.com/terrynullson/hls_mntrng/internal/ratelimit"
-	"github.com/terrynullson/hls_mntrng/internal/telemetry"
+	"github.com/terrynullson/mntrng/internal/config"
+	"github.com/terrynullson/mntrng/internal/ratelimit"
+	"github.com/terrynullson/mntrng/internal/telemetry"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 

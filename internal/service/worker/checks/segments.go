@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 func CheckSegmentsAvailability(

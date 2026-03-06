@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/terrynullson/hls_mntrng/internal/config"
+	"github.com/terrynullson/mntrng/internal/config"
 )
 
 func requestBodyLimitMiddleware(next http.Handler) http.Handler {

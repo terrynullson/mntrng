@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/config"
+	"github.com/terrynullson/mntrng/internal/config"
 )
 
 const (

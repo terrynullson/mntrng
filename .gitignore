@@ -16,7 +16,6 @@ backups/
 .cursor/
 PROMPTS/
 PROMTS/
-_archive/
 
 # Local build artifacts
 *.exe

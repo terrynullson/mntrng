@@ -1,4 +1,4 @@
-module github.com/terrynullson/hls_mntrng
+module github.com/terrynullson/mntrng
 
 go 1.24.0
 

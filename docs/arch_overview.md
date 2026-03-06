@@ -3,7 +3,7 @@
 ## Scope
 This document reflects the **current** layered structure after the API + Worker split and defines allowed dependency flow.
 
-**Целевая архитектура** (как должно быть по лучшим практикам 2026, с микросервисами и очередями) и наглядные диаграммы — в **`docs/architecture_target_2026.md`** (понятно даже новичку).
+Исторические материалы по целевой микро-сервисной архитектуре и расширенным audit-планам перенесены в `_archive/docs/` и не являются source-of-truth для текущего runtime.
 
 ## Runtime components
 - Frontend (`web/*`) calls HTTP API.

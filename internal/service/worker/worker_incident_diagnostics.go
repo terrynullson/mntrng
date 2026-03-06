@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

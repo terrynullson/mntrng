@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	serviceapi "github.com/terrynullson/hls_mntrng/internal/service/api"
+	serviceapi "github.com/terrynullson/mntrng/internal/service/api"
 )
 
 func (s *Server) handleRegisterRequest(w http.ResponseWriter, r *http.Request) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/mntrng/internal/domain"
 )
 
 func (r *WorkerRepo) PersistCheckResult(

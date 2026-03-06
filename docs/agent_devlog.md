@@ -936,7 +936,7 @@ Agent: Auto
 Commit: pending
 Summary:
 - Проведён глубокий аудит проекта для разбиения на микросервисы.
-- Добавлен docs/microservices_audit.md: текущая архитектура (API, Worker, Scheduler, очередь в БД, Redis только rate limit), домены, цели разбиения.
+- Добавлен `_archive/docs/microservices_audit.md`: исторический аудит текущей архитектуры и целей разбиения.
 - Рекомендации: (1) AI-микросервис — приоритет 1, (2) Notification/Telegram service — приоритет 2, (3) Stream Checker — приоритет 3; поэтапный план и зависимости.
 Notes:
 Аудит опирается на explore-агента, arch_overview, ai_incident_contract, decisions; ADR и код не менялись.
