@@ -99,17 +99,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-prod.ps1 \
 
 ## 7. Backup and restore
 
-Create backup:
+Полное описание: **docs/backup_restore.md**.
+
+Create backup (on prod use `ENV_FILE` so compose matches):
 
 ```bash
 chmod +x scripts/backup-db.sh scripts/restore-db.sh
-BACKUP_DIR=./backups RETENTION_DAYS=14 ./scripts/backup-db.sh
+ENV_FILE=.env.prod BACKUP_DIR=./backups RETENTION_DAYS=14 ./scripts/backup-db.sh
 ```
 
 Restore:
 
 ```bash
-./scripts/restore-db.sh ./backups/pg_YYYYMMDDTHHMMSSZ.sql.gz
+ENV_FILE=.env.prod ./scripts/restore-db.sh ./backups/pg_YYYYMMDDTHHMMSSZ.sql.gz
 ```
 
 ## 8. Recommended cron (daily backup at 03:30 UTC)

@@ -1,4 +1,19 @@
-# Dev/test scripts (PowerShell)
+# Scripts
+
+## Production / ops (shell)
+
+| Скрипт | Назначение |
+|--------|------------|
+| **deploy-prod.sh** | Подъём prod-стека: `ENV_FILE=.env.prod ./scripts/deploy-prod.sh`. |
+| **deploy.sh** | Деплой с записью коммита для отката (пишет `.deploy_prev_commit`, `.deploy_current_commit`). |
+| **rollback.sh** | Откат на предыдущий коммит или заданный: `ENV_FILE=.env.prod ./scripts/rollback.sh [commit]`. |
+| **backup-db.sh** | Бэкап PostgreSQL. На проде: `ENV_FILE=.env.prod BACKUP_DIR=... RETENTION_DAYS=14 ./scripts/backup-db.sh`. |
+| **restore-db.sh** | Восстановление БД из файла: `ENV_FILE=.env.prod ./scripts/restore-db.sh <file.sql.gz>`. |
+| **bootstrap-superadmin.sh** | Создание первого супер-админа. |
+
+Подробнее: [docs/ops_index.md](../docs/ops_index.md), [docs/backup_restore.md](../docs/backup_restore.md), [docs/rollback_runbook.md](../docs/rollback_runbook.md).
+
+## Dev/test (PowerShell)
 
 Используются для тестовой БД и пайплайна скриншотов. Требуют PostgreSQL (psql в PATH для миграций и создания БД).
 

@@ -1,5 +1,7 @@
 # Incident And Rollback Runbook
 
+**Сводный индекс операционной документации (чеклисты, failure matrix):** [docs/ops_index.md](ops_index.md).
+
 ## 1. Scope
 
 This runbook is for production incidents in HLS Monitoring stack:
@@ -72,33 +74,31 @@ Check:
 
 ## 4. Rollback Procedure
 
+**Подробный runbook с чеклистом:** [docs/rollback_runbook.md](rollback_runbook.md). На проде предпочтительно использовать `scripts/rollback.sh` с `ENV_FILE=.env.prod`.
+
 Prerequisites:
-- known stable commit/image tag;
+- known stable commit (e.g. from `.deploy_prev_commit`) or image tag;
 - DB backups are available.
 
-Steps:
+Steps (when using scripts):
 
-1. Stop current stack:
+1. On prod server: `ENV_FILE=.env.prod ./scripts/rollback.sh` (rollback to previous deploy commit) or `./scripts/rollback.sh <commit>`.
+2. Script checks out the target commit and runs `docker compose ... up -d --build`.
+3. Validate:
+   - `GET /api/v1/health` -> `200`
+   - `GET /api/v1/ready` -> `200`
+   - key UI flows: login, streams list, watch page.
 
-```bash
-docker compose down
-```
+If not using rollback script:
 
+1. Stop stack: `docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml down`.
 2. Checkout stable version or set stable image tags.
-3. Start stack:
+3. Start: `docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
+4. Validate as above.
 
-```bash
-docker compose up --build -d
-```
-
-4. Validate:
-- `GET /api/v1/health` -> `200`
-- `GET /api/v1/ready` -> `200`
-- key UI flows: login, streams list, watch page.
-
-5. If rollback includes DB schema downgrade:
+If rollback includes DB schema downgrade:
 - use `scripts/rollback_migrations.ps1` only with verified backup snapshot;
-- document exact versions before and after.
+- document exact versions before and after. See [rollback_runbook.md](rollback_runbook.md) (migrations section).
 
 ## 5. Data Safety Rules
 
