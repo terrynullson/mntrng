@@ -17,3 +17,6 @@ _archive/
 
 # Локальные бинарники
 *.exe
+
+.deploy_prev_commit
+.deploy_current_commit
