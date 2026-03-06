@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 func (s *Server) handleGetTelegramDeliverySettings(w http.ResponseWriter, r *http.Request, companyID int64) {

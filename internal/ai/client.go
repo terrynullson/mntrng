@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/example/hls-monitoring-platform/internal/config"
+	"github.com/terrynullson/hls_mntrng/internal/config"
 )
 
 // IncidentInput is the input for AI incident analysis (B6 contract).

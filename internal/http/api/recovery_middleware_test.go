@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 func TestRecoveryMiddlewareHandlesPanic(t *testing.T) {

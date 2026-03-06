@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 func (r *WorkerRepo) LoadTelegramDeliverySettings(ctx context.Context, companyID int64) (domain.WorkerTelegramDeliverySettings, bool, error) {

@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/config"
-	"github.com/example/hls-monitoring-platform/internal/domain"
-	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
+	"github.com/terrynullson/hls_mntrng/internal/config"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
+	serviceapi "github.com/terrynullson/hls_mntrng/internal/service/api"
 )
 
 type incidentResponse = domain.Incident

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/example/hls-monitoring-platform/internal/ai"
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/ai"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 // runAIIncidentIfNeeded calls the AI analyzer on WARN/FAIL and persists the result.

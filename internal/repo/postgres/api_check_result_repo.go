@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 type APICheckResultRepo struct {

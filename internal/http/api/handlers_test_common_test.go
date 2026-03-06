@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 var testTime = time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)

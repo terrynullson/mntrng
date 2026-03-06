@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 func DeclaredBitrate(playlistBody string) domain.WorkerDeclaredBitrateResult {

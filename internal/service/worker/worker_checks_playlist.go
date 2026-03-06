@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
-	"github.com/example/hls-monitoring-platform/internal/service/worker/checks"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/service/worker/checks"
 )
 
 func (w *worker) fetchPlaylist(ctx context.Context, streamURL string) (string, error) {

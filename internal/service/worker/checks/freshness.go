@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 func FreshnessStatus(playlistBody string, now time.Time, warnThreshold time.Duration, failThreshold time.Duration) string {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 func (r *WorkerRepo) ListCompanyIDsForRetention(ctx context.Context) ([]int64, error) {

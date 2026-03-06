@@ -1,6 +1,6 @@
 package checks
 
-import "github.com/example/hls-monitoring-platform/internal/domain"
+import "github.com/terrynullson/hls_mntrng/internal/domain"
 
 func AggregateStatuses(statuses ...string) string {
 	hasWarn := false

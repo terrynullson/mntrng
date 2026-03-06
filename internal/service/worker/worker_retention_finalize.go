@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 	"github.com/lib/pq"
 )
 

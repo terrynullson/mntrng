@@ -1,6 +1,6 @@
 package postgres
 
-import "github.com/example/hls-monitoring-platform/internal/domain"
+import "github.com/terrynullson/hls_mntrng/internal/domain"
 
 func scanUserRecord(scanner interface {
 	Scan(dest ...interface{}) error

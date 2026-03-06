@@ -1,4 +1,4 @@
-module github.com/example/hls-monitoring-platform
+module github.com/terrynullson/hls_mntrng
 
 go 1.24.0
 

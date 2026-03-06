@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 func (r *APIRegistrationRepo) ListUsers(ctx context.Context, filter domain.AdminUserListFilter) ([]domain.AuthUser, error) {

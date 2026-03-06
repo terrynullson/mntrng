@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/config"
-	"github.com/example/hls-monitoring-platform/internal/domain"
-	transport "github.com/example/hls-monitoring-platform/internal/telegram"
+	"github.com/terrynullson/hls_mntrng/internal/config"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
+	transport "github.com/terrynullson/hls_mntrng/internal/telegram"
 )
 
 func (w *worker) processTelegramDelivery(ctx context.Context, job claimedJob, evaluation checkJobEvaluation, decision alertDecision) {

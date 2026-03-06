@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 func (r *WorkerRepo) ClaimNextQueuedJob(ctx context.Context) (domain.WorkerClaimedJob, bool, error) {

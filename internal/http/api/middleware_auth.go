@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/example/hls-monitoring-platform/internal/config"
-	"github.com/example/hls-monitoring-platform/internal/domain"
-	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
+	"github.com/terrynullson/hls_mntrng/internal/config"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
+	serviceapi "github.com/terrynullson/hls_mntrng/internal/service/api"
 )
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {

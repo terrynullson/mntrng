@@ -1,6 +1,6 @@
-# HLS Monitoring Platform Bootstrap
+# HLS Monitoring Platform
 
-Минимальный инфраструктурный каркас репозитория и Docker Compose окружения.
+Production-oriented репозиторий мониторинга HLS с API, Worker, Scheduler и frontend.
 
 ## Состав сервисов
 
@@ -23,8 +23,14 @@
 - **Telegram:** алерты при переходах OK→WARN, WARN→FAIL и recovered (cooldown, streak); настройки доставки по компании (chat_id, send_recovered); DevLog в Telegram после каждого коммита (post-commit hook); «настроение» в сообщении — из `.devlog_mood.txt` в корне (опционально).
 - **Аналитика:** отображение состояний потоков, тренды, фильтрация по FAIL/WARN в UI.
 - **Плеер HLS:** просмотр потока в браузере, тёмная тема.
-- **AI по инцидентам:** при WARN/FAIL Worker после сохранения результата вызывает AI (cause/summary), результат сохраняется в БД; API отдаёт его по GET для job (только чтение).
+- **AI по инцидентам (частично):** Worker вызывает `StubAnalyzer`; записи cause/summary в БД сохраняются, но реального provider integration пока нет.
 - **Тесты:** юнит-тесты API handlers (streams, check-jobs, check-results, ai-incident — 200/404/401/403) и Worker (job flow, persist, alert state); `go test ./...`.
+
+## Статус реализации (честно)
+
+- **Реализовано:** API, auth/registration, CRUD компаний/проектов/потоков, Worker checks, Scheduler, Telegram alerts, frontend, migrations.
+- **Partial / stubbed:** AI incident analysis сейчас работает через `internal/ai.StubAnalyzer` (без внешнего LLM/provider).
+- **Перед production вручную обязательно:** заполнить секреты (`POSTGRES_PASSWORD`, `WORKER_METRICS_TOKEN`, auth/telegram токены), проверить cookie/CORS/TLS настройки и отключить ненужные опции (`BOOTSTRAP_SEED_ENABLED`, `SCHEDULER_ENABLED` при отсутствии токена).
 
 ## Документация
 
@@ -32,7 +38,7 @@
 - [docs/schema.md](docs/schema.md) — схема БД и порядок применения/отката миграций.
 - [docs/telegram_alerts_contract.md](docs/telegram_alerts_contract.md) — контракт Telegram Alerts (Worker): переходы статуса, формат сообщения, антиспам (cooldown/streak).
 - [docs/retention_cleanup.md](docs/retention_cleanup.md) — retention cleanup в Worker: TTL, батчи, tenant scope, конфиг ENV.
-- [docs/ai_incident_contract.md](docs/ai_incident_contract.md) — целевой контракт интеграции AI по инцидентам (B6): триггер WARN/FAIL, вход/выход, on-demand.
+- [docs/ai_incident_contract.md](docs/ai_incident_contract.md) — контракт AI incident analysis и текущее ограничение (stub analyzer без provider integration).
 - [docs/decisions.md](docs/decisions.md) — архитектурные решения (ADR).
 - [docs/agents_and_responsibilities.md](docs/agents_and_responsibilities.md) — процесс, роли агентов, JOB→RESULT→ROUTING, источник истины по правилам.
 - [docs/screenshot_automation.md](docs/screenshot_automation.md) — автоматизация скриншотов для UI-модулей (Docker, скрипты).
@@ -41,6 +47,10 @@
 - [docs/deploy_timeweb.md](docs/deploy_timeweb.md) — пошаговый production deploy на Timeweb Cloud (Caddy TLS, backup/restore).
 
 Переменные DevLog (`DEV_LOG_*`), retention (`RETENTION_*`) и Telegram Alerts (`TELEGRAM_*`, `ALERT_*`) описаны в [.env.example](.env.example) и в подразделах README ниже.
+
+## Baseline checklist (Phase 1)
+
+Пошаговый запуск и smoke-проверка: [docs/phase1_baseline_checklist.md](docs/phase1_baseline_checklist.md).
 
 ## Тесты
 
@@ -64,13 +74,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-prod.ps1 `
 
 ## Переменные окружения
 
-1. Создать локальный env-файл:
+1. Для локальной разработки создать env-файл из [.env.example](.env.example):
 
 ```bash
 cp .env.example .env
 ```
 
-2. При необходимости изменить значения в `.env`:
+2. Для production используйте `deploy/env.prod.example` или `deploy/env.prod.full.example`.
+
+3. При необходимости изменить значения в `.env`:
 
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
 - `APP_ENV`, `API_PORT`, `REDIS_ADDR`, `AUTH_ACCESS_TTL_MIN`, `AUTH_REFRESH_TTL_DAYS`, `AUTH_TELEGRAM_MAX_AGE_SEC`, `SUPER_ADMIN_TELEGRAM_CHAT_ID`, `WORKER_HEARTBEAT_SEC`, `API_HSTS_ENABLED`, `API_READ_HEADER_TIMEOUT_SEC`, `API_READ_TIMEOUT_SEC`, `API_WRITE_TIMEOUT_SEC`, `API_IDLE_TIMEOUT_SEC`, `API_MAX_HEADER_BYTES`, `API_MAX_BODY_BYTES`
@@ -85,6 +97,7 @@ cp .env.example .env
 Файл `.env` не добавляется в git (трекается только `.env.example`).
 
 `AUTH_COOKIE_SECURE` в compose теперь secure-by-default (`true`). Для локального запуска по чистому HTTP выставляйте `AUTH_COOKIE_SECURE=false` явно.
+`WORKER_METRICS_TOKEN` в production должен быть непустым и случайным (не менее 32 символов); пустое значение оставляйте только для локального стенда.
 При `APP_ENV=production` API делает fail-fast проверку безопасности конфигурации и не стартует при небезопасных значениях (`API_METRICS_PUBLIC=true`, `AUTH_COOKIE_SECURE=false`, `AUTH_COOKIE_SAMESITE=none`, `BOOTSTRAP_SEED_ENABLED=true`, insecure CORS origins).
 
 ## Запуск в Docker (без ручных шагов)
@@ -101,7 +114,8 @@ docker compose up --build -d
 
 ### Быстрый старт
 
-Выполните `docker compose up --build -d`, откройте http://localhost:3000 и войдите под пользователем `test_screenshot_admin` / `TestScreenshot1`.
+Выполните `docker compose up --build -d`, откройте http://localhost:3000.
+Для входа используйте существующего пользователя из вашей БД, либо включите `BOOTSTRAP_SEED_ENABLED=true` и используйте тестовые учётки для локального стенда.
 
 Проверка API:
 
@@ -162,7 +176,7 @@ docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod
 
 ### Мониторинг
 
-Рекомендуется проверять: (1) **liveness** — `GET /api/v1/health` (200); (2) **readiness** — `GET /api/v1/ready` (200 при доступности БД); (3) **worker metrics** — `GET /metrics` на `WORKER_METRICS_PORT` (по умолчанию 9091) c bearer-токеном `WORKER_METRICS_TOKEN`, если он задан; (4) **логи контейнеров** — `docker compose logs -f api`, `docker compose logs -f worker`, `docker compose logs -f scheduler` и т.д.; (5) **место на диске** — для логов, volume БД и локальных скриншотов (при хранении на том же хосте).
+Рекомендуется проверять: (1) **liveness** — `GET /api/v1/health` (200); (2) **readiness** — `GET /api/v1/ready` (200 при доступности БД); (3) **worker metrics** — `GET /metrics` на `WORKER_METRICS_PORT` (по умолчанию 9091) с bearer-токеном `WORKER_METRICS_TOKEN` (в production обязателен); (4) **логи контейнеров** — `docker compose logs -f api`, `docker compose logs -f worker`, `docker compose logs -f scheduler` и т.д.; (5) **место на диске** — для логов, volume БД и локальных скриншотов (при хранении на том же хосте).
 
 ### Быстрая диагностика `internal_error`
 

@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/config"
-	"github.com/example/hls-monitoring-platform/internal/domain"
-	"github.com/example/hls-monitoring-platform/internal/repo/postgres"
-	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
-	"github.com/example/hls-monitoring-platform/internal/telegram"
+	"github.com/terrynullson/hls_mntrng/internal/config"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/repo/postgres"
+	serviceapi "github.com/terrynullson/hls_mntrng/internal/service/api"
+	"github.com/terrynullson/hls_mntrng/internal/telegram"
 )
 
 type healthResponse = domain.HealthResponse

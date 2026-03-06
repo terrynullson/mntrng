@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
+	serviceapi "github.com/terrynullson/hls_mntrng/internal/service/api"
 )
 
 func (s *Server) handleListPendingRegistrationRequests(w http.ResponseWriter, r *http.Request) {

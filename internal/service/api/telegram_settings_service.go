@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/example/hls-monitoring-platform/internal/domain"
+	"github.com/terrynullson/hls_mntrng/internal/domain"
 )
 
 type TelegramSettingsStore interface {

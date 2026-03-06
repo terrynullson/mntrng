@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/example/hls-monitoring-platform/internal/ai"
-	"github.com/example/hls-monitoring-platform/internal/config"
-	postgresrepo "github.com/example/hls-monitoring-platform/internal/repo/postgres"
-	workerservice "github.com/example/hls-monitoring-platform/internal/service/worker"
+	"github.com/terrynullson/hls_mntrng/internal/ai"
+	"github.com/terrynullson/hls_mntrng/internal/config"
+	postgresrepo "github.com/terrynullson/hls_mntrng/internal/repo/postgres"
+	workerservice "github.com/terrynullson/hls_mntrng/internal/service/worker"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -64,6 +64,13 @@ func main() {
 	retryBackoff := time.Duration(config.IntAtLeast(config.GetInt("WORKER_DB_RETRY_BACKOFF_MS", 500), 1)) * time.Millisecond
 	workerMetricsPort := config.IntAtLeast(config.GetInt("WORKER_METRICS_PORT", 9091), 1)
 	workerMetricsToken := config.GetString("WORKER_METRICS_TOKEN", "")
+	appEnv := strings.ToLower(strings.TrimSpace(config.GetString("APP_ENV", "development")))
+	if strings.TrimSpace(workerMetricsToken) == "" {
+		if appEnv == "production" {
+			log.Fatal("WORKER_METRICS_TOKEN is required in production")
+		}
+		log.Printf("worker metrics: WORKER_METRICS_TOKEN is empty; /metrics endpoint is public")
+	}
 
 	databaseURL := config.GetString("DATABASE_URL", "")
 	if databaseURL == "" {

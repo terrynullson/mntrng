@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	serviceapi "github.com/example/hls-monitoring-platform/internal/service/api"
+	serviceapi "github.com/terrynullson/hls_mntrng/internal/service/api"
 )
 
 func writeServiceError(w http.ResponseWriter, r *http.Request, operation string, err error) {

@@ -5,18 +5,40 @@ web/tsconfig.tsbuildinfo
 .env
 .env.*
 !.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .devlog_mood.txt
 backups/
 
-# Документация и конфиг агентов (не пушить на GitHub)
+# Agent/tooling local config
 .cursor/
 PROMPTS/
 PROMTS/
-docs/
 _archive/
 
-# Локальные бинарники
+# Local build artifacts
 *.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.prof
+*.out
+coverage/
+dist/
+build/
+tmp/
+temp/
 
 .deploy_prev_commit
 .deploy_current_commit
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*.tmp
